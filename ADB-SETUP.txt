@@ -1,0 +1,100 @@
+========================================
+ADB REVERSE SETUP FOR BACKEND CONNECTION
+========================================
+
+ISSUE: App shows "Server is offline"
+CAUSE: ADB reverse not configured for backend port
+
+SOLUTION: Run this command every time you connect your device:
+
+    adb reverse tcp:3000 tcp:3000
+
+This forwards port 3000 from your computer to your Android device.
+
+========================================
+COMPLETE SETUP STEPS:
+========================================
+
+1. Connect Android device via USB cable
+
+2. Enable USB debugging on device
+
+3. Run ADB reverse commands:
+   adb reverse tcp:3000 tcp:3000    (Backend API)
+   adb reverse tcp:8081 tcp:8081    (Expo Metro)
+
+4. Verify setup:
+   adb reverse --list
+
+   Should show:
+   tcp:3000 tcp:3000
+   tcp:8081 tcp:8081
+
+5. Start backend server:
+   cd backend
+   npm run dev
+
+6. Start frontend:
+   cd frontend
+   npx expo start
+
+7. Open app on device - should connect!
+
+========================================
+TROUBLESHOOTING:
+========================================
+
+If still showing "Server is offline":
+
+1. Check backend is running:
+   curl http://localhost:3000/api/status
+
+2. Check ADB connection:
+   adb devices
+
+3. Re-run ADB reverse (IMPORTANT - do this every time):
+   adb reverse --remove-all
+   adb reverse tcp:3000 tcp:3000
+   adb reverse tcp:8081 tcp:8081
+   adb reverse --list
+
+4. Restart the app on device:
+   - Close the app completely (swipe away from recent apps)
+   - Open the app again
+
+5. If still not working, restart backend:
+   cd backend
+   npm run dev
+
+6. Check if port 3000 is in use:
+   netstat -ano | findstr :3000
+
+7. Try restarting ADB:
+   adb kill-server
+   adb start-server
+   adb devices
+
+========================================
+COMMON ISSUES:
+========================================
+
+1. "Server is offline" on app launch:
+   - ADB reverse needs to be run EVERY TIME you reconnect USB
+   - Close and reopen the app after running adb reverse
+
+2. Backend not responding:
+   - Check if backend is actually running (npm run dev)
+   - Check if port 3000 is available
+   - Look for errors in backend console
+
+3. ADB not found:
+   - Make sure Android SDK platform-tools is in PATH
+   - Or use full path: C:\Users\...\Android\sdk\platform-tools\adb.exe
+
+========================================
+NOTE: You need to run "adb reverse" every time you:
+- Reconnect USB cable
+- Restart computer
+- Restart phone
+- Unplug and replug USB cable
+========================================
