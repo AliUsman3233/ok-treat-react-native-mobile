@@ -6,426 +6,307 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Dimensions,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
 import ScreenWrapper from '../../components/ScreenWrapper';
-import Button from '../../components/Button';
-import { BackArrowIcon, KeyIcon } from '../../assets';
+import { BackArrowIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 
-const { width, height } = Dimensions.get('window');
-
 export default function OTPEntryScreen({ route, navigation }) {
-  const { email, password, fullName, phoneNumber, yearsOfExperience, referralCode, userId, otpMethod = 'email' } = route.params || {};
+  const { email, phoneNumber, userId, otpMethod = 'email' } = route.params || {};
   const dispatch = useDispatch();
 
   const [otp, setOtp] = useState(['', '', '', '']);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const [timer, setTimer] = useState(59);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
-  // Format phone number for display: (123) 456-7890
-  const formatPhoneForDisplay = (phone) => {
-    if (!phone) return '';
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 10) {
-      return `(${cleaned.substring(0, 3)}) ${cleaned.substring(3, 6)}-${cleaned.substring(6)}`;
-    }
-    return phone;
-  };
+  useEffect(() => {
+    setTimeout(() => inputRefs[0].current?.focus(), 300);
+  }, []);
 
-  // Countdown timer
   useEffect(() => {
     if (timer > 0) {
-      const interval = setInterval(() => {
-        setTimer(prev => prev - 1);
-      }, 1000);
-      return () => clearInterval(interval);
+      const id = setInterval(() => setTimer(p => p - 1), 1000);
+      return () => clearInterval(id);
     }
   }, [timer]);
 
   const handleOtpChange = (value, index) => {
-    // Only allow numbers
     if (value && !/^\d+$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 3) {
-      inputRefs[index + 1].current?.focus();
-    }
+    const next = [...otp];
+    next[index] = value;
+    setOtp(next);
+    if (value && index < 3) inputRefs[index + 1].current?.focus();
   };
 
   const handleKeyPress = (e, index) => {
-    // Handle backspace
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs[index - 1].current?.focus();
     }
   };
 
+  const isComplete = otp.every(d => d !== '');
+
   const handleSubmit = async () => {
-    const otpCode = otp.join('');
-    
-    if (otpCode.length !== 4) {
-      Alert.alert('Error', 'Please enter the complete 4-digit OTP');
+    const code = otp.join('');
+    if (code.length !== 4) {
+      Alert.alert('Error', 'Please enter the complete 4-digit code');
       return;
     }
 
+    Keyboard.dismiss();
     setLoading(true);
 
     try {
-      // Call verify OTP API
       const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: phoneNumber,
-          code: otpCode,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNumber, code }),
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Verification failed');
 
-      if (!response.ok) {
-        throw new Error(data.message || 'OTP verification failed');
-      }
-
-      // Store token and user data
       await AsyncStorage.setItem('authToken', data.data.token);
       await AsyncStorage.setItem('user', JSON.stringify(data.data.user));
 
-      // Update Redux state - this will automatically navigate via RootNavigator
-      dispatch(setCredentials({
-        user: data.data.user,
-        token: data.data.token,
-      }));
-
-      // No need to manually navigate - RootNavigator handles it when isAuthenticated changes
-
+      dispatch(setCredentials({ user: data.data.user, token: data.data.token }));
     } catch (error) {
-      console.error('OTP verification error:', error);
-      Alert.alert('Verification Failed', error.message || 'Invalid OTP. Please try again.');
+      Alert.alert('Verification Failed', error.message || 'Invalid code. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOTP = async () => {
-    if (timer > 0) {
-      Alert.alert('Please Wait', `You can resend OTP in ${timer} seconds`);
-      return;
-    }
-
+  const handleResend = async () => {
+    if (timer > 0) return;
     setResending(true);
 
     try {
       const response = await fetch(API_ENDPOINTS.RESEND_OTP, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: phoneNumber,
-          otpMethod,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNumber, otpMethod }),
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to resend');
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend OTP');
+      if (data.message?.includes('pending')) {
+        Alert.alert('Note', 'OTP delivery may be delayed. Please wait a moment.');
+      } else {
+        Alert.alert('Sent', 'A new code has been sent.');
       }
-
-      Alert.alert('Success', 'OTP resent successfully');
-      setTimer(59); // Reset timer
-      setOtp(['', '', '', '']); // Clear OTP inputs
-
+      setTimer(59);
+      setOtp(['', '', '', '']);
+      inputRefs[0].current?.focus();
     } catch (error) {
-      console.error('Resend OTP error:', error);
-      Alert.alert('Error', error.message || 'Failed to resend OTP');
+      Alert.alert('Error', error.message || 'Failed to resend code');
     } finally {
       setResending(false);
     }
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const isOtpComplete = otp.every(digit => digit !== '');
+  const destination = otpMethod === 'sms' ? phoneNumber : email;
+  const MethodIcon = otpMethod === 'sms' ? PhoneCallIcon : EnvelopeIcon;
 
   return (
     <ScreenWrapper style={styles.container}>
-      {/* Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <BackArrowIcon 
-            width={width * 0.053} 
-            height={width * 0.053} 
-            fill="#090E12" 
-          />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <BackArrowIcon width={20} height={20} fill="#090E12" />
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Icon Container */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
-            <View style={styles.iconInnerBorder} />
-            <View style={styles.iconWrapper}>
-              <KeyIcon 
-                width={width * 0.088} 
-                height={width * 0.088}
-                fill="#FFFFFF"
-              />
-            </View>
-          </View>
+      <View style={styles.body}>
+        {/* Icon */}
+        <View style={styles.iconWrap}>
+          <MethodIcon width={24} height={24} fill="#32A6D8" />
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Enter OTP</Text>
-
-        {/* Subtitle */}
+        <Text style={styles.title}>Enter Verification Code</Text>
         <Text style={styles.subtitle}>
-          {otpMethod === 'sms'
-            ? `We have sent a OTP to your registered\nPhone Number ${formatPhoneForDisplay(phoneNumber)}`
-            : `We have sent a OTP to your registered\nEmail ${email || ''}`}
+          We sent a 4-digit code to{'\n'}
+          <Text style={styles.destination}>{destination || ''}</Text>
         </Text>
 
-        {/* OTP Input Boxes */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <View 
-              key={index}
+        {/* OTP Inputs */}
+        <View style={styles.otpRow}>
+          {otp.map((digit, i) => (
+            <TextInput
+              key={i}
+              ref={inputRefs[i]}
               style={[
-                styles.otpInputWrapper,
-                focusedIndex === index && styles.otpInputWrapperFocused,
-                digit && styles.otpInputWrapperFilled,
+                styles.otpBox,
+                focusedIndex === i && styles.otpBoxFocused,
+                digit && styles.otpBoxFilled,
               ]}
-            >
-              <TextInput
-                ref={inputRefs[index]}
-                style={[
-                  styles.otpInput,
-                  focusedIndex === index && styles.otpInputFocused,
-                  digit && styles.otpInputFilled,
-                ]}
-                placeholder="0"
-                placeholderTextColor="#B0B0B0"
-                value={digit}
-                onChangeText={(value) => handleOtpChange(value, index)}
-                onKeyPress={(e) => handleKeyPress(e, index)}
-                onFocus={() => setFocusedIndex(index)}
-                onBlur={() => setFocusedIndex(-1)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-            </View>
+              value={digit}
+              onChangeText={(v) => handleOtpChange(v, i)}
+              onKeyPress={(e) => handleKeyPress(e, i)}
+              onFocus={() => setFocusedIndex(i)}
+              onBlur={() => setFocusedIndex(-1)}
+              keyboardType="number-pad"
+              maxLength={1}
+              selectTextOnFocus
+              placeholder="·"
+              placeholderTextColor="#CCC"
+            />
           ))}
         </View>
 
-        {/* Submit Button */}
-        <Button
-          title={loading ? "Verifying..." : "Submit"}
-          onPress={handleSubmit}
-          type="primary"
-          size="medium"
-          fullWidth
-          disabled={!isOtpComplete || loading}
-          style={[styles.submitButton, (!isOtpComplete || loading) && styles.submitButtonDisabled]}
-        />
-
-        {loading && (
-          <ActivityIndicator 
-            size="small" 
-            color="#32A6D8" 
-            style={styles.loader}
-          />
-        )}
-
-        {/* Timer and Resend */}
-        <View style={styles.timerContainer}>
-          <Text style={styles.timer}>{formatTime(timer)}</Text>
-          {timer === 0 && (
-            <TouchableOpacity 
-              onPress={handleResendOTP}
-              disabled={resending}
-              style={styles.resendButton}
-            >
+        {/* Timer + Resend */}
+        <View style={styles.timerRow}>
+          {timer > 0 ? (
+            <Text style={styles.timerText}>
+              Resend code in <Text style={styles.timerBold}>0:{timer.toString().padStart(2, '0')}</Text>
+            </Text>
+          ) : (
+            <TouchableOpacity onPress={handleResend} disabled={resending}>
               <Text style={styles.resendText}>
-                {resending ? 'Resending...' : 'Resend OTP'}
+                {resending ? 'Sending...' : 'Resend Code'}
               </Text>
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Submit */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.verifyBtn, (!isComplete || loading) && styles.verifyBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={!isComplete || loading}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text style={styles.verifyBtnText}>Verify</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.changeMethod}>
+          <Text style={styles.changeMethodText}>Change verification method</Text>
+        </TouchableOpacity>
       </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-  },
+  container: { backgroundColor: '#FFF', flex: 1 },
   header: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
+  body: {
     flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 32,
     alignItems: 'center',
-    paddingHorizontal: width * 0.064,
-    paddingTop: height * 0.05,
   },
-  iconContainer: {
-    marginBottom: 24,
-  },
-  iconBackground: {
-    width: 72,
-    height: 72,
-    backgroundColor: '#FFC2EB',
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#FFC2EB',
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: 'rgba(50,166,216,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
-  },
-  iconInnerBorder: {
-    position: 'absolute',
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(9, 14, 18, 0.04)',
-  },
-  iconWrapper: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
-    color: '#191919',
-    fontSize: 21,
-    fontFamily: 'Poppins',
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A1A1A',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    width: 283,
-    textAlign: 'center',
-    color: '#5C4746',
     fontSize: 14,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 22,
-    marginBottom: 40,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 32,
   },
-  otpContainer: {
+  destination: {
+    color: '#32A6D8',
+    fontWeight: '600',
+  },
+  otpRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 56,
+    gap: 14,
+    marginBottom: 28,
   },
-  otpInputWrapper: {
-    width: 60,
-    height: 75,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-  },
-  otpInputWrapperFocused: {
-    shadowColor: '#32A6D8',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    transform: [{ translateY: -2 }],
-  },
-  otpInputWrapperFilled: {
-    backgroundColor: 'rgba(255, 194, 235, 0.08)',
-  },
-  otpInput: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(239, 239, 239, 0.4)',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+  otpBox: {
+    width: 56,
+    height: 60,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FAFAFA',
     fontSize: 24,
-    fontFamily: 'Poppins',
     fontWeight: '700',
     textAlign: 'center',
-    color: '#191919',
-    paddingTop: 4,
+    color: '#1A1A1A',
   },
-  otpInputFocused: {
-    backgroundColor: '#FFFFFF',
+  otpBoxFocused: {
     borderColor: '#32A6D8',
-    borderWidth: 2.5,
-  },
-  otpInputFilled: {
-    backgroundColor: 'rgba(255, 194, 235, 0.15)',
-    borderColor: '#FFC2EB',
+    backgroundColor: '#FFF',
     borderWidth: 2,
   },
-  submitButton: {
-    marginBottom: 12,
+  otpBoxFilled: {
+    borderColor: '#32A6D8',
+    backgroundColor: 'rgba(50,166,216,0.04)',
   },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  loader: {
-    marginTop: 10,
-  },
-  timerContainer: {
+  timerRow: {
     alignItems: 'center',
-    gap: 8,
   },
-  timer: {
-    textAlign: 'center',
-    color: '#F38FB4',
-    fontSize: 13.94,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 19.52,
+  timerText: {
+    fontSize: 13,
+    color: '#999',
   },
-  resendButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  timerBold: {
+    color: '#32A6D8',
+    fontWeight: '700',
   },
   resendText: {
     color: '#32A6D8',
     fontSize: 14,
-    fontFamily: 'Avenir LT Std',
     fontWeight: '600',
   },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 12,
+    alignItems: 'center',
+  },
+  verifyBtn: {
+    backgroundColor: '#32A6D8',
+    borderRadius: 14,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  verifyBtnDisabled: { opacity: 0.4 },
+  verifyBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  changeMethod: { marginTop: 16 },
+  changeMethodText: { color: '#999', fontSize: 13 },
 });
