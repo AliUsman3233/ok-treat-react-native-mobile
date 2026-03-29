@@ -17,7 +17,7 @@ import { BackArrowIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 
 export default function OTPEntryScreen({ route, navigation }) {
-  const { email, phoneNumber, userId, otpMethod = 'email' } = route.params || {};
+  const { email, phoneNumber, userId, otpMethod = 'email', _devOtp } = route.params || {};
   const dispatch = useDispatch();
 
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -25,10 +25,17 @@ export default function OTPEntryScreen({ route, navigation }) {
   const [timer, setTimer] = useState(59);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [devCode, setDevCode] = useState(_devOtp || null);
   const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
   useEffect(() => {
-    setTimeout(() => inputRefs[0].current?.focus(), 300);
+    if (_devOtp) {
+      // Auto-fill OTP when email delivery failed and backend returned it
+      const digits = _devOtp.split('');
+      setOtp(digits);
+    } else {
+      setTimeout(() => inputRefs[0].current?.focus(), 300);
+    }
   }, []);
 
   useEffect(() => {
@@ -99,14 +106,23 @@ export default function OTPEntryScreen({ route, navigation }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to resend');
 
-      if (data.message?.includes('pending')) {
+      if (data._devOtp) {
+        // Email delivery failed — auto-fill returned code
+        setDevCode(data._devOtp);
+        setOtp(data._devOtp.split(''));
+        setTimer(59);
+      } else if (data.message?.includes('pending')) {
         Alert.alert('Note', 'OTP delivery may be delayed. Please wait a moment.');
+        setTimer(59);
+        setOtp(['', '', '', '']);
+        inputRefs[0].current?.focus();
       } else {
         Alert.alert('Sent', 'A new code has been sent.');
+        setTimer(59);
+        setOtp(['', '', '', '']);
+        setDevCode(null);
+        inputRefs[0].current?.focus();
       }
-      setTimer(59);
-      setOtp(['', '', '', '']);
-      inputRefs[0].current?.focus();
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to resend code');
     } finally {
@@ -136,6 +152,12 @@ export default function OTPEntryScreen({ route, navigation }) {
           We sent a 4-digit code to{'\n'}
           <Text style={styles.destination}>{destination || ''}</Text>
         </Text>
+
+        {devCode && (
+          <View style={styles.devBanner}>
+            <Text style={styles.devBannerText}>Code auto-filled (email delivery unavailable)</Text>
+          </View>
+        )}
 
         {/* OTP Inputs */}
         <View style={styles.otpRow}>
@@ -309,4 +331,17 @@ const styles = StyleSheet.create({
   verifyBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   changeMethod: { marginTop: 16 },
   changeMethodText: { color: '#999', fontSize: 13 },
+  devBanner: {
+    backgroundColor: '#FFF3CD',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 24,
+  },
+  devBannerText: {
+    color: '#856404',
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
 });

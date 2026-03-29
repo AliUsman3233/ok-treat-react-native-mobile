@@ -67,6 +67,7 @@ export default function OTPMethodScreen({ route, navigation }) {
         referralCode,
         userId: data.data.userId,
         otpMethod: selectedMethod,
+        _devOtp: data.data._devOtp || null,
       });
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to send verification code.');
