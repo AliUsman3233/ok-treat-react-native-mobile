@@ -118,33 +118,37 @@ export default function ContactSitterScreen({ navigation, route }) {
           {/* Pets Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Pets</Text>
-            <View style={styles.petCard}>
-              <View style={styles.petHeader}>
-                <View style={styles.petInfo}>
-                  <Image
-                    source={require('../../assets/images/Pet_default_image.png')}
-                    style={styles.petImage}
-                    resizeMode="cover"
+            {pets && pets.length > 0 ? (
+              <View style={styles.petCard}>
+                <View style={styles.petHeader}>
+                  <View style={styles.petInfo}>
+                    <Image
+                      source={pets[0].photoUrl ? { uri: pets[0].photoUrl } : require('../../assets/images/Pet_default_image.png')}
+                      style={styles.petImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.petName}>{pets[0].name || 'Unknown'}</Text>
+                  </View>
+                  <Switch
+                    value={isPetSelected}
+                    onValueChange={setIsPetSelected}
+                    trackColor={{ false: '#E5E5E5', true: '#FFC2EB' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#E5E5E5"
                   />
-                  <Text style={styles.petName}>Toto</Text>
                 </View>
-                <Switch
-                  value={isPetSelected}
-                  onValueChange={setIsPetSelected}
-                  trackColor={{ false: '#E5E5E5', true: '#FFC2EB' }}
-                  thumbColor="#FFFFFF"
-                  ios_backgroundColor="#E5E5E5"
-                />
+                <View style={styles.petDetails}>
+                  <Text style={styles.petDetailsText}>
+                    <Text style={styles.petLabel}>Weight: </Text>
+                    <Text style={styles.petValue}>{pets[0].weight ? `${pets[0].weight} lbs` : 'Not specified'}  .  </Text>
+                    <Text style={styles.petLabel}>Age: </Text>
+                    <Text style={styles.petValue}>{pets[0].ageYears ? `${pets[0].ageYears} years` : ''}{pets[0].ageMonths ? ` & ${pets[0].ageMonths} months` : ''}{pets[0].ageYears || pets[0].ageMonths ? ' old' : 'Not specified'}</Text>
+                  </Text>
+                </View>
               </View>
-              <View style={styles.petDetails}>
-                <Text style={styles.petDetailsText}>
-                  <Text style={styles.petLabel}>Weight: </Text>
-                  <Text style={styles.petValue}>25 pounds  .  </Text>
-                  <Text style={styles.petLabel}>Age: </Text>
-                  <Text style={styles.petValue}>9 years & 7 months old</Text>
-                </Text>
-              </View>
-            </View>
+            ) : (
+              <Text style={styles.cardSubtitle}>No pets selected</Text>
+            )}
           </View>
 
           {/* Message Section */}

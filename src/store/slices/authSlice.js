@@ -165,9 +165,9 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.isAuthenticated = false;
+        state.user = action.payload.user || null;
+        state.token = null;
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;

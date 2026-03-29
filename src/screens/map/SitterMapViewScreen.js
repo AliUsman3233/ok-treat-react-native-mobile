@@ -1,20 +1,50 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { getNearbySitters } from '../../services/sitterService';
 
-export default function SitterMapViewScreen({ navigation }) {
+export default function SitterMapViewScreen({ navigation, route }) {
   const [selectedSitter, setSelectedSitter] = useState(null);
+  const [sitters, setSitters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     service: 'all',
     rating: 'all',
     distance: '10',
   });
 
-  const sitters = [
-    { id: 1, name: 'Sarah M.', rating: 4.9, reviews: 127, distance: '0.8 mi', lat: 40.7580, lng: -73.9855, services: ['Walking', 'Boarding'], price: 25 },
-    { id: 2, name: 'Mike T.', rating: 4.8, reviews: 89, distance: '1.2 mi', lat: 40.7614, lng: -73.9776, services: ['Day Care', 'Drop-In'], price: 30 },
-    { id: 3, name: 'Emma L.', rating: 5.0, reviews: 156, distance: '1.5 mi', lat: 40.7489, lng: -73.9680, services: ['Boarding', 'House Sitting'], price: 35 },
-    { id: 4, name: 'John D.', rating: 4.7, reviews: 73, distance: '2.1 mi', lat: 40.7678, lng: -73.9812, services: ['Walking', 'Day Care'], price: 28 },
-  ];
+  const fetchSitters = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const latitude = route?.params?.latitude || 40.7580;
+      const longitude = route?.params?.longitude || -73.9855;
+      const radius = parseFloat(filters.distance) || 10;
+      const response = await getNearbySitters(latitude, longitude, radius);
+      const data = response?.sitters || response?.data || response || [];
+      const sittersArray = Array.isArray(data) ? data : [];
+      setSitters(sittersArray.map(s => ({
+        id: s.id || s._id,
+        name: s.fullName || s.name || 'Sitter',
+        rating: s.averageRating || s.rating || 0,
+        reviews: s.totalReviews || s.reviews || 0,
+        distance: s.distance ? `${s.distance} mi` : '',
+        lat: s.latitude || s.location?.coordinates?.[1] || 0,
+        lng: s.longitude || s.location?.coordinates?.[0] || 0,
+        services: s.services || [],
+        price: s.price || s.rate || 0,
+      })));
+    } catch (err) {
+      console.error('Failed to fetch nearby sitters:', err);
+      setError('Failed to load nearby sitters. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.distance, route?.params?.latitude, route?.params?.longitude]);
+
+  useEffect(() => {
+    fetchSitters();
+  }, [fetchSitters]);
 
   const Wrapper = Platform.OS === 'web' ? 'div' : View;
   const ScrollWrapper = Platform.OS === 'web' ? 'div' : ScrollView;
@@ -94,6 +124,23 @@ export default function SitterMapViewScreen({ navigation }) {
 
       {/* Sitters List */}
       <ScrollWrapper style={Platform.OS === 'web' ? { flex: 1, overflowY: 'auto' } : styles.scrollView}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FF6B6B" />
+            <Text style={styles.loadingText}>Finding sitters near you...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchSitters}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : sitters.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No sitters found nearby</Text>
+          </View>
+        ) : (
         <View style={styles.sittersList}>
           {sitters.map(sitter => (
             <TouchableOpacity
@@ -131,6 +178,7 @@ export default function SitterMapViewScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+        )}
       </ScrollWrapper>
 
       {/* Bottom Action */}
@@ -377,5 +425,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  errorContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#F44336',
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
   },
 });

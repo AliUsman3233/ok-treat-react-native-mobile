@@ -10,6 +10,7 @@ export default function SearchResultsScreen({ navigation, route }) {
   const { serviceType = 'Boarding', searchParams = {} } = route?.params || {};
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [sitters, setSitters] = useState([]);
+  const [filteredSitters, setFilteredSitters] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -128,7 +129,7 @@ export default function SearchResultsScreen({ navigation, route }) {
   };
 
   const handleMapView = () => {
-    console.log('Open map view');
+    navigation.navigate('SitterMapView', { sitters, serviceType, searchParams });
   };
 
   const handleFilters = () => {
@@ -136,8 +137,45 @@ export default function SearchResultsScreen({ navigation, route }) {
   };
 
   const handleApplyFilters = (filters) => {
-    console.log('Applied filters:', filters);
-    // Apply filters to the sitter list
+    let result = [...sitters];
+
+    // Filter by property type
+    if (filters.propertyType && filters.propertyType !== 'Any Type') {
+      result = result.filter(sitter =>
+        sitter.propertyType?.toLowerCase() === filters.propertyType.toLowerCase()
+      );
+    }
+
+    // Filter by date range availability
+    if (filters.startDate && filters.endDate) {
+      result = result.filter(sitter => {
+        if (!sitter.availableFrom && !sitter.availableTo) return true;
+        const filterStart = new Date(filters.startDate);
+        const filterEnd = new Date(filters.endDate);
+        const sitterStart = sitter.availableFrom ? new Date(sitter.availableFrom) : new Date(0);
+        const sitterEnd = sitter.availableTo ? new Date(sitter.availableTo) : new Date('2099-12-31');
+        return sitterStart <= filterStart && sitterEnd >= filterEnd;
+      });
+    }
+
+    // Filter by boolean sitter attributes
+    if (filters.fencedYard) result = result.filter(s => s.fencedYard);
+    if (filters.furnitureAllowed) result = result.filter(s => s.furnitureAllowed);
+    if (filters.bedAllowed) result = result.filter(s => s.bedAllowed);
+    if (filters.smokeFree) result = result.filter(s => s.smokeFree);
+    if (filters.availabilityDay) result = result.filter(s => s.availabilityDay || s.fullTimeAvailability);
+    if (filters.oneClient) result = result.filter(s => s.oneClient || s.oneClientAtATime);
+    if (filters.bathing) result = result.filter(s => s.bathing || s.bathingGrooming);
+    if (filters.firstAid) result = result.filter(s => s.firstAid || s.firstAidCertified);
+    if (filters.noDog) result = result.filter(s => s.noDog || !s.hasDog);
+    if (filters.noCat) result = result.filter(s => s.noCat || !s.hasCat);
+    if (filters.otherPets) result = result.filter(s => s.otherPets || s.hasOtherPets);
+    if (filters.unspayedFemale) result = result.filter(s => s.unspayedFemale || s.acceptsUnspayedFemale);
+    if (filters.nonNeuteredMale) result = result.filter(s => s.nonNeuteredMale || s.acceptsNonNeuteredMale);
+    if (filters.childrenPresent) result = result.filter(s => s.childrenPresent || s.hasChildren);
+    if (filters.noChildren) result = result.filter(s => s.noChildren || !s.hasChildren);
+
+    setFilteredSitters(result);
   };
 
   const handleLocationPress = (callback) => {
@@ -260,7 +298,7 @@ export default function SearchResultsScreen({ navigation, route }) {
         )}
 
         {/* Empty State */}
-        {!loading && !error && sitters.length === 0 && (
+        {!loading && !error && (filteredSitters || sitters).length === 0 && (
           <View style={styles.emptyContainer}>
             <Icon name="search-outline" size={48} color="#818898" />
             <Text style={styles.emptyText}>No sitters found</Text>
@@ -269,9 +307,9 @@ export default function SearchResultsScreen({ navigation, route }) {
         )}
 
         {/* Sitters List */}
-        {!loading && !error && sitters.length > 0 && (
+        {!loading && !error && (filteredSitters || sitters).length > 0 && (
           <FlatList
-            data={sitters}
+            data={filteredSitters || sitters}
             renderItem={renderSitterCard}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}

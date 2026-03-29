@@ -5,26 +5,32 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 const dogImage = require('../../assets/images/dog_image.png');
 const { width, height } = Dimensions.get('window');
 
-// Mock pet data - will be replaced with actual data from route params
-const MOCK_PET = {
-  id: 1,
-  name: 'Toto',
-  breed: 'Beagle & Mixed',
-  weight: '25 pounds',
-  age: '9 years & 7 months old',
-  owner: {
-    name: 'Vesta T. Hunter',
-    email: 'vestahunter@gmail.com',
-    address: '675 Malino road, Texas, 67567',
-    phone: '+1234567890'
-  }
-};
-
 export default function PetDetailScreen({ route, navigation }) {
   const { petData, qrCode } = route.params || {};
-  
-  // Use passed pet data or fallback to mock
-  const pet = petData || MOCK_PET;
+
+  const pet = petData;
+
+  if (!pet) {
+    return (
+      <ScreenWrapper noBottomTabs>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <BackArrowIcon width={20} height={20} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Pet Profile</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#E45050', fontSize: 16, fontFamily: 'Poppins', fontWeight: '500' }}>Pet data not available</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 12 }}>
+              <Text style={{ color: '#32A6D8', fontSize: 14, fontFamily: 'Poppins', fontWeight: '500' }}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   // Format age display
   const getAgeDisplay = () => {

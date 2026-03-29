@@ -1,32 +1,30 @@
-import { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder } from 'react-native';
+import { useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { getSitterRequests } from '../../services/bookingService';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -60;
 const DELETE_WIDTH = 40;
 
-// Mock request data
-const MOCK_REQUESTS = [
-  {
-    id: 1,
-    name: 'Ashlyn T.',
-    message: 'Aliquyam erat, sed diam',
-    time: 'Just now',
-    status: 'pending',
-    avatar: null
-  },
-  {
-    id: 2,
-    name: 'Dolzin',
-    message: 'Aliquyam erat, sed diam',
-    time: 'Just now',
-    status: 'pending',
-    avatar: null
-  },
-];
+const getRelativeTime = (dateString) => {
+  if (!dateString) return '';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
+};
 
 const SwipeableRequestCard = ({ request, onPress, onDelete }) => {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -148,16 +146,48 @@ const SwipeableRequestCard = ({ request, onPress, onDelete }) => {
 };
 
 export default function OpenRequestsScreen({ navigation }) {
-  const [requests, setRequests] = useState(MOCK_REQUESTS);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const insets = useSafeAreaInsets();
+
+  const fetchRequests = async () => {
+    try {
+      setError(null);
+      const response = await getSitterRequests();
+      const data = response?.data || response?.requests || response || [];
+      const list = Array.isArray(data) ? data : [];
+      const formatted = list.map(req => ({
+        id: req.id || req._id,
+        name: req.ownerName || req.owner?.fullName || req.owner?.name || 'Unknown',
+        message: req.message || req.notes || req.serviceType || '',
+        time: getRelativeTime(req.createdAt || req.created_at),
+        status: req.status || 'pending',
+        avatar: req.owner?.avatar || req.owner?.profileImage || null,
+      }));
+      setRequests(formatted);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+      setError('Failed to load requests');
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchRequests();
+    }, [])
+  );
 
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleRequestPress = (requestId) => {
-    console.log('Request pressed:', requestId);
-    // Navigate to request detail or chat
+    navigation.navigate('Bookings');
   };
 
   const handleDeleteRequest = (requestId) => {
@@ -180,20 +210,39 @@ export default function OpenRequestsScreen({ navigation }) {
 
         {/* Content */}
         <View style={[styles.contentContainer, { top: HEADER_HEIGHT + insets.top }]}>
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {requests.map((request) => (
-              <SwipeableRequestCard
-                key={request.id}
-                request={request}
-                onPress={() => handleRequestPress(request.id)}
-                onDelete={handleDeleteRequest}
-              />
-            ))}
-          </ScrollView>
+          {loading ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#32A6D8" />
+              <Text style={styles.loadingText}>Loading requests...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.centerContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity onPress={() => { setLoading(true); fetchRequests(); }}>
+                <Text style={styles.retryText}>Tap to retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : requests.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <Text style={styles.emptyTitle}>No Open Requests</Text>
+              <Text style={styles.emptySubtitle}>New requests will appear here</Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {requests.map((request) => (
+                <SwipeableRequestCard
+                  key={request.id}
+                  request={request}
+                  onPress={() => handleRequestPress(request.id)}
+                  onDelete={handleDeleteRequest}
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
       </View>
     </ScreenWrapper>
@@ -362,6 +411,46 @@ const styles = StyleSheet.create({
     color: '#E5A33D',
     fontSize: 10,
     fontFamily: 'Urbanist',
+    fontWeight: '400',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#818898',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '400',
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryText: {
+    color: '#32A6D8',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+  },
+  emptyTitle: {
+    color: '#1C1C28',
+    fontSize: 16,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    color: '#818898',
+    fontSize: 14,
+    fontFamily: 'Poppins',
     fontWeight: '400',
   },
 });

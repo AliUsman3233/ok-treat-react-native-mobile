@@ -102,7 +102,7 @@ export default function TransactionHistoryScreen({ navigation }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Shop Coins</Text>
+          <Text style={styles.headerTitle}>Transaction History</Text>
           <View style={styles.menuButton}>
             <View style={styles.dot} />
             <View style={styles.dot} />

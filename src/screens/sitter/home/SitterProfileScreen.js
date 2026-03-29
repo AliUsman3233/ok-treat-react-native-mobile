@@ -1,6 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../../store/slices/authSlice';
+import { getSitterProfile } from '../../../services/sitterService';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import {
@@ -21,6 +23,19 @@ import {
 export default function SitterProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
+  const [sitter, setSitter] = useState(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getSitterProfile();
+        setSitter(response?.data || response || null);
+      } catch (err) {
+        console.error('Failed to fetch sitter profile:', err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleBack = () => {
     navigation.goBack();
@@ -116,7 +131,7 @@ export default function SitterProfileScreen({ navigation }) {
 
             {/* Profile Info */}
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>Ashlyn T.</Text>
+              <Text style={styles.profileName}>{user?.fullName || 'Sitter'}</Text>
               
               {/* Verified Badge */}
               <View style={styles.verifiedBadge}>
@@ -128,11 +143,11 @@ export default function SitterProfileScreen({ navigation }) {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Icon name="star" size={16} color="#FBBC04" />
-                  <Text style={styles.statText}>5.0 (23 reviews)</Text>
+                  <Text style={styles.statText}>{sitter?.averageRating || '0.0'} ({sitter?.totalReviews || 0} reviews)</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Icon name="people" size={16} color="#32A6D8" />
-                  <Text style={styles.statText}>8 repeat clients</Text>
+                  <Text style={styles.statText}>{sitter?.repeatClients || 0} repeat clients</Text>
                 </View>
               </View>
 
@@ -144,7 +159,7 @@ export default function SitterProfileScreen({ navigation }) {
                 </View>
                 <View style={styles.statItem}>
                   <Icon name="location" size={14} color="#32A6D8" />
-                  <Text style={styles.statTextGray}>Vancouver, BC</Text>
+                  <Text style={styles.statTextGray}>{user?.address || ''}</Text>
                 </View>
               </View>
             </View>

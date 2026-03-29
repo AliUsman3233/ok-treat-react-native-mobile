@@ -104,6 +104,15 @@ export default function NotificationsScreen({ navigation }) {
         console.error('Error marking notification as read:', err);
       }
     }
+
+    // Navigate based on notification type
+    if (notification.type === 'payment') {
+      navigation.navigate('Bookings');
+    } else if (notification.type === 'message') {
+      navigation.navigate('ChatList');
+    } else if (notification.type === 'booking' || notification.type === 'reminder') {
+      navigation.navigate('Bookings');
+    }
   };
 
   const newestNotifications = notifications.filter(n => n.section === 'newest');

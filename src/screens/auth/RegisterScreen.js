@@ -141,7 +141,7 @@ export default function RegisterScreen({ navigation }) {
 
           {/* Register Button */}
           <Button
-            style={styles.provceed_button}
+            style={styles.proceed_button}
             title="Proceed"
             onPress={handleRegister}
             type="primary"
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  provceed_button: {
+  proceed_button: {
     
     marginTop: 40,
   },

@@ -212,7 +212,12 @@ export default function ChatListScreen({ navigation }) {
     });
   };
 
-  const handleDeleteChat = (chatId) => {
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await api.delete(`/messages/conversations/${chatId}`);
+    } catch (err) {
+      console.error('Error deleting conversation:', err);
+    }
     setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
   };
 

@@ -87,10 +87,6 @@ import DetailsScreen from '../screens/sitter/build-trust/profile/DetailsScreen';
 import PhotosScreen from '../screens/sitter/build-trust/profile/PhotosScreen';
 import PetCareInfoScreen from '../screens/sitter/build-trust/profile/PetCareInfoScreen';
 import YourPetsScreen from '../screens/sitter/build-trust/profile/YourPetsScreen';
-// RequestTestimonialsScreen removed from navigation - screen file kept for future use
-// import RequestTestimonialsScreen from '../screens/sitter/build-trust/RequestTestimonialsScreen';
-import SafetyQuizScreen from '../screens/sitter/build-trust/SafetyQuizScreen';
-import FinalDetailsScreen from '../screens/sitter/build-trust/FinalDetailsScreen';
 
 // Test Screens
 import CloudinaryTestScreen from '../screens/test/CloudinaryTestScreen';
@@ -431,9 +427,6 @@ export default function MainNavigator() {
       <RootStack.Screen name="Photos" component={PhotosScreen} />
       <RootStack.Screen name="PetCareInfo" component={PetCareInfoScreen} />
       <RootStack.Screen name="YourPets" component={YourPetsScreen} />
-      {/* RequestTestimonials screen removed from navigation */}
-      <RootStack.Screen name="SafetyQuiz" component={SafetyQuizScreen} />
-      <RootStack.Screen name="FinalDetails" component={FinalDetailsScreen} />
       <RootStack.Screen name="SitterPersonalProfile" component={SitterPersonalProfileScreen} />
       <RootStack.Screen name="EReceipt" component={EReceiptScreen} />
       

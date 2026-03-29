@@ -7,7 +7,6 @@ import LanguageScreen from '../screens/auth/LanguageScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import CompleteRegistrationScreen from '../screens/auth/CompleteRegistrationScreen';
-import PhoneVerificationScreen from '../screens/auth/PhoneVerificationScreen';
 import OTPMethodScreen from '../screens/auth/OTPMethodScreen';
 import OTPEntryScreen from '../screens/auth/OTPEntryScreen';
 import RegistrationSuccessScreen from '../screens/auth/RegistrationSuccessScreen';
@@ -30,7 +29,6 @@ export default function AuthNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="CompleteRegistration" component={CompleteRegistrationScreen} />
-      <Stack.Screen name="PhoneVerification" component={PhoneVerificationScreen} />
       <Stack.Screen name="OTPMethod" component={OTPMethodScreen} />
       <Stack.Screen name="OTPEntry" component={OTPEntryScreen} />
       <Stack.Screen name="RegistrationSuccess" component={RegistrationSuccessScreen} />

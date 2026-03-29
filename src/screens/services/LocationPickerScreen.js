@@ -396,7 +396,7 @@ export default function LocationPickerScreen({ navigation, route }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Boarding</Text>
+          <Text style={styles.headerTitle}>{route.params?.serviceTitle || 'Select Location'}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.actionButton}>
               <LocationPinIcon width={24} height={24} fill="black" />

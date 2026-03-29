@@ -194,13 +194,6 @@ export default function ProfileSetupScreen({ navigation, route }) {
 
   const handleBuildTrustPress = (itemName) => {
     console.log(`${itemName} pressed`);
-    if (itemName === 'Request Testimonials') {
-      navigation.navigate('RequestTestimonials');
-    } else if (itemName === 'Take a Safety Quiz') {
-      navigation.navigate('SafetyQuiz');
-    } else if (itemName === 'Final Details') {
-      navigation.navigate('FinalDetails');
-    }
   };
 
   const handleSubmit = async () => {
@@ -474,68 +467,6 @@ export default function ProfileSetupScreen({ navigation, route }) {
                 )}
               </View>
 
-              {/* Request Testimonials */}
-              {/* <TouchableOpacity 
-                style={styles.serviceItem}
-                onPress={() => handleBuildTrustPress('Request Testimonials')}
-              >
-                <View style={styles.serviceIconContainer}>
-                  <StarTag_1 width={24} height={25} fill="#32A6D8" />
-                </View>
-                <View style={styles.serviceContent}>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceTitle}>Request Testimonials</Text>
-                    <Text style={styles.serviceSubtitle}>Use references to get clients</Text>
-                  </View>
-                  {buildTrustStatus.requestTestimonials ? (
-                    <ProgressTickIcon width={20} height={20} fill="#32A6D8" />
-                  ) : (
-                    <Text style={styles.timeText}>3 mins</Text>
-                  )}
-                </View>
-              </TouchableOpacity> */}
-
-              {/* Take a Safety Quiz */}
-              {/* <TouchableOpacity 
-                style={styles.serviceItem}
-                onPress={() => handleBuildTrustPress('Take a Safety Quiz')}
-              >
-                <View style={styles.serviceIconContainer}>
-                  <StarTag width={23.79} height={26.22} fill="#32A6D8" />
-                </View>
-                <View style={styles.serviceContent}>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceTitle}>Take a Safety Quiz</Text>
-                    <Text style={styles.serviceSubtitle}>Safety tips for great reviews</Text>
-                  </View>
-                  {buildTrustStatus.safetyQuiz ? (
-                    <ProgressTickIcon width={20} height={20} fill="#32A6D8" />
-                  ) : (
-                    <Text style={styles.timeText}>3 mins</Text>
-                  )}
-                </View>
-              </TouchableOpacity> */}
-
-              {/* Final Details */}
-              {/* <TouchableOpacity 
-                style={styles.serviceItem}
-                onPress={() => handleBuildTrustPress('Final Details')}
-              >
-                <View style={styles.serviceIconContainer}>
-                  <BadgeCheckIcon width={24.37} height={24.37} fill="#32A6D8" />
-                </View>
-                <View style={styles.serviceContent}>
-                  <View style={styles.serviceInfo}>
-                    <Text style={styles.serviceTitle}>Final Details</Text>
-                    <Text style={styles.serviceSubtitle}>Background & review fee</Text>
-                  </View>
-                  {buildTrustStatus.finalDetails ? (
-                    <ProgressTickIcon width={20} height={20} fill="#32A6D8" />
-                  ) : (
-                    <Text style={styles.timeText}>3 mins</Text>
-                  )}
-                </View>
-              </TouchableOpacity> */}
             </View>
           </View>
         </ScrollView>

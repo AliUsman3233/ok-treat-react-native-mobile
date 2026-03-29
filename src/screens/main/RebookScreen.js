@@ -149,27 +149,11 @@ export default function RebookScreen({ navigation }) {
 
     const handleRebook = (service) => {
         console.log('Rebook service:', service.name);
-        // Navigate to the appropriate service screen
-        switch (service.name) {
-            case 'Boarding':
-                navigation.navigate('Boarding');
-                break;
-            case 'House Sitting':
-                navigation.navigate('HouseSitting');
-                break;
-            case 'Drop-in Visit':
-            case 'Drop-In Visits':
-                navigation.navigate('DropInVisits');
-                break;
-            case 'Day Care':
-                navigation.navigate('DayCare');
-                break;
-            case 'Pet Walking':
-                navigation.navigate('PetWalking');
-                break;
-            default:
-                break;
-        }
+        navigation.navigate('ServiceSearch', {
+            serviceType: service.name,
+            serviceTitle: service.name,
+            serviceSubtitle: `When do you need a ${service.name.toLowerCase()} sitter?`,
+        });
     };
 
     return (

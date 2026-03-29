@@ -248,7 +248,7 @@ export default function SearchFilterModal({ visible, onClose, onApply, onLocatio
             <Button
               title="Cancel"
               onPress={onClose}
-              variant="secondary"
+              type="secondary"
               size="small"
               style={styles.cancelButton}
             />

@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
@@ -7,6 +8,10 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { getSitterEarnings, getSitterBookings } from '../../../services/bookingService';
 
 export default function SitterHomeScreen({ navigation }) {
+  const { user } = useSelector(state => state.auth);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const [chartData, setChartData] = useState([]);
   const [totalSales, setTotalSales] = useState('$0.00');
   const [salesPercent, setSalesPercent] = useState('0');
@@ -141,8 +146,8 @@ export default function SitterHomeScreen({ navigation }) {
         <View style={styles.header}>
           <Image source={DogImage} style={styles.avatar} />
           <View style={styles.headerText}>
-            <Text style={styles.greeting}>Good Morning</Text>
-            <Text style={styles.userName}>Ashlyn T.</Text>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.userName}>{user?.fullName || 'Sitter'}</Text>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
             <Icon name="notifications-outline" size={24.55} color="#212121" />

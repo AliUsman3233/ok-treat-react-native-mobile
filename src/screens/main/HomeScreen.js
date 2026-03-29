@@ -103,7 +103,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeText}>Welcome Back</Text>
-            <Text style={styles.emailText}>{user?.email || 'alexjohn125@gmail.com'}</Text>
+            <Text style={styles.emailText}>{user?.email || 'No email'}</Text>
           </View>
         </View>
 

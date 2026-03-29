@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import store from '../store';
 import { logout } from '../store/slices/authSlice';
+import { STORAGE_KEYS } from '../utils/storage';
 
 let navigationRef = null;
 let tokenExpiredHandler = null;
@@ -20,8 +21,8 @@ export const handleTokenExpiredAction = async () => {
 
   // Clear storage
   try {
-    await AsyncStorage.removeItem('authToken');
-    await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER_TOKEN);
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
   } catch (e) {}
 
   // Clear Redux

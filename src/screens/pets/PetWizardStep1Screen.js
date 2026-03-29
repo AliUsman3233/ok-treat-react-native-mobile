@@ -120,7 +120,7 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
           {/* Weight and Breed Row */}
           <View style={styles.rowFields}>
             <View style={styles.halfField}>
-              <Text style={styles.fieldLabel}>Weights (lbs)</Text>
+              <Text style={styles.fieldLabel}>Weight (lbs)</Text>
               <Input
                 type="number"
                 placeholder="e.g., 25"

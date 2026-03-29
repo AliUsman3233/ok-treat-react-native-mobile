@@ -1,42 +1,49 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useDispatch } from 'react-redux';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
+import { logout } from '../../store/slices/authSlice';
 
 export default function SettingsScreen({ navigation }) {
+  const dispatch = useDispatch();
+
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleMenuPress = (screen) => {
-    if (screen) {
-      navigation.navigate(screen);
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', style: 'destructive', onPress: () => dispatch(logout()) },
+    ]);
+  };
+
+  const handleMenuPress = (item) => {
+    if (item.action) {
+      item.action();
+    } else if (item.screen) {
+      navigation.navigate(item.screen);
     }
   };
 
   const generalSettings = [
-    { title: 'Account Setting', screen: null },
-    { title: 'Notification', screen: 'NotificationSettings' },
-    { title: 'Privacy Choices', screen: null },
-    { title: 'Logout', screen: null },
+    { title: 'Account Setting', screen: 'EditProfileDetails' },
+    { title: 'Notification', screen: 'Notifications' },
+    { title: 'Privacy Choices', screen: 'PrivacyPolicy' },
+    { title: 'Logout', action: handleLogout },
   ];
 
   const aboutSettings = [
-    { title: 'Version', screen: null },
-    { title: 'Update', screen: null },
-    { title: 'Variant', screen: null },
     { title: 'Privacy Policy', screen: 'PrivacyPolicy' },
-    { title: 'Acknowledgement', screen: null },
-    { title: 'Terms of Service', screen: 'TermsOfService' },
-    { title: 'Digital Services Act', screen: null },
   ];
 
   const renderMenuItem = (item, index) => (
     <TouchableOpacity
       key={index}
       style={styles.menuItem}
-      onPress={() => handleMenuPress(item.screen)}
+      onPress={() => handleMenuPress(item)}
       activeOpacity={0.7}
     >
       <Text style={styles.menuText}>{item.title}</Text>

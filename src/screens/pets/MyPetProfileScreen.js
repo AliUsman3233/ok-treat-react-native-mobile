@@ -24,35 +24,6 @@ const dogImage = require('../../assets/images/dog_image.png');
 const coverImage = require('../../assets/images/Pet_default_image.png');
 
 
-// Mock pet data
-const MOCK_PET = {
-  id: 1,
-  name: 'Toto',
-  breed: 'Beagle & Mixed',
-  weight: '25 pounds',
-  age: '9 years & 7 months old',
-  about: "Very active outdoors but relaxed at home. He'll sleep next to you when I'm working from home.",
-  socialization: {
-    dogs: 'Depends if friendly with dogs',
-    cats: 'Unsure if friendly with cats',
-    children: 'Depends if friendly with children\nNot too young kids. Over 6 years are good.',
-    spayedNeutered: true
-  },
-  care: {
-    houseTrained: true,
-    pottyInstructions: 'Potty break will be in the Morning, between 3-5pm before sleep. \n3 times a day. But only need to walk twice.',
-    aloneTime: 'Can be left alone for 4-8 hours',
-    feedingInstructions: true
-  },
-  otherInfo: {
-    microchipped: false
-  },
-  careInstructions: "Please don't let him sleep on the bed. He has his own dog bed, which can stay beside your bed. He feels safe when near you.",
-  veterinary: {
-    name: 'Nobel Paw in New Westminister',
-    address: '815 1st Street #150 New Westminister BC'
-  }
-};
 const { width, height } = Dimensions.get('window');
 
 export default function MyPetProfileScreen({ route, navigation }) {
@@ -388,7 +359,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     </View>
                     <View style={styles.infoRow}>
                       <KidIcon />
-                      <Text style={styles.infoText}>{pet.friendlyWithChildren == "Yes" ? "Friendly With Childrens" : "Not Friendly With Children" || 'Not specified'}</Text>
+                      <Text style={styles.infoText}>{pet.friendlyWithChildren === "Yes" ? "Friendly With Childrens" : "Not Friendly With Children" || 'Not specified'}</Text>
                     </View>
                     <View style={styles.infoRow}>
                       <WomanIcon width={20} height={20} />
@@ -401,7 +372,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     <Text style={styles.sectionTitle}>Care</Text>
                     <View style={styles.infoRow}>
                       <HomeIconNew />
-                      <Text style={styles.infoText}>{pet.houseTrained == "Yes" ? "House Trained" : "Not House Trained" || 'Not specified'}</Text>
+                      <Text style={styles.infoText}>{pet.houseTrained === "Yes" ? "House Trained" : "Not House Trained" || 'Not specified'}</Text>
                     </View>
                     <View style={styles.infoRow}>
                       <PotyIcon width={20} height={20} />
@@ -429,7 +400,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Other Info</Text>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>{pet.microchipped == "Yes" ? "Microchipped" : "Not microchipped" || 'Not microchipped'}</Text>
+                      <Text style={styles.infoText}>{pet.microchipped === "Yes" ? "Microchipped" : "Not microchipped" || 'Not microchipped'}</Text>
                     </View>
                     {pet.adoptionDate && (
                       <View style={styles.infoRow}>
