@@ -26,48 +26,58 @@ const maskPhone = (phone) => {
 };
 
 export default function OTPMethodScreen({ route, navigation }) {
-  const { email, password, fullName, phoneNumber, yearsOfExperience, referralCode } = route.params || {};
+  const { email, password, fullName, phoneNumber, yearsOfExperience, referralCode, userId: existingUserId } = route.params || {};
   const [selectedMethod, setSelectedMethod] = useState('email');
   const [loading, setLoading] = useState(false);
+  const [registeredUserId, setRegisteredUserId] = useState(existingUserId || null);
 
   const handleSendCode = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.REGISTER, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          phone: phoneNumber,
-          fullName,
-          yearsOfExperience,
-          referredByCode: referralCode || undefined,
-          otpMethod: selectedMethod,
-        }),
-      });
+      let data;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+      if (registeredUserId) {
+        // User already registered — just resend OTP
+        const response = await fetch(API_ENDPOINTS.RESEND_OTP, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: phoneNumber,
+            otpMethod: selectedMethod,
+          }),
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to resend code');
+      } else {
+        // First time — register the user
+        const response = await fetch(API_ENDPOINTS.REGISTER, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            phone: phoneNumber,
+            fullName,
+            yearsOfExperience,
+            referredByCode: referralCode || undefined,
+            otpMethod: selectedMethod,
+          }),
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Registration failed');
+        setRegisteredUserId(data.data.userId);
       }
 
-      // Show warning if OTP delivery was pending
       if (data.message?.includes('pending')) {
         Alert.alert('Note', 'OTP delivery may be delayed. Please try resending if you don\'t receive it.');
       }
 
       navigation.navigate('OTPEntry', {
         email,
-        password,
-        fullName,
         phoneNumber,
-        yearsOfExperience,
-        referralCode,
-        userId: data.data.userId,
+        userId: registeredUserId || data.data?.userId,
         otpMethod: selectedMethod,
-        _devOtp: data.data._devOtp || null,
+        _devOtp: data.data?._devOtp || data._devOtp || null,
       });
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to send verification code.');

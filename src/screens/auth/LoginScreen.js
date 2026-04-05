@@ -84,6 +84,18 @@ export default function LoginScreen({ navigation }) {
 
       const data = await response.json();
 
+      // Handle unverified user — redirect to OTP verification
+      if (response.status === 403 && data.needsVerification) {
+        navigation.navigate('OTPEntry', {
+          email: data.data.email,
+          phoneNumber: data.data.phone,
+          userId: data.data.userId,
+          otpMethod: 'email',
+          _devOtp: data.data._devOtp || null,
+        });
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }

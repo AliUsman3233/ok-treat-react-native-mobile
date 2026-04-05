@@ -12,14 +12,15 @@ import {
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import PhoneInput from '../../components/PhoneInput';
 import Dropdown from '../../components/Dropdown';
-import { 
-  BackArrowIcon, 
-  UsersGroupIcon, 
-  MyProfileIcon, 
-  PhoneCallIcon, 
+import {
+  BackArrowIcon,
+  UsersGroupIcon,
+  MyProfileIcon,
+  PhoneCallIcon,
   CalendarIcon,
-  AngleDownIcon 
+  AngleDownIcon
 } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -41,57 +42,31 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const [referralCode, setReferralCode] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [rawPhone, setRawPhone] = useState(''); // Store raw digits
+  const [countryCode, setCountryCode] = useState('+1');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Format phone number as user types: (123) 456-7890
-  const handlePhoneChange = (text) => {
-    // Get the previous raw phone number
-    const prevRaw = rawPhone;
-    
-    // Remove all non-numeric characters from new input
-    const cleaned = text.replace(/\D/g, '');
-    
-    // Store raw digits
-    setRawPhone(cleaned);
-    
-    // Limit to 10 digits
-    const limited = cleaned.substring(0, 10);
-    
-    // Format: (123) 456-7890
-    let formatted = '';
-    if (limited.length > 0) {
-      formatted = '(' + limited.substring(0, 3);
-      if (limited.length >= 3) {
-        formatted += ') ' + limited.substring(3, 6);
-      }
-      if (limited.length >= 6) {
-        formatted += '-' + limited.substring(6, 10);
-      }
-    }
-    
-    setPhoneNumber(formatted);
-  };
-
   const handleContinue = () => {
     // Validate required fields
-    if (!fullName || !rawPhone) {
+    if (!fullName || !phoneNumber) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    if (rawPhone.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+    if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+      Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
+
+    // Combine country code + phone number for full international format
+    const fullPhone = `${countryCode}${phoneNumber}`;
 
     // Navigate to OTP Method selection screen (registration API will be called from there)
     navigation.navigate('OTPMethod', {
       email,
       password,
       fullName,
-      phoneNumber: rawPhone,
+      phoneNumber: fullPhone,
       yearsOfExperience,
       referralCode,
     });
@@ -155,12 +130,12 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
 
         {/* Phone Number Input */}
         <Text style={styles.fieldLabel}>Phone Number <Text style={{ color: '#FF3B30' }}>*</Text></Text>
-        <Input
-          type="phone"
-          placeholder="(123) 456-7890"
+        <PhoneInput
           value={phoneNumber}
-          onChangeText={handlePhoneChange}
-          maxLength={14}
+          onChangePhone={setPhoneNumber}
+          countryCode={countryCode}
+          onChangeCountryCode={setCountryCode}
+          placeholder="Phone number"
           leftIcon={
             <PhoneCallIcon
               width={width * 0.053}

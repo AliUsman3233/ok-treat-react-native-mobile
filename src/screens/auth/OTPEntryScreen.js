@@ -16,21 +16,22 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 
+const CODE_LENGTH = 4;
+
 export default function OTPEntryScreen({ route, navigation }) {
   const { email, phoneNumber, userId, otpMethod = 'email', _devOtp } = route.params || {};
   const dispatch = useDispatch();
 
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(Array(CODE_LENGTH).fill(''));
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [timer, setTimer] = useState(59);
+  const [timer, setTimer] = useState(180); // 3 minutes
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [devCode, setDevCode] = useState(_devOtp || null);
-  const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const inputRefs = Array.from({ length: CODE_LENGTH }, () => useRef(null));
 
   useEffect(() => {
     if (_devOtp) {
-      // Auto-fill OTP when email delivery failed and backend returned it
       const digits = _devOtp.split('');
       setOtp(digits);
     } else {
@@ -50,7 +51,7 @@ export default function OTPEntryScreen({ route, navigation }) {
     const next = [...otp];
     next[index] = value;
     setOtp(next);
-    if (value && index < 3) inputRefs[index + 1].current?.focus();
+    if (value && index < CODE_LENGTH - 1) inputRefs[index + 1].current?.focus();
   };
 
   const handleKeyPress = (e, index) => {
@@ -63,8 +64,8 @@ export default function OTPEntryScreen({ route, navigation }) {
 
   const handleSubmit = async () => {
     const code = otp.join('');
-    if (code.length !== 4) {
-      Alert.alert('Error', 'Please enter the complete 4-digit code');
+    if (code.length !== CODE_LENGTH) {
+      Alert.alert('Error', `Please enter the complete ${CODE_LENGTH}-digit code`);
       return;
     }
 
@@ -75,7 +76,7 @@ export default function OTPEntryScreen({ route, navigation }) {
       const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneNumber, code }),
+        body: JSON.stringify({ phone: phoneNumber, code, otpMethod }),
       });
 
       const data = await response.json();
@@ -106,20 +107,21 @@ export default function OTPEntryScreen({ route, navigation }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to resend');
 
+      const emptyOtp = Array(CODE_LENGTH).fill('');
+
       if (data._devOtp) {
-        // Email delivery failed — auto-fill returned code
         setDevCode(data._devOtp);
         setOtp(data._devOtp.split(''));
-        setTimer(59);
+        setTimer(180);
       } else if (data.message?.includes('pending')) {
         Alert.alert('Note', 'OTP delivery may be delayed. Please wait a moment.');
-        setTimer(59);
-        setOtp(['', '', '', '']);
+        setTimer(180);
+        setOtp(emptyOtp);
         inputRefs[0].current?.focus();
       } else {
         Alert.alert('Sent', 'A new code has been sent.');
-        setTimer(59);
-        setOtp(['', '', '', '']);
+        setTimer(180);
+        setOtp(emptyOtp);
         setDevCode(null);
         inputRefs[0].current?.focus();
       }
@@ -149,13 +151,13 @@ export default function OTPEntryScreen({ route, navigation }) {
 
         <Text style={styles.title}>Enter Verification Code</Text>
         <Text style={styles.subtitle}>
-          We sent a 4-digit code to{'\n'}
+          We sent a {CODE_LENGTH}-digit code to{'\n'}
           <Text style={styles.destination}>{destination || ''}</Text>
         </Text>
 
         {devCode && (
           <View style={styles.devBanner}>
-            <Text style={styles.devBannerText}>Code auto-filled (email delivery unavailable)</Text>
+            <Text style={styles.devBannerText}>Code auto-filled (delivery unavailable)</Text>
           </View>
         )}
 
@@ -188,7 +190,7 @@ export default function OTPEntryScreen({ route, navigation }) {
         <View style={styles.timerRow}>
           {timer > 0 ? (
             <Text style={styles.timerText}>
-              Resend code in <Text style={styles.timerBold}>0:{timer.toString().padStart(2, '0')}</Text>
+              Resend code in <Text style={styles.timerBold}>{Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</Text>
             </Text>
           ) : (
             <TouchableOpacity onPress={handleResend} disabled={resending}>
