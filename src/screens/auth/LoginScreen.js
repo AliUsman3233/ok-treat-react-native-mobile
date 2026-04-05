@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { GoogleIcon, AppleIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
-import { useGoogleAuth, signInWithGoogle } from '../../services/googleAuthService';
+import { signInWithGoogle } from '../../services/googleAuthService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,29 +26,24 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
-  const { request, response, promptAsync } = useGoogleAuth();
 
-  useEffect(() => {
-    const handleGoogleResponse = async () => {
-      if (response?.type === 'success') {
-        const { id_token } = response.params;
-        try {
-          setLoading(true);
-          const result = await signInWithGoogle(id_token);
-          if (result.success) {
-            await AsyncStorage.setItem('authToken', result.data.token);
-            await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
-            dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
-          }
-        } catch (error) {
-          Alert.alert('Error', error.message || 'Google sign-in failed');
-        } finally {
-          setLoading(false);
-        }
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const result = await signInWithGoogle();
+      if (result.success) {
+        await AsyncStorage.setItem('authToken', result.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
+        dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
       }
-    };
-    handleGoogleResponse();
-  }, [response]);
+    } catch (error) {
+      if (error.message !== 'Sign-in cancelled') {
+        Alert.alert('Error', error.message || 'Google sign-in failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -197,9 +192,9 @@ export default function LoginScreen({ navigation }) {
 
         {/* Social Login Buttons */}
         <TouchableOpacity
-          style={[styles.googleButton, (!request || loading) && { opacity: 0.6 }]}
-          onPress={() => promptAsync()}
-          disabled={!request || loading}
+          style={[styles.googleButton, loading && { opacity: 0.6 }]}
+          onPress={handleGoogleSignIn}
+          disabled={loading}
           activeOpacity={0.7}
         >
           <GoogleIcon width={20} height={20} />
