@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchSitters } from '../../store/slices/sitterSlice';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
@@ -15,6 +16,7 @@ import {
   SplashIcon
 } from '../../assets';
 import { getSitterStatus } from '../../services/sitterService';
+import { getData, saveData, STORAGE_KEYS } from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,6 +25,7 @@ export default function HomeScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
 
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [isApprovedSitter, setIsApprovedSitter] = useState(false);
   const [showApprovedModal, setShowApprovedModal] = useState(false);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -32,55 +35,75 @@ export default function HomeScreen({ navigation }) {
     dispatch(fetchSitters());
   }, [dispatch]);
 
-  const handleBecomeASitter = async () => {
-    // Check if user is already verified
-    if (user?.stripeVerified) {
-      // Check sitter status first
-      try {
-        setCheckingStatus(true);
-        const response = await getSitterStatus();
-        console.log('Sitter status response:', response);
-        
-        if (response.data && response.data.hasSitterProfile) {
-          const { sitter } = response.data;
-          
-          if (sitter.approvalStatus === 'APPROVED') {
-            // Show approved modal and navigate to SitterTabs
-            setShowApprovedModal(true);
-          } else if (sitter.approvalStatus === 'REJECTED') {
-            // Show rejected modal with reason
-            setRejectionReason(sitter.rejectionReason || 'Your application was rejected. Please contact support for more details.');
-            setShowRejectedModal(true);
-          } else if (sitter.approvalStatus === 'PENDING') {
-            // Show pending modal
-            setShowPendingModal(true);
+  useFocusEffect(
+    useCallback(() => {
+      const checkSitter = async () => {
+        try {
+          const response = await getSitterStatus();
+          if (response.data?.hasSitterProfile && response.data.sitter?.approvalStatus === 'APPROVED') {
+            setIsApprovedSitter(true);
+          } else {
+            setIsApprovedSitter(false);
           }
-        } else {
-          // No sitter profile, navigate to ProfileSetup
-          navigation.navigate('ProfileSetup');
+        } catch {
+          setIsApprovedSitter(false);
         }
-      } catch (error) {
-        console.error('Failed to check sitter status:', error);
-        
-        // Check if it's a token error - if so, don't navigate (interceptor will handle it)
-        if (error.response?.status === 401 || error.response?.data?.message === 'Token expired') {
-          // Token expired, interceptor will show alert and navigate to login
-          return;
+      };
+      checkSitter();
+    }, [])
+  );
+
+  const handleBecomeASitter = async () => {
+    try {
+      setCheckingStatus(true);
+
+      // Always check sitter status from API first
+      const response = await getSitterStatus();
+
+      if (response.data && response.data.hasSitterProfile) {
+        const { sitter } = response.data;
+
+        if (sitter.approvalStatus === 'APPROVED') {
+          const alreadySeen = await getData(STORAGE_KEYS.SITTER_APPROVAL_SEEN);
+          if (alreadySeen) {
+            navigation.navigate('SitterTabs');
+          } else {
+            setShowApprovedModal(true);
+          }
+        } else if (sitter.approvalStatus === 'REJECTED') {
+          setRejectionReason(sitter.rejectionReason || 'Your application was rejected. Please contact support for more details.');
+          setShowRejectedModal(true);
+        } else if (sitter.approvalStatus === 'PENDING') {
+          setShowPendingModal(true);
         }
-        
-        // For other errors, navigate to ProfileSetup
+      } else if (user?.stripeVerified) {
+        // Verified but no sitter profile — go to profile setup
         navigation.navigate('ProfileSetup');
-      } finally {
-        setCheckingStatus(false);
+      } else {
+        // Not verified — go to intro/verification
+        navigation.navigate('BecomeASitterIntro');
       }
-    } else {
-      // Navigate to intro screen
-      navigation.navigate('BecomeASitterIntro');
+    } catch (error) {
+      console.error('Failed to check sitter status:', error);
+
+      if (error.response?.status === 401 || error.response?.data?.message === 'Token expired') {
+        return;
+      }
+
+      // Fallback: check stripeVerified to decide where to go
+      if (user?.stripeVerified) {
+        navigation.navigate('ProfileSetup');
+      } else {
+        navigation.navigate('BecomeASitterIntro');
+      }
+    } finally {
+      setCheckingStatus(false);
     }
   };
 
-  const handleApprovedModalNext = () => {
+  const handleApprovedModalNext = async () => {
     setShowApprovedModal(false);
+    await saveData(STORAGE_KEYS.SITTER_APPROVAL_SEEN, true);
     navigation.navigate('SitterTabs');
   };
 
@@ -183,24 +206,26 @@ export default function HomeScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.actionCard, styles.halfCard]}
-              onPress={handleBecomeASitter}
-              disabled={checkingStatus}
-            >
-              <View style={styles.cardContent}>
-                {checkingStatus ? (
-                  <ActivityIndicator size="small" color="#32A6D8" />
-                ) : (
-                  <>
-                    <View style={styles.iconWrapper}>
-                      <Icon name="paw-outline" size={36} color="#32A6D8" />
-                    </View>
-                    <Text style={styles.actionLabel}>Become a Pet Sitter</Text>
-                  </>
-                )}
-              </View>
-            </TouchableOpacity>
+            {!isApprovedSitter && (
+              <TouchableOpacity
+                style={[styles.actionCard, styles.halfCard]}
+                onPress={handleBecomeASitter}
+                disabled={checkingStatus}
+              >
+                <View style={styles.cardContent}>
+                  {checkingStatus ? (
+                    <ActivityIndicator size="small" color="#32A6D8" />
+                  ) : (
+                    <>
+                      <View style={styles.iconWrapper}>
+                        <Icon name="paw-outline" size={36} color="#32A6D8" />
+                      </View>
+                      <Text style={styles.actionLabel}>Become a Pet Sitter</Text>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -321,7 +346,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   halfCard: {
-    flex: 1,
+    flex: 0,
+    width: (width - 48 - 12) / 2,
   },
   cardContent: {
     flex: 1,

@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setCredentials } from '../../../store/slices/authSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CardField, useConfirmSetupIntent } from '@stripe/stripe-react-native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import Button from '../../../components/Button';
@@ -13,7 +15,8 @@ const HORIZONTAL_PADDING = 24;
 const CONTENT_WIDTH = width - (HORIZONTAL_PADDING * 2);
 
 export default function VerifyIdentityScreen({ navigation }) {
-  const { user } = useSelector(state => state.auth);
+  const { user, token } = useSelector(state => state.auth);
+  const dispatch = useDispatch();
   const { confirmSetupIntent } = useConfirmSetupIntent();
   const [step, setStep] = useState('intro');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -51,6 +54,11 @@ export default function VerifyIdentityScreen({ navigation }) {
       });
 
       if (verifyResponse.data.success) {
+        // Update Redux state so HomeScreen knows user is verified
+        const updatedUser = { ...user, stripeVerified: true };
+        dispatch(setCredentials({ user: updatedUser, token }));
+        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+
         setStep('intro');
         setShowSuccessModal(true);
       } else {

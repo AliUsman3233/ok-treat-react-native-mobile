@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   ONBOARDING_COMPLETED: '@oktreat_onboarding_completed',
   USER_TOKEN: '@oktreat_user_token',
   USER_DATA: '@oktreat_user_data',
+  SITTER_APPROVAL_SEEN: '@oktreat_sitter_approval_seen',
 };
 
 /**

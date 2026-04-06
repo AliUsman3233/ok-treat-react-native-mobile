@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import api from '../../config/api';
+import { getData, saveData, STORAGE_KEYS } from '../../utils/storage';
 import {
   UserCircleIcon,
   PawIcon,
@@ -17,8 +19,12 @@ import {
 export default function MoreScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
   const [isSitterMode, setIsSitterMode] = useState(false);
-  const [sitterStatus, setSitterStatus] = useState(null); // null | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [sitterStatus, setSitterStatus] = useState(null);
   const [hasSitterProfile, setHasSitterProfile] = useState(false);
+  const [showApprovedModal, setShowApprovedModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Check sitter status on every screen focus
   useFocusEffect(
@@ -46,24 +52,43 @@ export default function MoreScreen({ navigation }) {
     }, [])
   );
 
-  const handleSitterModeToggle = (value) => {
+  const handleSitterModeToggle = async (value) => {
     if (value) {
       if (sitterStatus === 'APPROVED') {
-        // Approved sitter — switch to sitter home
-        setIsSitterMode(true);
-        navigation.navigate('SitterHome');
+        const alreadySeen = await getData(STORAGE_KEYS.SITTER_APPROVAL_SEEN);
+        if (alreadySeen) {
+          setIsSitterMode(true);
+          navigation.navigate('SitterTabs');
+        } else {
+          setShowApprovedModal(true);
+        }
       } else if (sitterStatus === 'PENDING') {
-        Alert.alert('Application Pending', 'Your sitter application is under review. You\'ll be notified once approved.');
+        setShowPendingModal(true);
       } else if (sitterStatus === 'REJECTED') {
-        Alert.alert('Application Rejected', 'Your sitter application was not approved. Please contact support for details.');
+        setRejectionReason('Your sitter application was not approved. Please contact support for details.');
+        setShowRejectedModal(true);
       } else {
-        // No sitter profile — start the flow
         navigation.navigate('BecomeASitterIntro');
       }
     } else {
-      // Turning off sitter mode
       setIsSitterMode(false);
     }
+  };
+
+  const handleApprovedModalNext = async () => {
+    setShowApprovedModal(false);
+    await saveData(STORAGE_KEYS.SITTER_APPROVAL_SEEN, true);
+    setIsSitterMode(true);
+    navigation.navigate('SitterTabs');
+  };
+
+  const handlePendingModalNext = () => {
+    setShowPendingModal(false);
+  };
+
+  const handleRejectedModalNext = () => {
+    setShowRejectedModal(false);
+    navigation.navigate('ProfileSetup');
   };
 
   const menuItems = [
@@ -199,6 +224,36 @@ export default function MoreScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Approved Modal */}
+      <ProfileVerifiedModal
+        visible={showApprovedModal}
+        onNext={handleApprovedModalNext}
+        title="Application Approved!"
+        description="Congratulations! Your sitter application has been approved. You can now start accepting bookings!"
+        buttonText="Go to Dashboard"
+        iconType="success"
+      />
+
+      {/* Rejected Modal */}
+      <ProfileVerifiedModal
+        visible={showRejectedModal}
+        onNext={handleRejectedModalNext}
+        title="Application Rejected"
+        description={rejectionReason}
+        buttonText="Update Profile"
+        iconType="error"
+      />
+
+      {/* Pending Modal */}
+      <ProfileVerifiedModal
+        visible={showPendingModal}
+        onNext={handlePendingModalNext}
+        title="Application Pending"
+        description="Your sitter application is currently under review. We'll notify you once it's been processed."
+        buttonText="OK"
+        iconType="pending"
+      />
     </ScreenWrapper>
   );
 }

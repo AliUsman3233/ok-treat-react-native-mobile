@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Platform, Modal, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { BackArrowIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { getPetByQRCode } from '../../services/petService';
@@ -31,7 +32,6 @@ const WebQRScanner = ({ onScan, scanning }) => {
 
     const startCamera = async () => {
       try {
-        // Request camera access
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
         });
@@ -39,11 +39,7 @@ const WebQRScanner = ({ onScan, scanning }) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          
-          // Start scanning after video is ready
-          setTimeout(() => {
-            scanQRCode();
-          }, 500);
+          setTimeout(() => scanQRCode(), 500);
         }
       } catch (err) {
         console.error('Camera access error:', err);
@@ -52,9 +48,7 @@ const WebQRScanner = ({ onScan, scanning }) => {
     };
 
     const scanQRCode = () => {
-      if (!scanning || !jsQR) {
-        return;
-      }
+      if (!scanning || !jsQR) return;
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -63,41 +57,32 @@ const WebQRScanner = ({ onScan, scanning }) => {
         const context = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
+
         if (canvas.width > 0 && canvas.height > 0) {
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          
-          // Try to detect QR code
+
           const code = jsQR(imageData.data, imageData.width, imageData.height, {
             inversionAttempts: 'dontInvert',
           });
-          
+
           if (code && code.data) {
-            console.log('QR Code detected:', code.data);
             onScan({ type: 'QR_CODE', data: code.data });
             return;
           }
         }
       }
 
-      // Continue scanning
       if (scanning) {
         scanIntervalRef.current = requestAnimationFrame(scanQRCode);
       }
     };
 
-    if (isWeb) {
-      startCamera();
-    }
+    if (isWeb) startCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (scanIntervalRef.current) {
-        cancelAnimationFrame(scanIntervalRef.current);
-      }
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (scanIntervalRef.current) cancelAnimationFrame(scanIntervalRef.current);
     };
   }, [scanning, onScan]);
 
@@ -113,11 +98,7 @@ const WebQRScanner = ({ onScan, scanning }) => {
     <View style={styles.webVideoContainer}>
       <video
         ref={videoRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         playsInline
         muted
         autoPlay
@@ -135,15 +116,24 @@ export default function PetQRScanScreen({ navigation, route }) {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const processingRef = useRef(false); // Prevent double-scan race condition
   const { fromScreen } = route.params || {};
 
-  useEffect(() => {
-    // On web, we'll handle permissions through getUserMedia
-    if (isWeb) {
-      return;
-    }
+  // Reset scanner when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setScanned(false);
+      setScanning(true);
+      processingRef.current = false;
+      return () => {
+        // Cleanup when screen loses focus
+        setScanning(false);
+      };
+    }, [])
+  );
 
-    // Request permission if not already granted
+  useEffect(() => {
+    if (isWeb) return;
     if (!permission?.granted) {
       requestPermission();
     }
@@ -151,7 +141,6 @@ export default function PetQRScanScreen({ navigation, route }) {
 
   useEffect(() => {
     if (scanning) {
-      // Animate scanning line up and down
       Animated.loop(
         Animated.sequence([
           Animated.timing(scanLineAnim, {
@@ -166,17 +155,60 @@ export default function PetQRScanScreen({ navigation, route }) {
           }),
         ])
       ).start();
+    } else {
+      scanLineAnim.stopAnimation();
     }
   }, [scanning, scanLineAnim]);
 
+  // Get location with a timeout so it doesn't hang
+  const getLocationSafe = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return {};
+
+      // Race between location fetch and a 5-second timeout
+      const locationPromise = Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Location timeout')), 5000)
+      );
+
+      const location = await Promise.race([locationPromise, timeoutPromise]);
+
+      let addressData = {};
+      try {
+        const address = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        addressData = {
+          address: address[0]?.street || address[0]?.name || '',
+          city: address[0]?.city || '',
+          country: address[0]?.country || '',
+        };
+      } catch (_) {}
+
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        ...addressData,
+      };
+    } catch (error) {
+      console.log('Location unavailable:', error.message);
+      return {};
+    }
+  };
+
   const handleBarCodeScanned = async ({ type, data }) => {
-    if (scanned) return;
-    
+    // Prevent double processing
+    if (processingRef.current) return;
+    processingRef.current = true;
+
     setScanned(true);
     setScanning(false);
-    console.log(`QR code scanned! Type: ${type}, Data: ${data}`);
-    
-    // Extract QR code from URL format: https://gondal.com/qr?qr-code=3356525125
+
+    // Extract QR code from URL format or use raw data
     let qrCode = data;
     try {
       const url = new URL(data);
@@ -184,62 +216,32 @@ export default function PetQRScanScreen({ navigation, route }) {
       if (qrCodeParam) {
         qrCode = qrCodeParam;
       }
-    } catch (error) {
-      // If it's not a valid URL, use the data as is
-      console.log('Not a URL format, using raw data:', data);
+    } catch (_) {
+      // Not a URL, use raw data
     }
-    
-    // Get current location
-    let locationData = {};
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        const address = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        
-        locationData = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          address: address[0]?.street || address[0]?.name || '',
-          city: address[0]?.city || '',
-          country: address[0]?.country || '',
-        };
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-    }
-    
-    // Check if we're coming from HomeScreen (to view pet details) or from AddPet (to link QR)
+
+    // Get location (non-blocking with timeout)
+    const locationData = await getLocationSafe();
+
     if (fromScreen === 'Home') {
       // Fetch pet data and navigate to PetDetailScreen
       setLoading(true);
       try {
         const response = await getPetByQRCode(qrCode);
-        
-        // Record the scan
-        try {
-          await createScan({
-            qrCode,
-            ...locationData,
-          });
-        } catch (scanError) {
-          console.error('Error recording scan:', scanError);
-          // Don't block the flow if scan recording fails
-        }
-        
+
+        // Record the scan in background
+        createScan({ qrCode, ...locationData }).catch(err =>
+          console.log('Scan record failed:', err.message)
+        );
+
         setLoading(false);
-        
+
         if (response.data && response.data.pet) {
-          // Navigate to PetDetailScreen with pet data
-          navigation.navigate('PetDetail', { 
+          navigation.replace('PetDetail', {
             petData: response.data.pet,
-            qrCode: qrCode 
+            qrCode: qrCode,
           });
         } else {
-          // No pet found
           setErrorMessage('No pet is linked with this QR code. Please check and try again.');
           setShowErrorModal(true);
         }
@@ -252,7 +254,7 @@ export default function PetQRScanScreen({ navigation, route }) {
     } else {
       // Original behavior: navigate back with QR code for AddPet flow
       const returnScreen = navigation.getState()?.routes?.find(r => r.name === 'PetQRScan')?.params?.returnScreen;
-      
+
       setTimeout(() => {
         if (returnScreen) {
           navigation.navigate(returnScreen, { qrCode });
@@ -267,6 +269,7 @@ export default function PetQRScanScreen({ navigation, route }) {
     setShowErrorModal(false);
     setScanned(false);
     setScanning(true);
+    processingRef.current = false;
   };
 
   const handleCannotScan = () => {
@@ -288,6 +291,7 @@ export default function PetQRScanScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
         <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#32A6D8" />
           <Text style={styles.permissionText}>Requesting camera permission...</Text>
         </View>
       </View>
@@ -306,6 +310,10 @@ export default function PetQRScanScreen({ navigation, route }) {
         </View>
         <View style={styles.centerContent}>
           <Text style={styles.permissionText}>No access to camera</Text>
+          <Text style={styles.permissionSubtext}>Please enable camera permission in your device settings</Text>
+          <TouchableOpacity style={styles.retryPermBtn} onPress={requestPermission}>
+            <Text style={styles.retryPermBtnText}>Grant Permission</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.manualButton} onPress={handleCannotScan}>
             <Text style={styles.manualButtonText}>Enter code manually</Text>
           </TouchableOpacity>
@@ -316,7 +324,7 @@ export default function PetQRScanScreen({ navigation, route }) {
 
   const scanLineTranslateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-140, 140], // Move from top to bottom of scanner area
+    outputRange: [-140, 140],
   });
 
   return (
@@ -347,18 +355,15 @@ export default function PetQRScanScreen({ navigation, route }) {
               }}
             />
           )}
-          
+
           {/* Scanner Frame Overlay */}
           <View style={styles.scannerFrame}>
-            {/* Scanning Line */}
             {scanning && (
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.scanningLine,
-                  {
-                    transform: [{ translateY: scanLineTranslateY }]
-                  }
-                ]} 
+                  { transform: [{ translateY: scanLineTranslateY }] }
+                ]}
               />
             )}
           </View>
@@ -372,7 +377,7 @@ export default function PetQRScanScreen({ navigation, route }) {
           style={styles.statusContainer}
         >
           <Text style={styles.statusText}>
-            {scanning ? 'Scanning...' : 'Scanned!'}
+            {loading ? 'Processing...' : scanning ? 'Scanning...' : 'Scanned!'}
           </Text>
         </LinearGradient>
       </View>
@@ -529,6 +534,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    gap: 12,
   },
   permissionText: {
     fontSize: 16,
@@ -536,7 +542,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#090E12',
     textAlign: 'center',
-    marginBottom: 20,
+  },
+  permissionSubtext: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryPermBtn: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#32A6D8',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  retryPermBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   errorContainer: {
     width: '100%',
@@ -554,14 +579,14 @@ const styles = StyleSheet.create({
   },
   manualButton: {
     width: '100%',
-    height: 56,
-    backgroundColor: '#32A6D8',
-    borderRadius: 16,
+    height: 50,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   manualButtonText: {
-    color: '#FFFFFF',
+    color: '#32A6D8',
     fontSize: 16,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',

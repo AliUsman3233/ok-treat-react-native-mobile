@@ -34,7 +34,12 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCKC_xOrCxAmFIdYpDVTYMDi9CYp_DE5rs"
+        }
+      }
     },
     "web": {},
     "plugins": [

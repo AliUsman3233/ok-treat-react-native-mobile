@@ -64,7 +64,6 @@ import ScanMapDetailScreen from '../screens/scans/ScanMapDetailScreen';
 
 import BecomeASitterIntroScreen from '../screens/sitter/intro/BecomeASitterIntroScreen';
 import VerifyIdentityScreen from '../screens/sitter/registration/VerifyIdentityScreen';
-import StripeVerificationScreen from '../screens/sitter/registration/StripeVerificationScreen';
 
 // Sitter Home Screens
 import SitterHomeScreen from '../screens/sitter/home/SitterHomeScreen';
@@ -410,7 +409,6 @@ export default function MainNavigator() {
       <RootStack.Screen name="Settings" component={SettingsScreen} />
       <RootStack.Screen name="BecomeASitterIntro" component={BecomeASitterIntroScreen} />
       <RootStack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
-      <RootStack.Screen name="StripeVerification" component={StripeVerificationScreen} />
 
       {/* Sitter Additional Screens (not in tabs) */}
       <RootStack.Screen name="SitterEarnings" component={SitterEarningsScreen} />

@@ -474,12 +474,12 @@ export default function LocationPickerScreen({ navigation, route }) {
               {/* 30km radius circle */}
               <Circle
                 center={markerPosition}
-                radius={RADIUS_KM * 1000} // Convert km to meters
+                radius={RADIUS_KM * 1000}
                 fillColor="rgba(50, 166, 216, 0.1)"
                 strokeColor="rgba(50, 166, 216, 0.5)"
                 strokeWidth={2}
               />
-              
+
               {/* Selected location marker */}
               <Marker coordinate={markerPosition}>
                 <LocationPinIcon width={30} height={30} fill="#FF0000" />
@@ -489,19 +489,18 @@ export default function LocationPickerScreen({ navigation, route }) {
 
           {nearbySitters.map((sitter) => {
             const isSelected = selectedSitter?.id === sitter.id;
-            
-            // Determine marker color based on approval status
+
             let markerColor;
             if (sitter.approvalStatus === 'REJECTED') {
-              markerColor = isSelected ? "#FF0000" : "#FF6B6B"; // Red for rejected
+              markerColor = isSelected ? "#FF0000" : "#FF6B6B";
             } else if (sitter.approvalStatus === 'PENDING') {
-              markerColor = isSelected ? "#FFA500" : "#FFB84D"; // Orange for pending
+              markerColor = isSelected ? "#FFA500" : "#FFB84D";
             } else if (sitter.approvalStatus === 'APPROVED') {
-              markerColor = isSelected ? "#32A6D8" : "#FFC2EB"; // Blue/Pink for approved
+              markerColor = isSelected ? "#32A6D8" : "#FFC2EB";
             } else {
-              markerColor = isSelected ? "#808080" : "#B0B0B0"; // Gray for others
+              markerColor = isSelected ? "#808080" : "#B0B0B0";
             }
-            
+
             return (
               <Marker
                 key={`${sitter.id}-${markerKey}`}
@@ -752,6 +751,31 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapFallback: {
+    backgroundColor: '#F6F8FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  mapFallbackIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  mapFallbackTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    color: '#191919',
+    marginBottom: 8,
+  },
+  mapFallbackText: {
+    fontSize: 14,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
+    color: '#8A8A8A',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   sitterCardContainer: {
     position: 'absolute',

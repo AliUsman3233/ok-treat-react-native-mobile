@@ -94,16 +94,17 @@ export default function PetCareInfoScreen({ navigation }) {
       const response = await upsertBuildTrustSection('PET_CARE_INFO', settings, true);
 
       if (response.success) {
-        // Navigate to next step (YourPets)
-        navigation.navigate('YourPets');
+        setIsSaving(false);
+        // Navigate back to ProfileSetup with completion flag
+        navigation.navigate('ProfileSetup', { completedSection: 'petCareInfo' });
       } else {
+        setIsSaving(false);
         Alert.alert('Error', 'Failed to save pet care info. Please try again.');
       }
     } catch (error) {
+      setIsSaving(false);
       console.error('Error saving pet care info:', error);
       Alert.alert('Error', 'Failed to save pet care info. Please try again.');
-    } finally {
-      setIsSaving(false);
     }
   };
 
