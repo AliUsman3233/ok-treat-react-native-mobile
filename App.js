@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
+import { AlertProvider } from './src/context/AlertContext';
 
 // Set up notification handler at top level (outside component)
 Notifications.setNotificationHandler({
@@ -96,7 +97,9 @@ export default function App() {
               setNavigationRef(navigationRef.current);
             }}
           >
-            <RootNavigator />
+            <AlertProvider>
+              <RootNavigator />
+            </AlertProvider>
             <StatusBar style="auto" />
           </NavigationContainer>
 

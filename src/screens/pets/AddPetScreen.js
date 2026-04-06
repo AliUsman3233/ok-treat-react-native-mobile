@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CheckCircleIcon } from '../../assets';
@@ -12,6 +13,7 @@ import { createPet } from '../../services/petService';
 const { width } = Dimensions.get('window');
 
 export default function AddPetScreen({ navigation, route }) {
+  const alert = useAppAlert();
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -122,28 +124,30 @@ export default function AddPetScreen({ navigation, route }) {
 
       // Validate required fields
       if (!formData.name || !formData.petType) {
-        Alert.alert('Validation Error', 'Please provide at least a pet name and type');
+        alert('Validation Error', 'Please provide at least a pet name and type', 'pending');
         setLoading(false);
         return;
       }
 
       // Call API to create pet
       const response = await createPet(formData);
-      
+
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error adding pet:', error);
-      
+
       // Check if it's an authentication error
       if (error.status === 'error' && error.message === 'No token provided') {
-        Alert.alert(
+        alert(
           'Authentication Required',
-          'Please log in to add a pet.'
+          'Please log in to add a pet.',
+          'error'
         );
       } else {
-        Alert.alert(
+        alert(
           'Error',
-          error.message || 'Failed to add pet. Please try again.'
+          error.message || 'Failed to add pet. Please try again.',
+          'error'
         );
       }
     } finally {

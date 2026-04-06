@@ -7,7 +7,7 @@ import ProfileVerifiedModal from '../../../components/ProfileVerifiedModal';
 import { BackArrowIcon, AngleDownIcon, BuildingsIcon, SunIcon, ProgressTickIcon, CalendarIconBlue, PawHoloIcon, BriefcaseIcon } from '../../../assets';
 import { getServiceSetups } from '../../../services/serviceSetupService';
 import { getBuildTrustStatus } from '../../../services/buildTrustService';
-import { submitSitterApplication } from '../../../services/sitterService';
+import { submitSitterApplication, getSitterStatus } from '../../../services/sitterService';
 
 export default function ProfileSetupScreen({ navigation, route }) {
   const [expandedSections, setExpandedSections] = useState({
@@ -38,6 +38,7 @@ export default function ProfileSetupScreen({ navigation, route }) {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isApprovedSitter, setIsApprovedSitter] = useState(false);
 
   // Check if all sections are completed
   const allServicesCompleted = Object.values(completedServices).every(status => status === true);
@@ -51,13 +52,27 @@ export default function ProfileSetupScreen({ navigation, route }) {
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Fetch service setup statuses when screen comes into focus
+  // Fetch service setup statuses and sitter status when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchServiceStatuses();
       fetchBuildTrustStatuses();
+      checkApprovalStatus();
     }, [])
   );
+
+  const checkApprovalStatus = async () => {
+    try {
+      const response = await getSitterStatus();
+      if (response.data?.hasSitterProfile && response.data.sitter?.approvalStatus === 'APPROVED') {
+        setIsApprovedSitter(true);
+      } else {
+        setIsApprovedSitter(false);
+      }
+    } catch {
+      setIsApprovedSitter(false);
+    }
+  };
 
   // Check if returning from a service setup screen
   useEffect(() => {
@@ -471,17 +486,19 @@ export default function ProfileSetupScreen({ navigation, route }) {
           </View>
         </ScrollView>
 
-        {/* Submit Button */}
-        <View style={styles.bottomButtonContainer}>
-          <Button
-            title={isSubmitting ? "Submitting..." : "Submit"}
-            onPress={handleSubmit}
-            type="secondary"
-            size="medium"
-            fullWidth
-            disabled={!allSectionsCompleted || isSubmitting}
-          />
-        </View>
+        {/* Submit Button - only show for new applicants */}
+        {!isApprovedSitter && (
+          <View style={styles.bottomButtonContainer}>
+            <Button
+              title={isSubmitting ? "Submitting..." : "Submit"}
+              onPress={handleSubmit}
+              type="secondary"
+              size="medium"
+              fullWidth
+              disabled={!allSectionsCompleted || isSubmitting}
+            />
+          </View>
+        )}
 
         {/* Success Modal */}
         <ProfileVerifiedModal

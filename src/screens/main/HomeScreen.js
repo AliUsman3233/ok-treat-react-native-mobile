@@ -167,7 +167,7 @@ export default function HomeScreen({ navigation }) {
 
           {/* Row 2 */}
           <View style={styles.row}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Bookings')}
             >
@@ -179,7 +179,22 @@ export default function HomeScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('OpenRequests')}
+            >
+              <View style={styles.cardContent}>
+                <View style={styles.iconWrapper}>
+                  <Icon name="send-outline" size={36} color="#32A6D8" />
+                </View>
+                <Text style={styles.actionLabel}>My Requests</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 3 */}
+          <View style={styles.row}>
+            <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Notifications')}
             >
@@ -190,12 +205,9 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.actionLabel}>Notifications</Text>
               </View>
             </TouchableOpacity>
-          </View>
 
-          {/* Row 3 */}
-          <View style={styles.row}>
-            <TouchableOpacity 
-              style={[styles.actionCard, styles.halfCard]}
+            <TouchableOpacity
+              style={styles.actionCard}
               onPress={() => navigation.navigate('ChatList')}
             >
               <View style={styles.cardContent}>
@@ -205,8 +217,11 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.actionLabel}>Inbox</Text>
               </View>
             </TouchableOpacity>
+          </View>
 
-            {!isApprovedSitter && (
+          {/* Row 4 - Become a Sitter */}
+          {!isApprovedSitter && (
+            <View style={styles.row}>
               <TouchableOpacity
                 style={[styles.actionCard, styles.halfCard]}
                 onPress={handleBecomeASitter}
@@ -225,8 +240,8 @@ export default function HomeScreen({ navigation }) {
                   )}
                 </View>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Approved Modal */}

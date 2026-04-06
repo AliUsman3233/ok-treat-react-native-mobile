@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Dimensions,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
@@ -22,6 +22,7 @@ import { signInWithGoogle } from '../../services/googleAuthService';
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
+  const alert = useAppAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (error) {
       if (error.message !== 'Sign-in cancelled') {
-        Alert.alert('Error', error.message || 'Google sign-in failed');
+        alert('Error', error.message || 'Google sign-in failed', 'error');
       }
     } finally {
       setLoading(false);
@@ -47,18 +48,18 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      alert('Error', 'Please fill in all fields', 'error');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      alert('Error', 'Please enter a valid email address', 'error');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      alert('Error', 'Password must be at least 6 characters', 'error');
       return;
     }
 
@@ -109,7 +110,7 @@ export default function LoginScreen({ navigation }) {
 
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', error.message || 'Invalid email or password');
+      alert('Login Failed', error.message || 'Invalid email or password', 'error');
     } finally {
       setLoading(false);
     }
@@ -203,7 +204,7 @@ export default function LoginScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.appleButton}
-          onPress={() => Alert.alert('Coming Soon', 'Apple Sign-In is under development.')}
+          onPress={() => alert('Coming Soon', 'Apple Sign-In is under development.', 'pending')}
           activeOpacity={0.7}
         >
           <AppleIcon width={20} height={20} fill="#FFFFFF" />

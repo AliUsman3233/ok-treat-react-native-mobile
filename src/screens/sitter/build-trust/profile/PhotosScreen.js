@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -11,6 +12,7 @@ import { CLOUDINARY_FOLDERS } from '../../../../config/cloudinary';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 
 export default function PhotosScreen({ navigation }) {
+  const alert = useAppAlert();
   const [petPhotos, setPetPhotos] = useState([]);
   const [coverPhoto, setCoverPhoto] = useState('');
   const [uploadingPet, setUploadingPet] = useState(false);
@@ -50,10 +52,10 @@ export default function PhotosScreen({ navigation }) {
       // Add to pet photos array
       setPetPhotos([...petPhotos, photoUrl]);
       
-      Alert.alert('Success', 'Photo uploaded successfully!');
+      alert('Success', 'Photo uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploadingPet(false);
     }
@@ -70,10 +72,10 @@ export default function PhotosScreen({ navigation }) {
       // Set cover photo
       setCoverPhoto(photoUrl);
       
-      Alert.alert('Success', 'Cover photo uploaded successfully!');
+      alert('Success', 'Cover photo uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploadingCover(false);
     }
@@ -94,7 +96,7 @@ export default function PhotosScreen({ navigation }) {
       
       // Validate at least one pet photo
       if (petPhotos.length === 0) {
-        Alert.alert('Required', 'Please add at least one photo with pets');
+        alert('Required', 'Please add at least one photo with pets', 'pending');
         return;
       }
       
@@ -111,11 +113,11 @@ export default function PhotosScreen({ navigation }) {
         // Navigate to next screen (PetCareInfo)
         navigation.navigate('PetCareInfo');
       } else {
-        Alert.alert('Error', 'Failed to save photos. Please try again.');
+        alert('Error', 'Failed to save photos. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving photos:', error);
-      Alert.alert('Error', 'Failed to save photos. Please try again.');
+      alert('Error', 'Failed to save photos. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }

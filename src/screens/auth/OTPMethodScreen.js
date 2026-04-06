@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { useAppAlert } from '../../context/AlertContext';
 import { BackArrowIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -26,6 +26,7 @@ const maskPhone = (phone) => {
 };
 
 export default function OTPMethodScreen({ route, navigation }) {
+  const alert = useAppAlert();
   const { email, password, fullName, phoneNumber, yearsOfExperience, referralCode, userId: existingUserId } = route.params || {};
   const [selectedMethod, setSelectedMethod] = useState('email');
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ export default function OTPMethodScreen({ route, navigation }) {
       }
 
       if (data.message?.includes('pending')) {
-        Alert.alert('Note', 'OTP delivery may be delayed. Please try resending if you don\'t receive it.');
+        alert('Note', 'OTP delivery may be delayed. Please try resending if you don\'t receive it.', 'pending');
       }
 
       navigation.navigate('OTPEntry', {
@@ -80,7 +81,7 @@ export default function OTPMethodScreen({ route, navigation }) {
         _devOtp: data.data?._devOtp || data._devOtp || null,
       });
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to send verification code.');
+      alert('Error', error.message || 'Failed to send verification code.', 'error');
     } finally {
       setLoading(false);
     }

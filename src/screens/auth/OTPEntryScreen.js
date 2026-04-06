@@ -5,10 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
@@ -19,6 +19,7 @@ import { API_ENDPOINTS } from '../../config/api';
 const CODE_LENGTH = 4;
 
 export default function OTPEntryScreen({ route, navigation }) {
+  const alert = useAppAlert();
   const { email, phoneNumber, userId, otpMethod = 'email', _devOtp } = route.params || {};
   const dispatch = useDispatch();
 
@@ -65,7 +66,7 @@ export default function OTPEntryScreen({ route, navigation }) {
   const handleSubmit = async () => {
     const code = otp.join('');
     if (code.length !== CODE_LENGTH) {
-      Alert.alert('Error', `Please enter the complete ${CODE_LENGTH}-digit code`);
+      alert('Error', `Please enter the complete ${CODE_LENGTH}-digit code`, 'error');
       return;
     }
 
@@ -87,7 +88,7 @@ export default function OTPEntryScreen({ route, navigation }) {
 
       dispatch(setCredentials({ user: data.data.user, token: data.data.token }));
     } catch (error) {
-      Alert.alert('Verification Failed', error.message || 'Invalid code. Please try again.');
+      alert('Verification Failed', error.message || 'Invalid code. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -114,19 +115,19 @@ export default function OTPEntryScreen({ route, navigation }) {
         setOtp(data._devOtp.split(''));
         setTimer(180);
       } else if (data.message?.includes('pending')) {
-        Alert.alert('Note', 'OTP delivery may be delayed. Please wait a moment.');
+        alert('Note', 'OTP delivery may be delayed. Please wait a moment.', 'pending');
         setTimer(180);
         setOtp(emptyOtp);
         inputRefs[0].current?.focus();
       } else {
-        Alert.alert('Sent', 'A new code has been sent.');
+        alert('Sent', 'A new code has been sent.', 'success');
         setTimer(180);
         setOtp(emptyOtp);
         setDevCode(null);
         inputRefs[0].current?.focus();
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to resend code');
+      alert('Error', error.message || 'Failed to resend code', 'error');
     } finally {
       setResending(false);
     }

@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -8,6 +9,7 @@ import { BackArrowIcon, PhoneCallIcon, UserCircleIcon } from '../../../../assets
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 
 export default function PhoneNumbersScreen({ navigation }) {
+  const alert = useAppAlert();
   // Primary phone
   const [primaryPart1, setPrimaryPart1] = useState('');
   const [primaryPart2, setPrimaryPart2] = useState('');
@@ -185,18 +187,18 @@ export default function PhoneNumbersScreen({ navigation }) {
       
       // Validate primary phone
       if (!primaryPart1 || !primaryPart2 || !primaryPart3 || !primaryPart4) {
-        Alert.alert('Required', 'Please enter your primary phone number');
+        alert('Required', 'Please enter your primary phone number', 'pending');
         return;
       }
-      
+
       // Validate emergency contact
       if (!emergencyName) {
-        Alert.alert('Required', 'Please enter emergency contact name');
+        alert('Required', 'Please enter emergency contact name', 'pending');
         return;
       }
-      
+
       if (!emergencyPart1 || !emergencyPart2 || !emergencyPart3 || !emergencyPart4) {
-        Alert.alert('Required', 'Please enter emergency contact phone number');
+        alert('Required', 'Please enter emergency contact phone number', 'pending');
         return;
       }
       
@@ -218,11 +220,11 @@ export default function PhoneNumbersScreen({ navigation }) {
         // Navigate to next screen (Details)
         navigation.navigate('Details');
       } else {
-        Alert.alert('Error', 'Failed to save phone numbers. Please try again.');
+        alert('Error', 'Failed to save phone numbers. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving phone numbers:', error);
-      Alert.alert('Error', 'Failed to save phone numbers. Please try again.');
+      alert('Error', 'Failed to save phone numbers. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }

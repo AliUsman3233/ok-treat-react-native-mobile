@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +17,7 @@ import { setCredentials } from '../../store/slices/authSlice';
 const { width } = Dimensions.get('window');
 
 export default function EditProfileDetailsScreen({ navigation }) {
+  const alert = useAppAlert();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   
@@ -143,10 +145,10 @@ export default function EditProfileDetailsScreen({ navigation }) {
         token,
       }));
 
-      Alert.alert('Success', 'Profile photo updated successfully!');
+      alert('Success', 'Profile photo updated successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -175,7 +177,7 @@ export default function EditProfileDetailsScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Name is required');
+      alert('Error', 'Name is required', 'error');
       return;
     }
 
@@ -210,12 +212,10 @@ export default function EditProfileDetailsScreen({ navigation }) {
       // Update AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(data.data.user));
 
-      Alert.alert('Success', 'Profile updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      alert('Success', 'Profile updated successfully!', 'success', 'OK', () => navigation.goBack());
     } catch (error) {
       console.error('Save profile error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
+      alert('Error', error.message || 'Failed to update profile. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

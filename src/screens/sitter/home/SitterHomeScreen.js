@@ -5,7 +5,7 @@ import Svg, { Path, Circle, Defs, LinearGradient, Stop, Polygon } from 'react-na
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getSitterEarnings, getSitterBookings } from '../../../services/bookingService';
+import { getSitterEarnings, getSitterBookings, getSitterRequests } from '../../../services/bookingService';
 
 export default function SitterHomeScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
@@ -19,6 +19,7 @@ export default function SitterHomeScreen({ navigation }) {
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loadingEarnings, setLoadingEarnings] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const fetchEarnings = useCallback(async () => {
     try {
@@ -70,17 +71,17 @@ export default function SitterHomeScreen({ navigation }) {
     try {
       setLoadingBookings(true);
       const response = await getSitterBookings('CONFIRMED');
-      const data = response?.bookings || response?.data || response || [];
+      const data = response?.data?.bookings || response?.bookings || response?.data || [];
       const bookingsArray = Array.isArray(data) ? data : [];
 
       setUpcomingBookings(bookingsArray.slice(0, 5).map(booking => ({
         id: booking.id || booking._id,
-        clientName: booking.client?.name || booking.clientName || booking.user?.name || 'Client',
-        clientImage: booking.client?.profileImage || booking.clientImage ? { uri: booking.client?.profileImage || booking.clientImage } : DogImage,
-        serviceType: booking.serviceType || booking.service || '',
+        clientName: booking.user?.fullName || booking.client?.name || 'Client',
+        clientImage: booking.user?.avatarUrl ? { uri: booking.user.avatarUrl } : DogImage,
+        serviceType: booking.serviceType || '',
         date: booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '',
-        address: booking.address || booking.client?.address || booking.location || '',
-        phone: booking.client?.phone || booking.phone || '',
+        address: booking.address || booking.location || '',
+        phone: booking.user?.phone || '',
         status: 'upcoming',
       })));
     } catch (err) {
@@ -90,10 +91,21 @@ export default function SitterHomeScreen({ navigation }) {
     }
   }, []);
 
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const response = await getSitterRequests();
+      const requests = response?.data?.requests || [];
+      setPendingCount(Array.isArray(requests) ? requests.length : 0);
+    } catch {
+      setPendingCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEarnings();
     fetchUpcomingBookings();
-  }, [fetchEarnings, fetchUpcomingBookings]);
+    fetchPendingCount();
+  }, [fetchEarnings, fetchUpcomingBookings, fetchPendingCount]);
 
   // Calculate chart dimensions
   const chartWidth = 235.6;
@@ -260,6 +272,25 @@ export default function SitterHomeScreen({ navigation }) {
             </View>
           </View>
         </View>
+
+        {/* Pending Requests Banner */}
+        {pendingCount > 0 && (
+          <TouchableOpacity
+            style={styles.pendingBanner}
+            onPress={() => navigation.navigate('SitterRequests')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.pendingBannerLeft}>
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+              </View>
+              <Text style={styles.pendingBannerText}>
+                Pending request{pendingCount !== 1 ? 's' : ''} waiting for your response
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color="#FFF" />
+          </TouchableOpacity>
+        )}
 
         {/* Upcoming Bookings Section */}
         <View style={styles.bookingsSection}>
@@ -528,6 +559,44 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
     fontWeight: '600',
     lineHeight: 17.54,
+  },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F38FB4',
+    marginHorizontal: 21.92,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  pendingBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  pendingBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingBadgeText: {
+    color: '#F38FB4',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '700',
+  },
+  pendingBannerText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    flex: 1,
   },
   bookingsSection: {
     marginTop: 20,

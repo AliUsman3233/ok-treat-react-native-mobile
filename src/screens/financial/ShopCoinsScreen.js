@@ -1,12 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CoinIcon } from '../../assets';
 import { Button } from '../../components';
 import AddCardBottomSheet from '../../components/AddCardBottomSheet';
 import api from '../../config/api';
+import { useAppAlert } from '../../context/AlertContext';
 
 export default function ShopCoinsScreen({ navigation }) {
+  const alert = useAppAlert();
   const [selectedPackage, setSelectedPackage] = useState('100');
   const [customAmount, setCustomAmount] = useState('0');
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -56,10 +58,10 @@ export default function ShopCoinsScreen({ navigation }) {
     try {
       await api.post('/coins/purchase', { amount, packageId, cardData });
       await fetchBalance();
-      Alert.alert('Success', 'Coins purchased successfully!');
+      alert('Success', 'Coins purchased successfully!', 'success');
     } catch (err) {
       console.error('Error purchasing coins:', err);
-      Alert.alert('Error', err.response?.data?.message || 'Failed to purchase coins. Please try again.');
+      alert('Error', err.response?.data?.message || 'Failed to purchase coins. Please try again.', 'error');
     } finally {
       setPurchasing(false);
     }

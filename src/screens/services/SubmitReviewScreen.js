@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import { useState } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, ProfileImagePersonIcon } from '../../assets';
@@ -6,6 +7,7 @@ import Button from '../../components/Button';
 import api from '../../config/api';
 
 export default function SubmitReviewScreen({ navigation, route }) {
+  const alert = useAppAlert();
   const { booking, sitter } = route.params || {};
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -18,7 +20,7 @@ export default function SubmitReviewScreen({ navigation, route }) {
 
   const handleSubmit = async () => {
     if (rating < 1 || rating > 5) {
-      Alert.alert('Rating Required', 'Please select a rating between 1 and 5 stars.');
+      alert('Rating Required', 'Please select a rating between 1 and 5 stars.', 'pending');
       return;
     }
 
@@ -32,15 +34,13 @@ export default function SubmitReviewScreen({ navigation, route }) {
       });
 
       if (response.data?.success) {
-        Alert.alert('Thank You!', 'Your review has been submitted successfully.', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        alert('Thank You!', 'Your review has been submitted successfully.', 'success', 'OK', () => navigation.goBack());
       } else {
         throw new Error(response.data?.message || 'Failed to submit review');
       }
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Failed to submit review';
-      Alert.alert('Error', message);
+      alert('Error', message, 'error');
     } finally {
       setSubmitting(false);
     }

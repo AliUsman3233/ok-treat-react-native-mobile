@@ -1,10 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
-import { getSitterRequests } from '../../services/bookingService';
+import { getUserBookings, cancelBooking } from '../../services/bookingService';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -60;
@@ -149,21 +148,22 @@ export default function OpenRequestsScreen({ navigation }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const insets = useSafeAreaInsets();
+
 
   const fetchRequests = async () => {
     try {
       setError(null);
-      const response = await getSitterRequests();
-      const data = response?.data || response?.requests || response || [];
-      const list = Array.isArray(data) ? data : [];
-      const formatted = list.map(req => ({
-        id: req.id || req._id,
-        name: req.ownerName || req.owner?.fullName || req.owner?.name || 'Unknown',
-        message: req.message || req.notes || req.serviceType || '',
-        time: getRelativeTime(req.createdAt || req.created_at),
-        status: req.status || 'pending',
-        avatar: req.owner?.avatar || req.owner?.profileImage || null,
+      const response = await getUserBookings();
+      const bookings = response?.data?.bookings || [];
+      const formatted = bookings.map(booking => ({
+        id: booking.id,
+        name: booking.sitter?.user?.fullName || 'Sitter',
+        message: booking.notes || booking.serviceType?.replace(/_/g, ' ') || '',
+        time: getRelativeTime(booking.createdAt),
+        status: booking.status?.toLowerCase() || 'pending',
+        avatar: booking.sitter?.user?.avatarUrl || null,
+        serviceType: booking.serviceType,
+        totalAmount: booking.totalAmount,
       }));
       setRequests(formatted);
     } catch (err) {
@@ -190,26 +190,31 @@ export default function OpenRequestsScreen({ navigation }) {
     navigation.navigate('Bookings');
   };
 
-  const handleDeleteRequest = (requestId) => {
-    setRequests(prevRequests => prevRequests.filter(request => request.id !== requestId));
+  const handleDeleteRequest = async (requestId) => {
+    try {
+      await cancelBooking(requestId);
+      setRequests(prevRequests => prevRequests.filter(request => request.id !== requestId));
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+    }
   };
 
   return (
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { top: insets.top }]}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Open Request</Text>
+          <Text style={styles.headerTitle}>My Requests</Text>
           <TouchableOpacity style={styles.settingsButton}>
             <Setting2IconAlt width={16.36} height={16.36} />
           </TouchableOpacity>
         </View>
 
         {/* Content */}
-        <View style={[styles.contentContainer, { top: HEADER_HEIGHT + insets.top }]}>
+        <View style={styles.contentContainer}>
           {loading ? (
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color="#32A6D8" />
@@ -249,30 +254,18 @@ export default function OpenRequestsScreen({ navigation }) {
   );
 }
 
-const HEADER_HEIGHT = 68;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.25,
-    overflow: 'hidden',
-    position: 'relative',
   },
   header: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: HEADER_HEIGHT,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
-    zIndex: 10,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   backButton: {
     width: 40,
@@ -298,11 +291,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   contentContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingVertical: 10,
+    flex: 1,
   },
   scrollView: {
     flex: 1,

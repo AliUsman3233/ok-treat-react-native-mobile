@@ -1,19 +1,89 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, Alert, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
+import { useState, useEffect } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CalendarIcon, CheckCircleIcon } from '../../assets';
 import { Button } from '../../components';
 import { createBooking } from '../../services/bookingService';
+import { getUserPets } from '../../services/petService';
+import moment from 'moment';
 
 const { width } = Dimensions.get('window');
 
+const SERVICE_SUBTITLES = {
+  'Boarding': "At the sitter's home",
+  'House Sitting': 'At your residence',
+  'Drop-In Visit': 'In-home visits',
+  'Day Care': 'Daytime care',
+  'Pet Walking': 'Exercise & fresh air',
+};
+
+const SERVICE_ICONS = {
+  'Boarding': 'home',
+  'House Sitting': 'home-outline',
+  'Drop-In Visit': 'time',
+  'Day Care': 'sunny',
+  'Pet Walking': 'walk',
+};
+
+// Convert display name to API enum
+const SERVICE_TYPE_MAP = {
+  'Boarding': 'BOARDING',
+  'House Sitting': 'HOUSE_SITTING',
+  'Drop-In Visit': 'DROP_IN_VISITS',
+  'Day Care': 'DAY_CARE',
+  'Pet Walking': 'PET_WALKING',
+};
+
 export default function ContactSitterScreen({ navigation, route }) {
-  const { sitter, service, dates, pets } = route?.params || {};
+  const alert = useAppAlert();
+  const { sitter, service, serviceType, startDate, endDate } = route?.params || {};
   const [message, setMessage] = useState('');
-  const [isPetSelected, setIsPetSelected] = useState(true);
+  const [pets, setPets] = useState([]);
+  const [selectedPetId, setSelectedPetId] = useState(null);
+  const [loadingPets, setLoadingPets] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Fetch user's pets on mount
+  useEffect(() => {
+    const fetchPets = async () => {
+      try {
+        const response = await getUserPets();
+        const userPets = response?.data?.pets || [];
+        setPets(userPets);
+        if (userPets.length > 0) {
+          setSelectedPetId(userPets[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pets:', err);
+      } finally {
+        setLoadingPets(false);
+      }
+    };
+    fetchPets();
+  }, []);
+
+  // Get base rate from sitter's service data
+  const getBaseRate = () => {
+    const svcType = serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING';
+    const svcData = sitter?.services?.[svcType];
+    return parseFloat(svcData?.baseRate) || 0;
+  };
+
+  // Calculate days between dates
+  const getDaysCount = () => {
+    if (!startDate || !endDate) return null;
+    const days = moment(endDate).diff(moment(startDate), 'days');
+    return days > 0 ? days : 1;
+  };
+
+  // Format date range for display
+  const formatDateRange = () => {
+    if (!startDate || !endDate) return 'Dates not selected';
+    return `${moment(startDate).format('MMM D')} - ${moment(endDate).format('MMM D, YYYY')}`;
+  };
 
   const handleBack = () => {
     navigation.goBack();
@@ -21,29 +91,45 @@ export default function ContactSitterScreen({ navigation, route }) {
 
   const handleSendRequest = async () => {
     if (!message.trim()) {
-      Alert.alert('Message Required', 'Please enter a message before sending your request.');
+      alert('Message Required', 'Please enter a message before sending your request.', 'pending');
+      return;
+    }
+
+    if (!selectedPetId) {
+      alert('Pet Required', 'Please select a pet for this booking.', 'pending');
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      alert('Dates Required', 'Booking dates are missing. Please go back and select dates.', 'pending');
       return;
     }
 
     try {
       setSubmitting(true);
 
+      const days = getDaysCount() || 1;
+      const rate = getBaseRate();
+      const totalPrice = rate * days;
+
       const bookingData = {
         sitterId: sitter?.id || sitter?._id,
-        serviceType: service || 'Boarding',
-        dates: dates,
-        message: message.trim(),
-        pets: isPetSelected && pets ? pets : [],
+        petId: selectedPetId,
+        serviceType: serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING',
+        startDate: startDate,
+        endDate: endDate,
+        totalPrice: totalPrice,
+        notes: message.trim(),
       };
 
       await createBooking(bookingData);
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Failed to create booking:', err);
-      Alert.alert(
+      alert(
         'Request Failed',
         err?.message || 'Failed to send your request. Please try again.',
-        [{ text: 'OK' }]
+        'error'
       );
     } finally {
       setSubmitting(false);
@@ -55,6 +141,10 @@ export default function ContactSitterScreen({ navigation, route }) {
     navigation.navigate('OpenRequests');
   };
 
+  const daysCount = getDaysCount();
+  const baseRate = getBaseRate();
+  const totalEstimate = baseRate * (daysCount || 1);
+
   return (
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
@@ -63,7 +153,7 @@ export default function ContactSitterScreen({ navigation, route }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Contact {sitter?.name || 'Ashlyn T.'}</Text>
+          <Text style={styles.headerTitle}>Contact {sitter?.name || 'Sitter'}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -73,10 +163,10 @@ export default function ContactSitterScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Service</Text>
             <View style={styles.card}>
               <View style={styles.cardRow}>
-                <Icon name="home" size={30} color="#32A6D8" />
+                <Icon name={SERVICE_ICONS[service] || 'home'} size={30} color="#32A6D8" />
                 <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>{service || 'Boarding'}</Text>
-                  <Text style={styles.cardSubtitle}>At the sitter's house</Text>
+                  <Text style={styles.cardSubtitle}>{SERVICE_SUBTITLES[service] || "At the sitter's home"}</Text>
                 </View>
               </View>
             </View>
@@ -91,63 +181,92 @@ export default function ContactSitterScreen({ navigation, route }) {
                   <CalendarIcon width={30} height={30} fill="#32A6D8" />
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>Service Date</Text>
-                    <Text style={styles.cardSubtitle}>{dates || 'Dec 23-25'}</Text>
+                    <Text style={styles.cardSubtitle}>{formatDateRange()}</Text>
                   </View>
-                  <Text style={styles.daysText}>7 Days</Text>
-                </View>
-              </View>
-
-              <View style={styles.timeCard}>
-                <View style={styles.timeRow}>
-                  <Text style={styles.timeLabel}>Drop-Off Range</Text>
-                  <Text style={styles.addTimeText}>Add times</Text>
-                  <Icon name="chevron-forward" size={20} color="#32A6D8" />
-                </View>
-              </View>
-
-              <View style={styles.timeCard}>
-                <View style={styles.timeRow}>
-                  <Text style={styles.timeLabel}>Pick-Up Range</Text>
-                  <Text style={styles.addTimeText}>Add times</Text>
-                  <Icon name="chevron-forward" size={20} color="#32A6D8" />
+                  {daysCount && (
+                    <Text style={styles.daysText}>{daysCount} {daysCount === 1 ? 'Day' : 'Days'}</Text>
+                  )}
                 </View>
               </View>
             </View>
           </View>
 
-          {/* Pets Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pets</Text>
-            {pets && pets.length > 0 ? (
-              <View style={styles.petCard}>
-                <View style={styles.petHeader}>
-                  <View style={styles.petInfo}>
-                    <Image
-                      source={pets[0].photoUrl ? { uri: pets[0].photoUrl } : require('../../assets/images/Pet_default_image.png')}
-                      style={styles.petImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.petName}>{pets[0].name || 'Unknown'}</Text>
-                  </View>
-                  <Switch
-                    value={isPetSelected}
-                    onValueChange={setIsPetSelected}
-                    trackColor={{ false: '#E5E5E5', true: '#FFC2EB' }}
-                    thumbColor="#FFFFFF"
-                    ios_backgroundColor="#E5E5E5"
-                  />
-                </View>
-                <View style={styles.petDetails}>
-                  <Text style={styles.petDetailsText}>
-                    <Text style={styles.petLabel}>Weight: </Text>
-                    <Text style={styles.petValue}>{pets[0].weight ? `${pets[0].weight} lbs` : 'Not specified'}  .  </Text>
-                    <Text style={styles.petLabel}>Age: </Text>
-                    <Text style={styles.petValue}>{pets[0].ageYears ? `${pets[0].ageYears} years` : ''}{pets[0].ageMonths ? ` & ${pets[0].ageMonths} months` : ''}{pets[0].ageYears || pets[0].ageMonths ? ' old' : 'Not specified'}</Text>
-                  </Text>
+          {/* Price Summary */}
+          {baseRate > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Price Estimate</Text>
+              <View style={styles.card}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>{baseRate} coins x {daysCount || 1} {(daysCount || 1) === 1 ? 'day' : 'days'}</Text>
+                  <Text style={styles.priceValue}>{totalEstimate} coins</Text>
                 </View>
               </View>
+            </View>
+          )}
+
+          {/* Pets Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Select Pet</Text>
+            {loadingPets ? (
+              <View style={styles.loadingPetsContainer}>
+                <ActivityIndicator size="small" color="#32A6D8" />
+                <Text style={styles.loadingPetsText}>Loading your pets...</Text>
+              </View>
+            ) : pets.length > 0 ? (
+              <View style={styles.petsListContainer}>
+                {pets.map((pet) => {
+                  const isSelected = selectedPetId === pet.id;
+                  const years = pet.ageYears || 0;
+                  const months = pet.ageMonths || 0;
+                  const ageDisplay = years === 0 && months === 0
+                    ? 'Age not specified'
+                    : years === 0 ? `${months} month${months !== 1 ? 's' : ''}`
+                    : months === 0 ? `${years} year${years !== 1 ? 's' : ''}`
+                    : `${years} year${years !== 1 ? 's' : ''} & ${months} month${months !== 1 ? 's' : ''}`;
+                  const weightDisplay = pet.weight ? `${pet.weight} lbs` : 'Weight not specified';
+
+                  return (
+                    <TouchableOpacity
+                      key={pet.id}
+                      style={[styles.petCard, isSelected && styles.petCardSelected]}
+                      onPress={() => setSelectedPetId(pet.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.petCardHeader}>
+                        <View style={styles.petCardLeft}>
+                          <View style={styles.petImageContainer}>
+                            <Image
+                              source={pet.photoUrl ? { uri: pet.photoUrl } : require('../../assets/images/Pet_default_image.png')}
+                              style={styles.petImage}
+                            />
+                          </View>
+                          <Text style={styles.petName} numberOfLines={1}>{pet.name || 'Unknown'}</Text>
+                        </View>
+                        <Text style={styles.petBreed}>{pet.breed || pet.type || ''}</Text>
+                        <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
+                          {isSelected && <View style={styles.radioInner} />}
+                        </View>
+                      </View>
+                      <View style={styles.petDetails}>
+                        <Text style={styles.petDetailsText}>
+                          <Text style={styles.detailLabel}>Weight:</Text>
+                          <Text style={styles.detailValue}> {weightDisplay}  .  </Text>
+                          <Text style={styles.detailLabel}>Age:</Text>
+                          <Text style={styles.detailValue}> {ageDisplay}</Text>
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             ) : (
-              <Text style={styles.cardSubtitle}>No pets selected</Text>
+              <TouchableOpacity
+                style={styles.noPetsCard}
+                onPress={() => navigation.navigate('AddPet')}
+              >
+                <Icon name="add-circle-outline" size={24} color="#32A6D8" />
+                <Text style={styles.noPetsText}>Add a pet to continue</Text>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -183,7 +302,7 @@ export default function ContactSitterScreen({ navigation, route }) {
               onPress={handleSendRequest}
               fullWidth
               size="medium"
-              disabled={!message?.trim() || submitting}
+              disabled={!message?.trim() || !selectedPetId || !startDate || submitting}
             />
           )}
         </View>
@@ -305,57 +424,59 @@ const styles = StyleSheet.create({
   scheduleContainer: {
     gap: 8,
   },
-  timeCard: {
-    padding: 12,
-    backgroundColor: 'white',
-    shadowColor: 'rgba(0, 0, 0, 0.04)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 40,
-    elevation: 2,
-    borderRadius: 12,
-  },
-  timeRow: {
+  // Pet styles
+  loadingPetsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 20,
   },
-  timeLabel: {
-    flex: 1,
-    color: 'black',
-    fontSize: 12,
+  loadingPetsText: {
+    color: '#818898',
+    fontSize: 13,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
-    lineHeight: 18.6,
   },
-  addTimeText: {
-    color: '#898D8F',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20,
-    marginRight: 8,
+  petsListContainer: {
+    gap: 8,
   },
   petCard: {
     padding: 12,
-    backgroundColor: 'white',
-    shadowColor: 'rgba(0, 0, 0, 0.04)',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.04,
     shadowRadius: 40,
-    elevation: 2,
+    elevation: 1,
     borderRadius: 12,
-    gap: 12,
+    borderWidth: 1,
+    borderColor: '#ECEFF3',
   },
-  petHeader: {
+  petCardSelected: {
+    borderColor: '#32A6D8',
+    borderWidth: 1.5,
+  },
+  petCardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  petInfo: {
+  petCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+  petImageContainer: {
+    width: 37,
+    height: 37,
+    borderRadius: 38,
+    backgroundColor: '#32A6D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   petImage: {
     width: 34,
@@ -363,31 +484,99 @@ const styles = StyleSheet.create({
     borderRadius: 38,
   },
   petName: {
+    flex: 1,
     color: '#0D0D12',
     fontSize: 14,
     fontFamily: 'Poppins',
-    fontWeight: '500',
+    fontWeight: '400',
     lineHeight: 21.7,
   },
-  petDetails: {
-    gap: 6,
-  },
-  petDetailsText: {
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  petLabel: {
-    color: 'black',
-    fontSize: 11,
-    lineHeight: 17.05,
-  },
-  petValue: {
+  petBreed: {
     color: '#818898',
     fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
+    lineHeight: 18.6,
+    marginRight: 10,
+  },
+  radioCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#D0D0D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioCircleSelected: {
+    borderColor: '#32A6D8',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#32A6D8',
+  },
+  petDetails: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  petDetailsText: {
+    textAlign: 'left',
+    marginLeft: 50,
+  },
+  detailLabel: {
+    color: 'black',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
+    lineHeight: 17.05,
+  },
+  detailValue: {
+    color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
     lineHeight: 18.6,
   },
+  noPetsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+    borderStyle: 'dashed',
+  },
+  noPetsText: {
+    color: '#32A6D8',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceLabel: {
+    color: '#676869',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  priceValue: {
+    color: '#32A6D8',
+    fontSize: 15,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  // Message styles
   messageInputContainer: {
     height: 130,
     paddingHorizontal: 20,
@@ -417,6 +606,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
   loadingButton: {
     flexDirection: 'row',

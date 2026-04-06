@@ -6,10 +6,10 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { useAppAlert } from '../../context/AlertContext';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
@@ -37,6 +37,7 @@ const EXPERIENCE_OPTIONS = [
 ];
 
 export default function CompleteRegistrationScreen({ route, navigation }) {
+  const alert = useAppAlert();
   const { email, password } = route.params || {};
   
   const [referralCode, setReferralCode] = useState('');
@@ -49,12 +50,12 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const handleContinue = () => {
     // Validate required fields
     if (!fullName || !phoneNumber) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      alert('Error', 'Please fill in all required fields', 'error');
       return;
     }
 
     if (phoneNumber.length < 6 || phoneNumber.length > 15) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      alert('Error', 'Please enter a valid phone number', 'error');
       return;
     }
 

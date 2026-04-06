@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Dimensions,
   ScrollView,
 } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
@@ -20,6 +20,7 @@ import { signInWithGoogle } from '../../services/googleAuthService';
 const { width, height } = Dimensions.get('window');
 
 export default function RegisterScreen({ navigation }) {
+  const alert = useAppAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,7 +38,7 @@ export default function RegisterScreen({ navigation }) {
       }
     } catch (error) {
       if (error.message !== 'Sign-in cancelled') {
-        Alert.alert('Error', error.message || 'Google sign-in failed');
+        alert('Error', error.message || 'Google sign-in failed', 'error');
       }
     } finally {
       setLoading(false);
@@ -53,22 +54,22 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      alert('Error', 'Please fill in all fields', 'error');
       return;
     }
 
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      alert('Error', 'Please enter a valid email address', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      alert('Error', 'Passwords do not match', 'error');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      alert('Error', 'Password must be at least 6 characters', 'error');
       return;
     }
 
@@ -177,7 +178,7 @@ export default function RegisterScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.appleButton}
-          onPress={() => Alert.alert('Coming Soon', 'Apple Sign-In is under development.')}
+          onPress={() => alert('Coming Soon', 'Apple Sign-In is under development.', 'pending')}
           activeOpacity={0.7}
         >
           <AppleIcon width={20} height={20} fill="#FFFFFF" />

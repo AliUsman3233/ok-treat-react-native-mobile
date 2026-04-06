@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -41,6 +42,7 @@ const PET_RESTRICTION_OPTIONS = [
 const YEARS_EXPERIENCE_OPTIONS = ['< 1', '1-2', '3-5', '5-10', '10+'];
 
 export default function DetailsScreen({ navigation }) {
+  const alert = useAppAlert();
   const [aboutPet, setAboutPet] = useState('');
   const [skills, setSkills] = useState([]);
   const [homeType, setHomeType] = useState('');
@@ -70,12 +72,12 @@ export default function DetailsScreen({ navigation }) {
       if (response.data.success && response.data.data.description) {
         setAboutPet(response.data.data.description);
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to generate description');
+        alert('Error', response.data.message || 'Failed to generate description', 'error');
       }
     } catch (error) {
       console.error('AI generate error:', error);
       const message = error.response?.data?.message || 'Failed to generate description. Please try again.';
-      Alert.alert('Error', message);
+      alert('Error', message, 'error');
     } finally {
       setAiGenerating(false);
     }
@@ -118,22 +120,22 @@ export default function DetailsScreen({ navigation }) {
       setIsSaving(true);
 
       if (!aboutPet.trim()) {
-        Alert.alert('Required', 'Please describe your pet care experience');
+        alert('Required', 'Please describe your pet care experience', 'pending');
         return;
       }
 
       if (skills.length === 0) {
-        Alert.alert('Required', 'Please select at least one skill');
+        alert('Required', 'Please select at least one skill', 'pending');
         return;
       }
 
       if (!homeType) {
-        Alert.alert('Required', 'Please select your home type');
+        alert('Required', 'Please select your home type', 'pending');
         return;
       }
 
       if (!yearsExperience) {
-        Alert.alert('Required', 'Please select your years of experience');
+        alert('Required', 'Please select your years of experience', 'pending');
         return;
       }
 
@@ -154,11 +156,11 @@ export default function DetailsScreen({ navigation }) {
       if (response.success) {
         navigation.navigate('Photos');
       } else {
-        Alert.alert('Error', 'Failed to save details. Please try again.');
+        alert('Error', 'Failed to save details. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving details:', error);
-      Alert.alert('Error', 'Failed to save details. Please try again.');
+      alert('Error', 'Failed to save details. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }

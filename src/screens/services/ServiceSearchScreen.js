@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -8,6 +9,7 @@ import DateRangePicker from '../../components/DateRangePicker';
 import moment from 'moment';
 
 export default function ServiceSearchScreen({ navigation, route }) {
+  const alert = useAppAlert();
   const { serviceType = 'Boarding', serviceTitle = 'Boarding', serviceSubtitle = 'When do you need a sitter?' } = route.params || {};
   const insets = useSafeAreaInsets();
   const [startDate, setStartDate] = useState(null);
@@ -21,7 +23,7 @@ export default function ServiceSearchScreen({ navigation, route }) {
 
   const handleSearchNow = () => {
     if (!startDate) {
-      Alert.alert('Missing Dates', 'Please select dates for your search');
+      alert('Missing Dates', 'Please select dates for your search', 'pending');
       return;
     }
 

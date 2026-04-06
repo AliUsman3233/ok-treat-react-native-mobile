@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { useAppAlert } from '../../context/AlertContext';
 import api from '../../config/api';
 import { useSelector } from 'react-redux';
 import Button from '../../components/Button';
 import { BackArrowIcon } from '../../assets';
 
 export default function VerificationScreen({ navigation }) {
+  const alert = useAppAlert();
   const { user } = useSelector(state => state.auth);
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
@@ -39,10 +41,10 @@ export default function VerificationScreen({ navigation }) {
       if (user?.id || user?._id) payload.userId = user?.id || user?._id;
 
       await api.post('/auth/resend-otp', payload);
-      Alert.alert('Success', 'Verification email has been resent. Please check your inbox.');
+      alert('Success', 'Verification email has been resent. Please check your inbox.', 'success');
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to resend verification email.';
-      Alert.alert('Error', msg);
+      alert('Error', msg, 'error');
     } finally {
       setResending(false);
     }

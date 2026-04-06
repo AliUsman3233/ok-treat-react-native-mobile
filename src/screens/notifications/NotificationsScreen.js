@@ -64,12 +64,13 @@ export default function NotificationsScreen({ navigation }) {
         const createdAt = new Date(n.createdAt || n.created_at);
         return {
           id: n.id || n._id,
-          type: n.type === 'payment' || (n.message || '').toLowerCase().includes('payment') ? 'payment' : 'reminder',
+          type: n.type || (n.message || '').toLowerCase().includes('payment') ? 'payment' : 'reminder',
           message: n.message || n.title || '',
           time: getRelativeTime(n.createdAt || n.created_at),
           isNew: !n.read && !n.isRead,
           section: createdAt > oneDayAgo ? 'newest' : 'oldest',
           read: n.read || n.isRead || false,
+          data: n.data || null,
         };
       });
       setNotifications(formatted);
@@ -106,11 +107,16 @@ export default function NotificationsScreen({ navigation }) {
     }
 
     // Navigate based on notification type
-    if (notification.type === 'payment') {
+    const notifType = notification.type;
+    if (notifType === 'BOOKING_REQUEST') {
+      navigation.navigate('SitterRequests');
+    } else if (notifType === 'BOOKING_CONFIRMED' || notifType === 'BOOKING_DECLINED' || notifType === 'BOOKING_COMPLETED' || notifType === 'BOOKING_CANCELLED') {
       navigation.navigate('Bookings');
-    } else if (notification.type === 'message') {
+    } else if (notifType === 'message' || notifType === 'NEW_MESSAGE') {
       navigation.navigate('ChatList');
-    } else if (notification.type === 'booking' || notification.type === 'reminder') {
+    } else if (notifType === 'payment') {
+      navigation.navigate('Bookings');
+    } else {
       navigation.navigate('Bookings');
     }
   };

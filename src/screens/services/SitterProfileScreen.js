@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator, FlatList } from 'react-native';
 import { useState, useEffect } from 'react';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -8,17 +8,18 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, LocationPinIcon, ImageHereIcon, VerifiedIcon, CoinIcon, CoinBackgroundIcon } from '../../assets';
 import { Button } from '../../components';
 import api from '../../config/api';
+import moment from 'moment';
 
 const { width } = Dimensions.get('window');
 
 export default function SitterProfileScreen({ navigation, route }) {
-  const { sitter, serviceType: searchedServiceType } = route?.params || {};
+  const { sitter, serviceType: searchedServiceType, searchParams = {} } = route?.params || {};
   const [sitterData, setSitterData] = useState(sitter || {});
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [selectedTab, setSelectedTab] = useState(searchedServiceType ? 'services' : 'info');
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showAboutHint, setShowAboutHint] = useState(false);
+  const [expandedServices, setExpandedServices] = useState({});
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -67,8 +68,9 @@ export default function SitterProfileScreen({ navigation, route }) {
         ...sitterData,
       },
       service: selectedService,
-      dates: '',
-      pets: [],
+      serviceType: searchedServiceType,
+      startDate: searchParams.startDate || null,
+      endDate: searchParams.endDate || null,
     });
   };
 
@@ -236,25 +238,38 @@ export default function SitterProfileScreen({ navigation, route }) {
 
   const renderInfoTab = () => (
     <View style={styles.tabContent}>
-      {/* About Pet */}
+      {/* Photo Gallery */}
+      {sitterData?.photos && sitterData.photos.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Photos</Text>
+          <FlatList
+            data={sitterData.photos}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <Image
+                source={{ uri: item }}
+                style={styles.galleryImage}
+                resizeMode="cover"
+              />
+            )}
+            contentContainerStyle={styles.galleryContainer}
+          />
+        </View>
+      )}
+
+      {/* About Me */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>About Pet</Text>
-        <TouchableOpacity
-          style={styles.hintToggle}
-          onPress={() => setShowAboutHint(!showAboutHint)}
-        >
-          <Icon name="information-circle-outline" size={16} color="#32A6D8" />
-          <Text style={styles.hintToggleText}>What should this include?</Text>
-          <Icon name={showAboutHint ? "chevron-up" : "chevron-down"} size={14} color="#32A6D8" />
-        </TouchableOpacity>
-        {showAboutHint && (
-          <Text style={styles.hintText}>
-            Provide future sitters with important information about your pet's personality, behaviors, and specific care requirements.
-          </Text>
+        <Text style={styles.cardTitle}>About Me</Text>
+        {sitterData?.aboutPet ? (
+          <Text style={styles.cardDescription}>{sitterData.aboutPet}</Text>
+        ) : (
+          <View style={styles.emptyState}>
+            <Icon name="document-text-outline" size={24} color="#D0D0D0" />
+            <Text style={styles.emptyStateText}>No description provided</Text>
+          </View>
         )}
-        <Text style={styles.cardDescription}>
-          {sitterData?.aboutPet || 'No description provided.'}
-        </Text>
       </View>
 
       {/* Skills */}
@@ -269,7 +284,10 @@ export default function SitterProfileScreen({ navigation, route }) {
               </View>
             ))
           ) : (
-            <Text style={styles.cardDescription}>No skills listed.</Text>
+            <View style={styles.emptyState}>
+              <Icon name="ribbon-outline" size={24} color="#D0D0D0" />
+              <Text style={styles.emptyStateText}>No skills listed</Text>
+            </View>
           )}
         </View>
       </View>
@@ -345,8 +363,8 @@ export default function SitterProfileScreen({ navigation, route }) {
                 initialRegion={{
                   latitude: parseFloat(sitterData.latitude),
                   longitude: parseFloat(sitterData.longitude),
-                  latitudeDelta: 0.3,
-                  longitudeDelta: 0.3,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
                 }}
                 scrollEnabled={false}
                 zoomEnabled={false}
@@ -387,7 +405,10 @@ export default function SitterProfileScreen({ navigation, route }) {
             </View>
           ))
         ) : (
-          <Text style={styles.cardDescription}>No pets listed.</Text>
+          <View style={styles.emptyState}>
+            <Icon name="paw-outline" size={24} color="#D0D0D0" />
+            <Text style={styles.emptyStateText}>No pets listed</Text>
+          </View>
         )}
       </View>
     </View>
@@ -405,9 +426,22 @@ export default function SitterProfileScreen({ navigation, route }) {
     return Array.from(allDays);
   };
 
+  const toggleServiceExpand = (serviceType) => {
+    setExpandedServices(prev => ({
+      ...prev,
+      [serviceType]: !prev[serviceType],
+    }));
+  };
+
+  const PET_SIZE_LABELS = {
+    '1-15': 'Small',
+    '16-40': 'Medium',
+    '41-100': 'Large',
+    '101+': 'Giant',
+  };
+
   const renderServicesTab = () => {
     const allServices = sitterData?.services ? Object.keys(sitterData.services) : [];
-    // Put the searched service first if it exists
     const availableServices = searchedServiceType && allServices.includes(searchedServiceType)
       ? [searchedServiceType, ...allServices.filter(s => s !== searchedServiceType)]
       : allServices;
@@ -417,6 +451,7 @@ export default function SitterProfileScreen({ navigation, route }) {
         {availableServices.length > 0 ? (
           availableServices.map((serviceType, index) => {
             const isSearchedService = serviceType === searchedServiceType;
+            const isExpanded = expandedServices[serviceType] || isSearchedService;
             const service = sitterData.services[serviceType];
             const baseRate = parseFloat(service.baseRate) || 50;
             const holidayRate = parseFloat(service.holidayRate) || Math.round(baseRate * 1.12);
@@ -431,15 +466,18 @@ export default function SitterProfileScreen({ navigation, route }) {
             return (
               <View key={index} style={[
                 styles.card,
-                index > 0 && { marginTop: 12 },
                 isSearchedService && { borderWidth: 2, borderColor: '#32A6D8' }
               ]}>
                 {isSearchedService && (
-                  <View style={{ backgroundColor: '#32A6D8', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'Avenir LT Std', fontWeight: '600' }}>Searched Service</Text>
+                  <View style={styles.searchedServiceBadge}>
+                    <Text style={styles.searchedServiceBadgeText}>Searched Service</Text>
                   </View>
                 )}
-                <View style={styles.serviceHeader}>
+                <TouchableOpacity
+                  style={styles.serviceHeader}
+                  onPress={() => toggleServiceExpand(serviceType)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.serviceLeft}>
                     <Icon name={getServiceIcon(serviceType)} size={29} color="#32A6D8" />
                     <View>
@@ -447,116 +485,123 @@ export default function SitterProfileScreen({ navigation, route }) {
                       <Text style={styles.serviceSubtitle}>{getServiceSubtitle(serviceType)}</Text>
                     </View>
                   </View>
-                  <View style={styles.servicePrice}>
-                    <View style={styles.coinRow}>
-                      <View style={styles.coinIconContainer}>
-                        <CoinBackgroundIcon width={23} height={23} style={styles.coinBackground} />
-                        <CoinIcon width={23} height={23} style={styles.coinForeground} />
+                  <View style={styles.serviceRight}>
+                    <View style={styles.servicePrice}>
+                      <View style={styles.coinRow}>
+                        <View style={styles.coinIconContainer}>
+                          <CoinBackgroundIcon width={23} height={23} style={styles.coinBackground} />
+                          <CoinIcon width={23} height={23} style={styles.coinForeground} />
+                        </View>
+                        <Text style={styles.coinText}>{baseRate} Coins</Text>
                       </View>
-                      <Text style={styles.coinText}>{baseRate} Coins</Text>
+                      <Text style={styles.priceLabel}>{getPriceLabel(serviceType)}</Text>
                     </View>
-                    <Text style={styles.priceLabel}>{getPriceLabel(serviceType)}</Text>
+                    <Icon name={isExpanded ? "chevron-up" : "chevron-down"} size={18} color="#32A6D8" />
                   </View>
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.ratesList}>
-                  {serviceType === 'DROP_IN_VISITS' && (
-                    <View style={styles.rateRow}>
-                      <Text style={styles.rateLabel}>Hourly Rate</Text>
-                      <View style={styles.rateRight}>
-                        <View style={styles.coinIconSmall}>
-                          <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                          <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                {isExpanded && (
+                  <>
+                    <View style={styles.ratesList}>
+                      {serviceType === 'DROP_IN_VISITS' && (
+                        <View style={styles.rateRow}>
+                          <Text style={styles.rateLabel}>Hourly Rate</Text>
+                          <View style={styles.rateRight}>
+                            <View style={styles.coinIconSmall}>
+                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                            </View>
+                            <Text style={styles.rateValue}>{baseRate} Coins</Text>
+                          </View>
                         </View>
-                        <Text style={styles.rateValue}>{baseRate} Coins</Text>
-                      </View>
-                    </View>
-                  )}
-                  <View style={styles.rateRow}>
-                    <View style={styles.rateLeft}>
-                      <Text style={styles.rateLabel}>Holiday Rate</Text>
-                      <Icon name="information-circle" size={16} color="#25314C" />
-                    </View>
-                    <View style={styles.rateRight}>
-                      <View style={styles.coinIconSmall}>
-                        <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                        <CoinIcon width={16} height={16} style={styles.coinForeground} />
-                      </View>
-                      <Text style={styles.rateValue}>{holidayRate} Coins</Text>
-                    </View>
-                  </View>
-                  <View style={styles.rateRow}>
-                    <Text style={styles.rateLabel}>Additional Dog Rate</Text>
-                    <View style={styles.rateRight}>
-                      <View style={styles.coinIconSmall}>
-                        <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                        <CoinIcon width={16} height={16} style={styles.coinForeground} />
-                      </View>
-                      <Text style={styles.rateValue}>{additionalDogRate} Coins</Text>
-                    </View>
-                  </View>
-                  <View style={styles.rateRow}>
-                    <Text style={styles.rateLabel}>Puppy Rate</Text>
-                    <View style={styles.rateRight}>
-                      <View style={styles.coinIconSmall}>
-                        <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                        <CoinIcon width={16} height={16} style={styles.coinForeground} />
-                      </View>
-                      <Text style={styles.rateValue}>{puppyRate} Coins</Text>
-                    </View>
-                  </View>
-                  {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
-                    <View style={styles.rateRow}>
-                      <Text style={styles.rateLabel}>Stays of 14 Nights or More</Text>
-                      <View style={styles.rateRight}>
-                        <View style={styles.coinIconSmall}>
-                          <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                          <CoinIcon width={16} height={16} style={styles.coinForeground} />
-                        </View>
-                        <Text style={styles.rateValue}>{longStayRate} Coins</Text>
-                      </View>
-                    </View>
-                  )}
-                  {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
-                    <>
-                      <View style={styles.rateRow}>
-                        <Text style={styles.rateLabel}>Bathing / Grooming</Text>
-                        <Text style={styles.freeText}>{typeof bathingGrooming === 'string' ? bathingGrooming : (bathingGrooming ? 'Included' : 'Free')}</Text>
-                      </View>
+                      )}
                       <View style={styles.rateRow}>
                         <View style={styles.rateLeft}>
-                          <Text style={styles.rateLabel}>Extended Care</Text>
+                          <Text style={styles.rateLabel}>Holiday Rate</Text>
                           <Icon name="information-circle" size={16} color="#25314C" />
                         </View>
                         <View style={styles.rateRight}>
-                          <Text style={styles.percentText}>{extendedCareMin}-{extendedCareMax}%</Text>
-                          <Text style={styles.percentLabel}>of nightly rate</Text>
+                          <View style={styles.coinIconSmall}>
+                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                          </View>
+                          <Text style={styles.rateValue}>{holidayRate} Coins</Text>
                         </View>
                       </View>
-                    </>
-                  )}
-                </View>
-
-                <View style={styles.sizeOptions}>
-                  {['1-15', '16-40', '41-100', '101+'].map((size, idx) => {
-                    const isAvailable = selectedPetSizes.includes(size);
-                    return (
-                      <View 
-                        key={idx} 
-                        style={[
-                          styles.sizeBox,
-                          { borderColor: isAvailable ? '#4CAF50' : '#F44336' }
-                        ]}
-                      >
-                        <Icon name="paw" size={24} color="#FFC2EB" />
-                        <Text style={styles.sizeText}>
-                          <Text style={styles.sizeNumber}>{size}{'\n'}</Text>
-                          <Text style={styles.sizeLabel}>pounds</Text>
-                        </Text>
+                      <View style={styles.rateRow}>
+                        <Text style={styles.rateLabel}>Additional Dog Rate</Text>
+                        <View style={styles.rateRight}>
+                          <View style={styles.coinIconSmall}>
+                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                          </View>
+                          <Text style={styles.rateValue}>{additionalDogRate} Coins</Text>
+                        </View>
                       </View>
-                    );
-                  })}
-                </View>
+                      <View style={styles.rateRow}>
+                        <Text style={styles.rateLabel}>Puppy Rate</Text>
+                        <View style={styles.rateRight}>
+                          <View style={styles.coinIconSmall}>
+                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                          </View>
+                          <Text style={styles.rateValue}>{puppyRate} Coins</Text>
+                        </View>
+                      </View>
+                      {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
+                        <View style={styles.rateRow}>
+                          <Text style={styles.rateLabel}>Stays of 14 Nights or More</Text>
+                          <View style={styles.rateRight}>
+                            <View style={styles.coinIconSmall}>
+                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                            </View>
+                            <Text style={styles.rateValue}>{longStayRate} Coins</Text>
+                          </View>
+                        </View>
+                      )}
+                      {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
+                        <>
+                          <View style={styles.rateRow}>
+                            <Text style={styles.rateLabel}>Bathing / Grooming</Text>
+                            <Text style={styles.freeText}>{typeof bathingGrooming === 'string' ? bathingGrooming : (bathingGrooming ? 'Included' : 'Free')}</Text>
+                          </View>
+                          <View style={styles.rateRow}>
+                            <View style={styles.rateLeft}>
+                              <Text style={styles.rateLabel}>Extended Care</Text>
+                              <Icon name="information-circle" size={16} color="#25314C" />
+                            </View>
+                            <View style={styles.rateRight}>
+                              <Text style={styles.percentText}>{extendedCareMin}-{extendedCareMax}%</Text>
+                              <Text style={styles.percentLabel}>of nightly rate</Text>
+                            </View>
+                          </View>
+                        </>
+                      )}
+                    </View>
+
+                    <View style={styles.sizeOptions}>
+                      {['1-15', '16-40', '41-100', '101+'].map((size, idx) => {
+                        const isAvailable = selectedPetSizes.includes(size);
+                        return (
+                          <View
+                            key={idx}
+                            style={[
+                              styles.sizeBox,
+                              { borderColor: isAvailable ? '#4CAF50' : '#F44336' }
+                            ]}
+                          >
+                            <Icon name="paw" size={24} color="#FFC2EB" />
+                            <Text style={styles.sizeText}>
+                              <Text style={styles.sizeNumber}>{size}{'\n'}</Text>
+                              <Text style={styles.sizeLabel}>{PET_SIZE_LABELS[size]}</Text>
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
               </View>
             );
           })
@@ -697,7 +742,7 @@ export default function SitterProfileScreen({ navigation, route }) {
       {/* Reviews List */}
       {reviews.length > 0 ? (
         reviews.map((review) => (
-          <View key={review.id} style={[styles.card, { marginTop: 12 }]}>
+          <View key={review.id} style={styles.card}>
             <View style={styles.reviewHeader}>
               <View style={styles.reviewerInfo}>
                 {review.reviewer?.avatarUrl ? (
@@ -726,10 +771,25 @@ export default function SitterProfileScreen({ navigation, route }) {
           </View>
         ))
       ) : (
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <Text style={styles.cardDescription}>No reviews yet.</Text>
+        <View style={styles.card}>
+          <View style={styles.emptyState}>
+            <Icon name="chatbubble-outline" size={24} color="#D0D0D0" />
+            <Text style={styles.emptyStateText}>No reviews yet</Text>
+          </View>
         </View>
       )}
+
+      {/* Write a Review */}
+      <TouchableOpacity
+        style={styles.writeReviewButton}
+        onPress={() => navigation.navigate('SubmitReview', {
+          sitterId: sitterData?.id,
+          sitterName: sitterData?.name || 'Sitter',
+        })}
+      >
+        <Icon name="create-outline" size={18} color="#32A6D8" />
+        <Text style={styles.writeReviewText}>Write a Review</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -765,7 +825,7 @@ export default function SitterProfileScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
           {/* Profile Section */}
           <View style={styles.profileSection}>
             {/* Cover and Profile Image */}
@@ -779,7 +839,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                 {sitterData?.avatarUrl ? (
                   <Image
                     source={{ uri: sitterData.avatarUrl }}
-                    style={{ width: 103, height: 103, borderRadius: 51.5 }}
+                    style={styles.profileImage}
                     resizeMode="cover"
                   />
                 ) : (
@@ -791,6 +851,9 @@ export default function SitterProfileScreen({ navigation, route }) {
             {/* Name and Info */}
             <View style={styles.infoContainer}>
               <Text style={styles.sitterName}>{sitterData?.name || 'Anonymous'}</Text>
+              {sitterData?.businessName ? (
+                <Text style={styles.businessNameText}>{sitterData.businessName}</Text>
+              ) : null}
 
               {/* Verified Badge */}
               <View style={styles.verifiedBadge}>
@@ -829,6 +892,24 @@ export default function SitterProfileScreen({ navigation, route }) {
                     </Text>
                   </View>
                 </View>
+
+                {/* Row 3: Response Time and Member Since */}
+                {(sitterData?.responseTime || sitterData?.registrationDate) && (
+                  <View style={styles.statsRow}>
+                    {sitterData?.responseTime ? (
+                      <View style={styles.statItem}>
+                        <Icon name="time-outline" size={14} color="#32A6D8" />
+                        <Text style={styles.subtitleText}>{sitterData.responseTime}</Text>
+                      </View>
+                    ) : null}
+                    {sitterData?.registrationDate ? (
+                      <View style={styles.statItem}>
+                        <Icon name="calendar-outline" size={14} color="#32A6D8" />
+                        <Text style={styles.subtitleText}>Member since {moment(sitterData.registrationDate).format('MMM YYYY')}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -841,16 +922,17 @@ export default function SitterProfileScreen({ navigation, route }) {
           {selectedTab === 'services' && renderServicesTab()}
           {selectedTab === 'reviews' && renderReviewsTab()}
 
-          {/* Contact Button */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Contact Sitter"
-              onPress={handleContactSitter}
-              fullWidth
-              size="medium"
-            />
-          </View>
         </ScrollView>
+
+        {/* Contact Button - Fixed at bottom */}
+        <View style={[styles.fixedButtonContainer, { paddingBottom: insets.bottom || 16 }]}>
+          <Button
+            title="Contact Sitter"
+            onPress={handleContactSitter}
+            fullWidth
+            size="medium"
+          />
+        </View>
       </View>
     </ScreenWrapper>
   );
@@ -891,13 +973,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   imageContainer: {
-    width: width * 0.9,
+    width: '100%',
     height: 233,
     position: 'relative',
     alignItems: 'center',
   },
   coverImage: {
-    width: 327,
+    width: '100%',
     height: 182,
     borderRadius: 20,
   },
@@ -914,7 +996,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoContainer: {
-    width: width * 0.9,
+    width: '100%',
     alignItems: 'center',
     gap: 10,
   },
@@ -940,14 +1022,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statsContainer: {
-    width: width * 0.9,
-    gap: 5,
+    width: '100%',
+    gap: 6,
   },
   statsRow: {
-    width: width * 0.9,
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 4,
   },
   statItem: {
     flexDirection: 'row',
@@ -972,10 +1056,10 @@ const styles = StyleSheet.create({
   },
   locationText: {
     color: '#818898',
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 18.6,
     textAlign: 'center',
   },
   tabContainer: {
@@ -1012,6 +1096,7 @@ const styles = StyleSheet.create({
   tabContent: {
     paddingHorizontal: 24,
     marginTop: 13,
+    gap: 12,
   },
   card: {
     padding: 12,
@@ -1437,32 +1522,82 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 18.6,
   },
-  buttonContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+  profileImage: {
+    width: 103,
+    height: 103,
+    borderRadius: 51.5,
   },
-  hintToggle: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
   },
-  hintToggleText: {
-    color: '#32A6D8',
-    fontSize: 12,
+  emptyStateText: {
+    color: '#B0B0B0',
+    fontSize: 13,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
-    flex: 1,
+    lineHeight: 20,
   },
-  hintText: {
+  businessNameText: {
     color: '#818898',
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '400',
-    lineHeight: 18,
-    backgroundColor: '#F6FBFF',
-    padding: 12,
+    fontWeight: '600',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  serviceRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchedServiceBadge: {
+    backgroundColor: '#32A6D8',
     borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  searchedServiceBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+  },
+  galleryContainer: {
+    gap: 10,
+  },
+  galleryImage: {
+    width: 140,
+    height: 100,
+    borderRadius: 10,
+  },
+  fixedButtonContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  writeReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 4,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#32A6D8',
+    backgroundColor: 'rgba(50, 166, 216, 0.05)',
+  },
+  writeReviewText: {
+    color: '#32A6D8',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
   },
 });

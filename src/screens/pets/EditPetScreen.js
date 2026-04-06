@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CheckCircleIcon } from '../../assets';
@@ -12,6 +13,7 @@ import { getPetById, updatePet } from '../../services/petService';
 const { width } = Dimensions.get('window');
 
 export default function EditPetScreen({ navigation, route }) {
+  const alert = useAppAlert();
   const { petId } = route.params || {};
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -87,16 +89,14 @@ export default function EditPetScreen({ navigation, route }) {
         });
       } catch (error) {
         console.error('Error loading pet:', error);
-        Alert.alert('Error', 'Failed to load pet data', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        alert('Error', 'Failed to load pet data', 'error', 'OK', () => navigation.goBack());
       } finally {
         setLoading(false);
       }
     };
 
     if (petId) loadPet();
-    else { setLoading(false); Alert.alert('Error', 'No pet ID provided'); navigation.goBack(); }
+    else { setLoading(false); alert('Error', 'No pet ID provided', 'error'); navigation.goBack(); }
   }, [petId]);
 
   const getButtonText = () => {
@@ -151,7 +151,7 @@ export default function EditPetScreen({ navigation, route }) {
       setSaving(true);
 
       if (!formData.name || !formData.petType) {
-        Alert.alert('Validation Error', 'Please provide at least a pet name and type');
+        alert('Validation Error', 'Please provide at least a pet name and type', 'pending');
         setSaving(false);
         return;
       }
@@ -160,7 +160,7 @@ export default function EditPetScreen({ navigation, route }) {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error updating pet:', error);
-      Alert.alert('Error', error.message || 'Failed to update pet. Please try again.');
+      alert('Error', error.message || 'Failed to update pet. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

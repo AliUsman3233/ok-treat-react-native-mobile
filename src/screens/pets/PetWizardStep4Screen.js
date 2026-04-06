@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import React from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { PawFilledIcon, CameraFillIcon, ScanAltIcon } from '../../assets';
@@ -10,6 +11,7 @@ import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 const { width } = Dimensions.get('window');
 
 export default function PetWizardStep4Screen({ formData, setFormData, navigation, route }) {
+  const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
 
   const handleScanQR = () => {
@@ -29,10 +31,10 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
         ...formData, 
         photos: [...currentPhotos, result.url] 
       });
-      Alert.alert('Success', 'Photo uploaded successfully!');
+      alert('Success', 'Photo uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploading(false);
     }

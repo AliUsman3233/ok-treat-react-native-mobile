@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, Image } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -11,6 +12,7 @@ import { CLOUDINARY_FOLDERS } from '../../../../config/cloudinary';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 
 export default function BasicInfoScreen({ navigation, route }) {
+  const alert = useAppAlert();
   const [profilePhoto, setProfilePhoto] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -157,10 +159,10 @@ export default function BasicInfoScreen({ navigation, route }) {
       // Update local state
       setProfilePhoto(photoUrl);
       
-      Alert.alert('Success', 'Profile photo uploaded successfully!');
+      alert('Success', 'Profile photo uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -193,7 +195,7 @@ export default function BasicInfoScreen({ navigation, route }) {
 
       // Validate month range
       if (monthNum < 1 || monthNum > 12) {
-        Alert.alert('Invalid Date', 'Please enter a valid month (01-12).');
+        alert('Invalid Date', 'Please enter a valid month (01-12).', 'pending');
         return;
       }
 
@@ -204,13 +206,13 @@ export default function BasicInfoScreen({ navigation, route }) {
         testDate.getMonth() !== monthNum - 1 ||
         testDate.getDate() !== dayNum
       ) {
-        Alert.alert('Invalid Date', 'The date you entered does not exist. Please check the day, month, and year.');
+        alert('Invalid Date', 'The date you entered does not exist. Please check the day, month, and year.', 'pending');
         return;
       }
 
       // Validate year is reasonable
       if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
-        Alert.alert('Invalid Year', 'Please enter a valid year.');
+        alert('Invalid Year', 'Please enter a valid year.', 'pending');
         return;
       }
 
@@ -218,7 +220,7 @@ export default function BasicInfoScreen({ navigation, route }) {
       const today = new Date();
       const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
       if (testDate > eighteenYearsAgo) {
-        Alert.alert('Age Requirement', 'You must be at least 18 years old to register as a sitter.');
+        alert('Age Requirement', 'You must be at least 18 years old to register as a sitter.', 'pending');
         return;
       }
 
@@ -287,17 +289,17 @@ export default function BasicInfoScreen({ navigation, route }) {
       
       // Validate required fields
       if (!profilePhoto) {
-        Alert.alert('Required', 'Please upload a profile photo');
+        alert('Required', 'Please upload a profile photo', 'pending');
         return;
       }
-      
+
       if (!addressLine1 || !city || !state || !zipCode) {
-        Alert.alert('Required', 'Please fill in all address fields');
+        alert('Required', 'Please fill in all address fields', 'pending');
         return;
       }
-      
+
       if (!birthday) {
-        Alert.alert('Required', 'Please add your birthday for age verification');
+        alert('Required', 'Please add your birthday for age verification', 'pending');
         return;
       }
       
@@ -321,11 +323,11 @@ export default function BasicInfoScreen({ navigation, route }) {
         // Navigate to next screen (Phone Numbers)
         navigation.navigate('PhoneNumbers');
       } else {
-        Alert.alert('Error', 'Failed to save basic info. Please try again.');
+        alert('Error', 'Failed to save basic info. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving basic info:', error);
-      Alert.alert('Error', 'Failed to save basic info. Please try again.');
+      alert('Error', 'Failed to save basic info. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }

@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { BackArrowIcon } from '../../assets';
 import { Input, Button } from '../../components';
@@ -7,6 +8,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 const { width, height } = Dimensions.get('window');
 
 export default function PetQRManualEntryScreen({ navigation }) {
+  const alert = useAppAlert();
   const [tagId, setTagId] = useState('');
 
   const handleBack = () => {
@@ -17,7 +19,7 @@ export default function PetQRManualEntryScreen({ navigation }) {
     // Validate tag ID
     const trimmed = tagId.trim();
     if (!trimmed || trimmed.length < 4 || !/^[a-zA-Z0-9]+$/.test(trimmed)) {
-      Alert.alert('Invalid Tag ID', 'Please enter a valid tag ID (alphanumeric, at least 4 characters).');
+      alert('Invalid Tag ID', 'Please enter a valid tag ID (alphanumeric, at least 4 characters).', 'pending');
       return;
     }
 

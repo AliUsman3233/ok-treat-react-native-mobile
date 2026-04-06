@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator }
 import { useState, useEffect } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import { BackArrowIcon, MapPinIcon, SliderIcon, StarIcon, ShieldCheckIcon, CalendarNewIcon, ImageHereIcon, CoinIcon, CoinBackgroundIcon, LocationPinIcon } from '../../assets';
 import SearchFilterModal from '../../components/SearchFilterModal';
 import { searchSitters } from '../../services/sitterService';
@@ -13,6 +14,8 @@ export default function SearchResultsScreen({ navigation, route }) {
   const [filteredSitters, setFilteredSitters] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusModalConfig, setStatusModalConfig] = useState({});
 
   // Log received search payload
   useEffect(() => {
@@ -191,14 +194,32 @@ export default function SearchResultsScreen({ navigation, route }) {
   };
 
   const handleSitterPress = (sitter) => {
-    console.log('Navigating to SitterProfile with:', sitter);
-    navigation.navigate('SitterProfile', { sitter, serviceType });
+    if (sitter.approvalStatus === 'APPROVED') {
+      navigation.navigate('SitterProfile', { sitter, serviceType, searchParams });
+    } else if (sitter.approvalStatus === 'PENDING') {
+      setStatusModalConfig({
+        title: 'Sitter Pending',
+        description: 'This sitter\'s profile is still under review and is not available for booking yet.',
+        iconType: 'pending',
+        buttonText: 'OK',
+      });
+      setShowStatusModal(true);
+    } else if (sitter.approvalStatus === 'REJECTED') {
+      setStatusModalConfig({
+        title: 'Sitter Unavailable',
+        description: 'This sitter is currently not available for booking.',
+        iconType: 'error',
+        buttonText: 'OK',
+      });
+      setShowStatusModal(true);
+    }
   };
 
   const renderSitterCard = ({ item }) => {
-    // Determine border color based on approval status
-    const borderColor = item.approvalStatus === 'REJECTED' ? '#FF0000' : '#EBEBEB';
-    
+    const borderColor = item.approvalStatus === 'REJECTED' ? '#FF0000'
+                       : item.approvalStatus === 'PENDING' ? '#FF9800'
+                       : '#EBEBEB';
+
     return (
       <TouchableOpacity
         style={[styles.sitterCard, { borderColor }]}
@@ -317,6 +338,16 @@ export default function SearchResultsScreen({ navigation, route }) {
           />
         )}
       </View>
+
+      {/* Sitter Status Modal */}
+      <ProfileVerifiedModal
+        visible={showStatusModal}
+        onNext={() => setShowStatusModal(false)}
+        title={statusModalConfig.title}
+        description={statusModalConfig.description}
+        buttonText={statusModalConfig.buttonText}
+        iconType={statusModalConfig.iconType}
+      />
 
       {/* Search Filter Modal */}
       <SearchFilterModal

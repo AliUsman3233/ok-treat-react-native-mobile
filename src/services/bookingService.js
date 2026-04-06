@@ -37,6 +37,17 @@ export const updateBookingStatus = async (bookingId, status) => {
   }
 };
 
+// Cancel a booking
+export const cancelBooking = async (bookingId) => {
+  try {
+    const response = await api.put(`/bookings/${bookingId}/cancel`);
+    return response.data;
+  } catch (error) {
+    console.error('Cancel booking error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to cancel booking' };
+  }
+};
+
 // ========== SITTER BOOKING ENDPOINTS ==========
 
 // Get bookings for the sitter

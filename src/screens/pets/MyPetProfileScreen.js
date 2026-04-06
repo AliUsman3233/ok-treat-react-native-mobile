@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import {
@@ -27,6 +28,7 @@ const coverImage = require('../../assets/images/Pet_default_image.png');
 const { width, height } = Dimensions.get('window');
 
 export default function MyPetProfileScreen({ route, navigation }) {
+  const alert = useAppAlert();
   const { petId } = route.params || {};
   const [activeTab, setActiveTab] = useState(null); // null means show all sections
   const [pet, setPet] = useState(null);
@@ -49,7 +51,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
       setPet(response.data.pet);
     } catch (error) {
       console.error('Error fetching pet:', error);
-      Alert.alert('Error', error.message || 'Failed to load pet profile. Please try again.');
+      alert('Error', error.message || 'Failed to load pet profile. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -95,14 +97,14 @@ export default function MyPetProfileScreen({ route, navigation }) {
         // Update local pet state
         setPet({ ...pet, description });
 
-        Alert.alert('Success', 'AI description has been generated and saved!');
+        alert('Success', 'AI description has been generated and saved!', 'success');
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to generate description');
+        alert('Error', response.data.message || 'Failed to generate description', 'error');
       }
     } catch (error) {
       console.error('AI generate error:', error);
       const message = error.response?.data?.message || 'Failed to generate description. Please try again.';
-      Alert.alert('Error', message);
+      alert('Error', message, 'error');
     } finally {
       setAiGenerating(false);
     }

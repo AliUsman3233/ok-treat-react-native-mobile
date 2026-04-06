@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, Keyboard, FlatList, Dimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, FlatList, Dimensions, Animated, Easing } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ const { width } = Dimensions.get('window');
 const RADIUS_KM = 30; // 30km radius
 
 export default function LocationPickerScreen({ navigation, route }) {
+  const appAlert = useAppAlert();
   const mapRef = useRef(null);
   const insets = useSafeAreaInsets();
   const [region, setRegion] = useState({
@@ -44,7 +46,7 @@ export default function LocationPickerScreen({ navigation, route }) {
       setLoading(true);
       const response = await getNearbySitters(latitude, longitude, RADIUS_KM);
       
-      if (response.status === 'success') {
+      if (response.success) {
         const sittersWithFormattedData = response.data.sitters.map(sitter => ({
           ...sitter,
           distance: `${sitter.distance} km away`,
@@ -80,7 +82,7 @@ export default function LocationPickerScreen({ navigation, route }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to use this feature');
+        appAlert('Permission Denied', 'Location permission is required to use this feature', 'error');
         return;
       }
 
@@ -103,7 +105,7 @@ export default function LocationPickerScreen({ navigation, route }) {
       await fetchNearbySitters(location.coords.latitude, location.coords.longitude);
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert('Error', 'Failed to get current location');
+      appAlert('Error', 'Failed to get current location', 'error');
     }
   };
 
@@ -232,7 +234,7 @@ export default function LocationPickerScreen({ navigation, route }) {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      Alert.alert('Empty Search', 'Please enter a location to search');
+      appAlert('Empty Search', 'Please enter a location to search', 'pending');
       return;
     }
 
@@ -253,11 +255,11 @@ export default function LocationPickerScreen({ navigation, route }) {
         await reverseGeocode(latitude, longitude);
         await fetchNearbySitters(latitude, longitude);
       } else {
-        Alert.alert('Not Found', 'Location not found. Please try a different search.');
+        appAlert('Not Found', 'Location not found. Please try a different search.', 'pending');
       }
     } catch (error) {
       console.error('Error searching location:', error);
-      Alert.alert('Error', 'Failed to search location');
+      appAlert('Error', 'Failed to search location', 'error');
     }
   };
 
@@ -310,7 +312,7 @@ export default function LocationPickerScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Error getting place details:', error);
-      Alert.alert('Error', 'Failed to get location details');
+      appAlert('Error', 'Failed to get location details', 'error');
     }
   };
 

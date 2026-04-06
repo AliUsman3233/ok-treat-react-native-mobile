@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ScrollView, Dimensions, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ScrollView, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import React from 'react';
 import { CameraIcon, PawFilledIcon, DogFaceIcon, CatFaceIcon } from '../../assets';
 import { Input, Dropdown } from '../../components';
@@ -10,6 +11,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 const { width } = Dimensions.get('window');
 
 export default function PetWizardStep1Screen({ formData, setFormData }) {
+  const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
 
   const handleImageSelected = async (imageUri) => {
@@ -17,10 +19,10 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
       setUploading(true);
       const result = await uploadToCloudinary(imageUri, CLOUDINARY_FOLDERS.PETS);
       setFormData({ ...formData, photo: result.url });
-      Alert.alert('Success', 'Pet photo uploaded successfully!');
+      alert('Success', 'Pet photo uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
+      alert('Upload Failed', error.message || 'Failed to upload image. Please try again.', 'error');
     } finally {
       setUploading(false);
     }

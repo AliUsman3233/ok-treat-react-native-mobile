@@ -97,15 +97,20 @@ export default function MoreScreen({ navigation }) {
       screen: 'ProfileView',
       component: UserCircleIcon 
     },
-    { 
-      title: 'Your Pet', 
+    {
+      title: 'Your Pet',
       screen: 'PetList',
-      component: PawIcon 
+      component: PawIcon
     },
-    { 
-      title: 'Your Latest Scans', 
+    {
+      title: 'My Requests',
+      screen: 'OpenRequests',
+      component: PawIcon
+    },
+    {
+      title: 'Your Latest Scans',
       screen: 'Scans',
-      component: ScannerIcon 
+      component: ScannerIcon
     },
     { 
       title: 'Shop Coins', 

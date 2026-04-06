@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -9,6 +10,7 @@ import { getUserPets } from '../../../../services/petService';
 import { upsertBuildTrustSection } from '../../../../services/buildTrustService';
 
 export default function YourPetsScreen({ navigation }) {
+  const alert = useAppAlert();
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [userPets, setUserPets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,11 +71,11 @@ export default function YourPetsScreen({ navigation }) {
       if (response.success) {
         navigation.navigate('ProfileSetup', { completedSection: 'yourPets' });
       } else {
-        Alert.alert('Error', 'Failed to save your pets. Please try again.');
+        alert('Error', 'Failed to save your pets. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error saving your pets:', error);
-      Alert.alert('Error', 'Failed to save your pets. Please try again.');
+      alert('Error', 'Failed to save your pets. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }

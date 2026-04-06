@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
 import { Dropdown } from '../../components';
@@ -8,6 +9,7 @@ import { CalendarIcon, AngleDownIcon } from '../../assets';
 import api from '../../config/api';
 
 export default function PetWizardStep2Screen({ formData, setFormData }) {
+  const alert = useAppAlert();
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -30,12 +32,12 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
       if (response.data.success && response.data.data.description) {
         setFormData({ ...formData, description: response.data.data.description });
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to generate description');
+        alert('Error', response.data.message || 'Failed to generate description', 'error');
       }
     } catch (error) {
       console.error('AI generate error:', error);
       const message = error.response?.data?.message || 'Failed to generate description. Please try again.';
-      Alert.alert('Error', message);
+      alert('Error', message, 'error');
     } finally {
       setAiGenerating(false);
     }

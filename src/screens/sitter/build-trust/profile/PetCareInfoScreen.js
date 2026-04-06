@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
@@ -14,6 +15,7 @@ const FEEDING_OPTIONS = ['Dry food', 'Wet food', 'Raw diet', 'Special diet', 'Me
 const SPECIAL_CARE_OPTIONS = ['Senior pets', 'Puppies/kittens', 'Disabled pets', 'Anxious/fearful pets', 'Aggressive behavior management'];
 
 export default function PetCareInfoScreen({ navigation }) {
+  const alert = useAppAlert();
   const [petPreferences, setPetPreferences] = useState([]);
   const [petSizePreference, setPetSizePreference] = useState([]);
   const [walkFrequency, setWalkFrequency] = useState('');
@@ -66,17 +68,17 @@ export default function PetCareInfoScreen({ navigation }) {
 
       // Validate required fields
       if (petPreferences.length === 0) {
-        Alert.alert('Required', 'Please select at least one pet type preference');
+        alert('Required', 'Please select at least one pet type preference', 'pending');
         return;
       }
 
       if (petSizePreference.length === 0) {
-        Alert.alert('Required', 'Please select at least one pet size preference');
+        alert('Required', 'Please select at least one pet size preference', 'pending');
         return;
       }
 
       if (!walkFrequency) {
-        Alert.alert('Required', 'Please select a walk frequency');
+        alert('Required', 'Please select a walk frequency', 'pending');
         return;
       }
 
@@ -99,12 +101,12 @@ export default function PetCareInfoScreen({ navigation }) {
         navigation.navigate('ProfileSetup', { completedSection: 'petCareInfo' });
       } else {
         setIsSaving(false);
-        Alert.alert('Error', 'Failed to save pet care info. Please try again.');
+        alert('Error', 'Failed to save pet care info. Please try again.', 'error');
       }
     } catch (error) {
       setIsSaving(false);
       console.error('Error saving pet care info:', error);
-      Alert.alert('Error', 'Failed to save pet care info. Please try again.');
+      alert('Error', 'Failed to save pet care info. Please try again.', 'error');
     }
   };
 

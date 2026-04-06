@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
+import ProfileVerifiedModal from '../../../components/ProfileVerifiedModal';
 import { BackArrowIcon, Setting2IconAlt, DogImage } from '../../../assets';
 import { getSitterRequests, updateBookingStatus } from '../../../services/bookingService';
+import { getSocket } from '../../../config/socket';
 
 export default function SitterRequestsScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chats'
@@ -11,37 +14,43 @@ export default function SitterRequestsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingIds, setProcessingIds] = useState(new Set());
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({});
 
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getSitterRequests();
-      const data = response?.requests || response?.data || response || [];
+      const data = response?.data?.requests || response?.requests || response?.data || [];
       const requestsArray = Array.isArray(data) ? data : [];
 
-      // Separate into requests and chats based on type or status
       const requestItems = [];
       const chatItems = [];
 
       requestsArray.forEach((item) => {
         const mapped = {
           id: item.id || item._id,
-          bookingId: item.bookingId || item.id || item._id,
-          name: item.client?.name || item.user?.name || item.name || 'User',
-          message: item.message || item.lastMessage || 'New request',
+          bookingId: item.id || item._id,
+          name: item.user?.fullName || 'User',
+          message: item.notes || item.serviceType?.replace(/_/g, ' ') || 'New request',
           time: item.createdAt
             ? getTimeDisplay(new Date(item.createdAt))
-            : item.time || '',
-          avatar: item.client?.profileImage || item.user?.profileImage
-            ? { uri: item.client?.profileImage || item.user?.profileImage }
+            : '',
+          avatar: item.user?.avatarUrl
+            ? { uri: item.user.avatarUrl }
             : DogImage,
           type: item.type || 'request',
           status: item.status,
-          unread: item.unreadCount || item.unread || 0,
+          unread: item.unreadCount || 0,
+          serviceType: item.serviceType,
+          petName: item.pet?.name,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          totalAmount: item.totalAmount,
         };
 
-        if (item.type === 'chat' || item.status === 'CONFIRMED' || item.status === 'IN_PROGRESS') {
+        if (item.status === 'CONFIRMED' || item.status === 'ONGOING') {
           chatItems.push(mapped);
         } else {
           requestItems.push(mapped);
@@ -58,8 +67,28 @@ export default function SitterRequestsScreen({ navigation }) {
     }
   }, []);
 
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, [fetchRequests])
+  );
+
+  // Real-time refresh via socket
   useEffect(() => {
-    fetchRequests();
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewNotification = (notification) => {
+      if (notification?.type === 'BOOKING_REQUEST') {
+        fetchRequests();
+      }
+    };
+
+    socket.on('newNotification', handleNewNotification);
+    return () => {
+      socket.off('newNotification', handleNewNotification);
+    };
   }, [fetchRequests]);
 
   // Helper to display relative time
@@ -74,6 +103,11 @@ export default function SitterRequestsScreen({ navigation }) {
     return 'Yesterday';
   };
 
+  const showModal = (title, description, iconType) => {
+    setModalConfig({ title, description, iconType, buttonText: 'OK' });
+    setModalVisible(true);
+  };
+
   const handleAccept = async (item) => {
     const bookingId = item.bookingId;
     if (!bookingId) return;
@@ -81,13 +115,12 @@ export default function SitterRequestsScreen({ navigation }) {
     setProcessingIds(prev => new Set([...prev, bookingId]));
     try {
       await updateBookingStatus(bookingId, 'CONFIRMED');
-      Alert.alert('Accepted', `Request from ${item.name} has been accepted.`);
-      // Move from requests to chats
       setRequests(prev => prev.filter(r => r.bookingId !== bookingId));
       setChats(prev => [...prev, { ...item, type: 'chat', status: 'CONFIRMED' }]);
+      showModal('Request Accepted', `Request from ${item.name} has been accepted.`, 'success');
     } catch (err) {
       console.error('Failed to accept request:', err);
-      Alert.alert('Error', err?.message || 'Failed to accept request');
+      showModal('Error', err?.message || 'Failed to accept request', 'error');
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev);
@@ -101,34 +134,21 @@ export default function SitterRequestsScreen({ navigation }) {
     const bookingId = item.bookingId;
     if (!bookingId) return;
 
-    Alert.alert(
-      'Decline Request',
-      `Are you sure you want to decline the request from ${item.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            setProcessingIds(prev => new Set([...prev, bookingId]));
-            try {
-              await updateBookingStatus(bookingId, 'CANCELLED');
-              setRequests(prev => prev.filter(r => r.bookingId !== bookingId));
-              Alert.alert('Declined', `Request from ${item.name} has been declined.`);
-            } catch (err) {
-              console.error('Failed to decline request:', err);
-              Alert.alert('Error', err?.message || 'Failed to decline request');
-            } finally {
-              setProcessingIds(prev => {
-                const next = new Set(prev);
-                next.delete(bookingId);
-                return next;
-              });
-            }
-          },
-        },
-      ]
-    );
+    setProcessingIds(prev => new Set([...prev, bookingId]));
+    try {
+      await updateBookingStatus(bookingId, 'DECLINED');
+      setRequests(prev => prev.filter(r => r.bookingId !== bookingId));
+      showModal('Request Declined', `Request from ${item.name} has been declined.`, 'pending');
+    } catch (err) {
+      console.error('Failed to decline request:', err);
+      showModal('Error', err?.message || 'Failed to decline request', 'error');
+    } finally {
+      setProcessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(bookingId);
+        return next;
+      });
+    }
   };
 
   const renderRequestCard = (item) => {
@@ -275,6 +295,14 @@ export default function SitterRequestsScreen({ navigation }) {
           </ScrollView>
         )}
       </View>
+      <ProfileVerifiedModal
+        visible={modalVisible}
+        onNext={() => setModalVisible(false)}
+        title={modalConfig.title}
+        description={modalConfig.description}
+        buttonText={modalConfig.buttonText}
+        iconType={modalConfig.iconType}
+      />
     </ScreenWrapper>
   );
 }
