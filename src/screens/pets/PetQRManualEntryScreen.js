@@ -18,8 +18,8 @@ export default function PetQRManualEntryScreen({ navigation }) {
   const handleSubmit = () => {
     // Validate tag ID
     const trimmed = tagId.trim();
-    if (!trimmed || trimmed.length < 4 || !/^[a-zA-Z0-9]+$/.test(trimmed)) {
-      alert('Invalid Tag ID', 'Please enter a valid tag ID (alphanumeric, at least 4 characters).', 'pending');
+    if (!trimmed || trimmed.length < 4 || !/^[a-zA-Z0-9-]+$/.test(trimmed)) {
+      alert('Invalid Tag ID', 'Please enter a valid tag ID (e.g., OKTREAT-A1B2C3).', 'pending');
       return;
     }
 
@@ -67,7 +67,7 @@ export default function PetQRManualEntryScreen({ navigation }) {
         <View style={styles.inputContainer}>
           <Input
             type="text"
-            placeholder="DI787GH"
+            placeholder="OKTREAT-A1B2C3"
             value={tagId}
             onChangeText={setTagId}
             containerStyle={styles.input}

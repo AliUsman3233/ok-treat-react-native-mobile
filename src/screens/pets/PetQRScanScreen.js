@@ -208,16 +208,24 @@ export default function PetQRScanScreen({ navigation, route }) {
     setScanned(true);
     setScanning(false);
 
-    // Extract QR code from URL format or use raw data
-    let qrCode = data;
-    try {
-      const url = new URL(data);
-      const qrCodeParam = url.searchParams.get('qr-code');
-      if (qrCodeParam) {
-        qrCode = qrCodeParam;
+    // Extract QR code from various formats
+    let qrCode = data.trim();
+
+    // Check if it's an OKTREAT code (new format: OKTREAT-XXXXXX)
+    const oktreatMatch = qrCode.match(/OKTREAT-[A-Z0-9]{4,}/i);
+    if (oktreatMatch) {
+      qrCode = oktreatMatch[0].toUpperCase();
+    } else {
+      // Try to extract from URL format (old format: https://gondal.com/qr?qr-code=3356525135)
+      try {
+        const url = new URL(qrCode);
+        const qrCodeParam = url.searchParams.get('qr-code') || url.searchParams.get('qrCode') || url.searchParams.get('code');
+        if (qrCodeParam) {
+          qrCode = qrCodeParam;
+        }
+      } catch (_) {
+        // Not a URL, use raw data as-is
       }
-    } catch (_) {
-      // Not a URL, use raw data
     }
 
     // Get location (non-blocking with timeout)
