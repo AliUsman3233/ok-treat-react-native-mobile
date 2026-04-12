@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CoinIcon, CoinInIcon } from '../../assets';
 import Dropdown from '../../components/Dropdown';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import api from '../../config/api';
 import { useFocusEffect } from '@react-navigation/native';
 

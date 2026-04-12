@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CardField, useConfirmSetupIntent } from '@stripe/stripe-react-native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import Button from '../../../components/Button';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { BackArrowIcon, ShieldCheckIcon } from '../../../assets';
 import api from '../../../config/api';
 

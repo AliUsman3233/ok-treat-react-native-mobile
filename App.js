@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as Notifications from 'expo-notifications';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';

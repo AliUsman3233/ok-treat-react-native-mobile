@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../../assets';
 import { getSitterEarnings, getSitterTransactions } from '../../../services/bookingService';

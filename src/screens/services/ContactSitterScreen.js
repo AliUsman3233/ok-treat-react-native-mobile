@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { useState, useEffect } from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CalendarIcon, CheckCircleIcon } from '../../assets';
 import { Button } from '../../components';

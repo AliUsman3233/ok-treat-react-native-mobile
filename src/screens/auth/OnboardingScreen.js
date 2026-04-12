@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { IconButton } from '../../components/Button';
-import OnboardingImage1 from '../../assets/icons/on_boarding_1.svg';
-import OnboardingImage2 from '../../assets/icons/on_boarding_2.svg';
-import OnboardingImage3 from '../../assets/icons/on_boarding_3.svg';
+const OnboardingImage1 = require('../../assets/icons/on_boarding_1.png');
+const OnboardingImage2 = require('../../assets/icons/on_boarding_2.png');
+const OnboardingImage3 = require('../../assets/icons/on_boarding_3.png');
 import NextArrowIcon from '../../assets/icons/next_arrow_btn_icon.svg';
 import { completeOnboarding } from '../../store/slices/appSlice';
 
@@ -94,7 +94,7 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   const currentData = onboardingData[currentIndex];
-  const ImageComponent = currentData.image;
+  const imageSource = currentData.image;
 
   return (
     <ScreenWrapper style={styles.container} scrollable={false}>
@@ -114,10 +114,10 @@ export default function OnboardingScreen({ navigation }) {
             }
           ]}
         >
-          <ImageComponent
-            width={width * 0.9}
-            height={width * 0.76}
-            preserveAspectRatio="xMidYMid meet"
+          <Image
+            source={imageSource}
+            style={{ width: width * 0.9, height: width * 0.76 }}
+            resizeMode="contain"
           />
         </Animated.View>
       </View>

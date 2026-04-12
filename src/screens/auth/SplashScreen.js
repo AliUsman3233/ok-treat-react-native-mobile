@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, Dimensions, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, Dimensions, Modal, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
-import SplashIcon from '../../assets/icons/splash.svg';
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
 
 const { width, height } = Dimensions.get('window');
@@ -98,10 +97,10 @@ export default function SplashScreen({ onServerReady }) {
       <View style={styles.content}>
         {/* Logo Icon - Centered */}
         <View style={styles.logoArea}>
-          <SplashIcon 
-            width={width * 0.53} 
-            height={height * 0.37} 
-            preserveAspectRatio="xMidYMid meet"
+          <Image
+            source={require('../../assets/icons/splash.png')}
+            style={{ width: width * 0.53, height: height * 0.37 }}
+            resizeMode="contain"
           />
           
           {/* Loading indicator */}

@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchSitters } from '../../store/slices/sitterSlice';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { 
   HomeIconSvg, 
   ScanAltIcon, 
@@ -122,7 +122,7 @@ export default function HomeScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
-            <SplashIcon width={30} height={30} />
+            <Image source={SplashIcon} style={{ width: 30, height: 30 }} resizeMode="contain" />
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeText}>Welcome Back</Text>

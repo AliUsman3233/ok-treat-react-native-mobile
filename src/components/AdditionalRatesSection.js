@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import React from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { CoinIcon, CoinBackgroundIcon } from '../assets';
 
 export default function AdditionalRatesSection({

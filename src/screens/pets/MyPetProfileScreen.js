@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import {
   BackArrowIcon,
@@ -318,18 +318,6 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     </Text>
                   )}
                   <Text style={styles.cardContent}>{pet.description || 'No description provided yet.'}</Text>
-                  <TouchableOpacity
-                    style={styles.aiGenerateButton}
-                    onPress={handleAIGenerateDescription}
-                    disabled={aiGenerating}
-                    activeOpacity={0.7}
-                  >
-                    {aiGenerating ? (
-                      <ActivityIndicator size="small" color="#32A6D8" />
-                    ) : (
-                      <Text style={styles.aiGenerateButtonText}>AI Generate Description</Text>
-                    )}
-                  </TouchableOpacity>
                 </View>
               )}
 

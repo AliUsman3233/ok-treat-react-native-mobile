@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import React from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { PawFilledIcon, CameraFillIcon, ScanAltIcon } from '../../assets';
 import { Dropdown } from '../../components';
 import ImagePickerButton from '../../components/ImagePickerButton';
@@ -14,10 +14,12 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
   const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
 
+  // Determine which screen to return to based on whether we're in add or edit mode
+  const isEditMode = route?.params?.petId || formData?.id;
+  const returnScreen = isEditMode ? 'EditPet' : 'AddPet';
+
   const handleScanQR = () => {
-    navigation.navigate('PetQRScan', {
-      returnScreen: 'AddPet'
-    });
+    navigation.navigate('PetQRScan', { returnScreen });
   };
 
   const handleImageSelected = async (imageUri) => {

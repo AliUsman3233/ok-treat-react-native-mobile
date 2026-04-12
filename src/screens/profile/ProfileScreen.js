@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, setCredentials } from '../../store/slices/authSlice';
 import { useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import api from '../../config/api';
 import {
@@ -129,7 +129,7 @@ export default function ProfileScreen({ navigation }) {
                 {user?.avatarUrl ? (
                   <Image source={{ uri: user.avatarUrl }} style={styles.profileImage} />
                 ) : (
-                  <ProfileImagePersonIcon width={88} height={88} />
+                  <Image source={ProfileImagePersonIcon} style={{ width: 88, height: 88, borderRadius: 44 }} resizeMode="cover" />
                 )}
               </View>
               <TouchableOpacity

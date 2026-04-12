@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon, DogImage, ProfileImagePersonIcon } from '../../../assets';
 
@@ -28,7 +28,7 @@ export default function SitterPersonalProfileScreen({ navigation }) {
           <Image source={DogImage} style={styles.coverImage} />
           <View style={styles.profileImageWrapper}>
             <View style={styles.profileImageContainer}>
-              <ProfileImagePersonIcon width={103} height={103} />
+              <Image source={ProfileImagePersonIcon} style={{ width: 103, height: 103, borderRadius: 51.5 }} resizeMode="cover" />
             </View>
           </View>
         </View>

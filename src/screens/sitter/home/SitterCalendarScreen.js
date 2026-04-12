@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon, DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterCalendar } from '../../../services/bookingService';
 
 const daysOfWeek = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];

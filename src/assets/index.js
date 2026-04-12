@@ -11,8 +11,8 @@
 // ============================================
 // SVG ICONS
 // ============================================
-// Splash Icon
-export { default as SplashIcon } from './icons/splash.svg';
+// Splash Icon (PNG — too large for SVG inline)
+export const SplashIcon = require('./icons/splash.png');
 
 // Navigation Icons
 export { default as BackArrowIcon } from './icons/back_arrow.svg';
@@ -119,8 +119,8 @@ export { default as ReferFriendIcon } from './icons/Refer_a_Friend_Icon_profile_
 export { default as SupportProfileIcon } from './icons/support_icon_profile_screen.svg';
 export { default as RateUsIcon } from './icons/rate_us_icon_profile_screen.svg';
 export { default as LogoutProfileIcon } from './icons/LogoutIcon_profile_screen.svg';
-export { default as ProfileDefaultIcon } from './icons/profile_default.svg';
-export { default as ProfileImagePersonIcon } from './icons/Profile_Image_person_default_profile_screen.svg';
+export const ProfileDefaultIcon = require('./icons/profile_default.png');
+export const ProfileImagePersonIcon = require('./icons/Profile_Image_person_default_profile_screen.jpg');
 export { default as EditIcon } from './icons/edit_icon.svg';
 export { default as CoinInIcon } from './icons/CoinIn_tranfer_hostory_screen.svg';
 
@@ -130,9 +130,9 @@ export { default as DocumentUploadIcon } from './icons/Document Upload 4.svg';
 export { default as HappyIcon } from './icons/Happy 1.svg';
 
 // Onboarding Images
-export { default as OnboardingImage1 } from './icons/on_boarding_1.svg';
-export { default as OnboardingImage2 } from './icons/on_boarding_2.svg';
-export { default as OnboardingImage3 } from './icons/on_boarding_3.svg';
+export const OnboardingImage1 = require('./icons/on_boarding_1.png');
+export const OnboardingImage2 = require('./icons/on_boarding_2.png');
+export const OnboardingImage3 = require('./icons/on_boarding_3.png');
 
 export { default as BadgeCheckIcon } from './icons/badge-check.svg';
 export { default as StarTag } from './icons/star-tag.svg';

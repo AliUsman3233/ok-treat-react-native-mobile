@@ -1,40 +1,53 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { BackArrowIcon } from '../../assets';
 import { Input, Button } from '../../components';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { getPetByQRCode } from '../../services/petService';
+import { createScan } from '../../services/scanService';
 
 const { width, height } = Dimensions.get('window');
 
 export default function PetQRManualEntryScreen({ navigation }) {
   const alert = useAppAlert();
   const [tagId, setTagId] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validate tag ID
-    const trimmed = tagId.trim();
+    const trimmed = tagId.trim().toUpperCase();
     if (!trimmed || trimmed.length < 4 || !/^[a-zA-Z0-9-]+$/.test(trimmed)) {
       alert('Invalid Tag ID', 'Please enter a valid tag ID (e.g., OKTREAT-A1B2C3).', 'pending');
       return;
     }
 
-    // Navigate to PetDetailScreen with mock pet data
-    const mockPetData = {
-      id: 'QR-' + Date.now(),
-      name: 'Unknown Pet',
-      tagId: trimmed,
-      type: 'Dog',
-      breed: 'Unknown',
-      age: 'Unknown',
-      weight: 'Unknown',
-    };
-
-    navigation.navigate('PetDetail', { pet: mockPetData });
+    setLoading(true);
+    try {
+      const response = await getPetByQRCode(trimmed);
+      if (response.data?.pet) {
+        // Record the scan in background
+        createScan({ qrCode: trimmed }).catch(() => {});
+        navigation.replace('PetDetail', { petData: response.data.pet, qrCode: trimmed });
+      } else {
+        alert('No Pet Found', 'No pet is linked with this tag ID. Please check and try again.', 'pending');
+      }
+    } catch (err) {
+      const reason = err?.reason;
+      if (reason === 'DEACTIVATED') {
+        alert('Tag Deactivated', 'This QR tag has been deactivated and is no longer valid.', 'pending');
+      } else if (reason === 'NOT_LINKED') {
+        alert('Tag Not Linked', 'This QR tag is not linked to any pet yet.', 'pending');
+      } else {
+        alert('Error', err?.message || 'Failed to look up this tag. Please try again.', 'pending');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,11 +89,11 @@ export default function PetQRManualEntryScreen({ navigation }) {
 
         {/* Submit Button */}
         <Button
-          title="Submit"
+          title={loading ? 'Looking up...' : 'Submit'}
           onPress={handleSubmit}
           fullWidth
           size="medium"
-          disabled={!tagId.trim()}
+          disabled={!tagId.trim() || loading}
         />
       </View>
       </View>

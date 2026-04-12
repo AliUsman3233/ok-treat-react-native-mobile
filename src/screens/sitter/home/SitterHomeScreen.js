@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterEarnings, getSitterBookings, getSitterRequests } from '../../../services/bookingService';
 
 export default function SitterHomeScreen({ navigation }) {

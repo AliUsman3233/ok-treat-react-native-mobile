@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, CoinIcon, DogImage, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon, ChatIcon } from '../../../assets';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterBookings } from '../../../services/bookingService';
 
 // Helper to derive status style

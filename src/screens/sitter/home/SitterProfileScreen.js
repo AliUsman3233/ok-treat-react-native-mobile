@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../../store/slices/authSlice';
 import { getSitterProfile } from '../../../services/sitterService';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import {
   BackArrowIcon,
@@ -119,7 +119,7 @@ export default function SitterProfileScreen({ navigation }) {
           <View style={styles.profileSection}>
             <View style={styles.profileImageWrapper}>
               <View style={styles.profileImageContainer}>
-                <ProfileImagePersonIcon width={103} height={103} />
+                <Image source={ProfileImagePersonIcon} style={{ width: 103, height: 103, borderRadius: 51.5 }} resizeMode="cover" />
               </View>
               <TouchableOpacity
                 style={styles.editButton}

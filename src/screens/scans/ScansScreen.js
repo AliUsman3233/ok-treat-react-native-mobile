@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import MapView, { Marker } from 'react-native-maps';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';

@@ -85,7 +85,7 @@ export default function SubmitReviewScreen({ navigation, route }) {
             {sitterImage ? (
               <Image source={{ uri: sitterImage }} style={styles.sitterImage} />
             ) : (
-              <ProfileImagePersonIcon width={64} height={64} />
+              <Image source={ProfileImagePersonIcon} style={{ width: 64, height: 64, borderRadius: 32 }} resizeMode="cover" />
             )}
           </View>
           <Text style={styles.sitterName}>{sitterName}</Text>

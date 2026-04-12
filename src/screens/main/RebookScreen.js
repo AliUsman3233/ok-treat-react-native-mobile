@@ -162,7 +162,7 @@ export default function RebookScreen({ navigation }) {
                 {/* Header */}
                 <View style={[styles.header, { top: insets.top }]}>
                     <View style={styles.avatarContainer}>
-                        <SplashIcon width={30} height={30} />
+                        <Image source={SplashIcon} style={{ width: 30, height: 30 }} resizeMode="contain" />
                     </View>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.headerTitle}>Rebook a Sitter</Text>

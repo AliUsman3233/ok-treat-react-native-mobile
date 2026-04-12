@@ -99,6 +99,14 @@ export default function EditPetScreen({ navigation, route }) {
     else { setLoading(false); alert('Error', 'No pet ID provided', 'error'); navigation.goBack(); }
   }, [petId]);
 
+  // Handle QR code from navigation params (returned from scanner)
+  useEffect(() => {
+    if (route?.params?.qrCode) {
+      setFormData(prev => ({ ...prev, qrCode: route.params.qrCode }));
+      navigation.setParams({ qrCode: undefined });
+    }
+  }, [route?.params?.qrCode]);
+
   const getButtonText = () => {
     return currentStep === totalSteps ? 'Save Changes' : 'Next';
   };
@@ -180,7 +188,7 @@ export default function EditPetScreen({ navigation, route }) {
       case 3:
         return <PetWizardStep3Screen formData={formData} setFormData={setFormData} />;
       case 4:
-        return <PetWizardStep4Screen formData={formData} setFormData={setFormData} navigation={navigation} />;
+        return <PetWizardStep4Screen formData={formData} setFormData={setFormData} navigation={navigation} route={route} />;
       default:
         return null;
     }

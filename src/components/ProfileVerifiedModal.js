@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { CheckCircleIcon } from '../assets';
 
 export default function ProfileVerifiedModal({ 

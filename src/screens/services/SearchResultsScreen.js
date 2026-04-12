@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import { BackArrowIcon, MapPinIcon, SliderIcon, StarIcon, ShieldCheckIcon, CalendarNewIcon, ImageHereIcon, CoinIcon, CoinBackgroundIcon, LocationPinIcon } from '../../assets';

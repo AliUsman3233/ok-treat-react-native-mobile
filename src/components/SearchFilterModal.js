@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import { CalendarNewIcon, LocationPinIcon, BuildingsIcon, HomeIconSvg, SliderIcon, Calendar2Icon, CalendarIcon, QuestionCircleIcom, BuildingsFilledIcon } from '../assets';
 import Button from './Button';
 import FilterOption from './FilterOption';

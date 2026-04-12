@@ -3,7 +3,7 @@ import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, ProfileImagePersonIcon, EditIcon, MyProfileIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { Button, Input } from '../../components';
@@ -245,7 +245,7 @@ export default function EditProfileDetailsScreen({ navigation }) {
                 ) : profilePhoto ? (
                   <Image source={{ uri: profilePhoto }} style={styles.profileImageActual} />
                 ) : (
-                  <ProfileImagePersonIcon width={60} height={60} />
+                  <Image source={ProfileImagePersonIcon} style={{ width: 60, height: 60, borderRadius: 30 }} resizeMode="cover" />
                 )}
                 <View style={styles.editBadge}>
                   <Icon name="camera" size={12} color="#FFF" />

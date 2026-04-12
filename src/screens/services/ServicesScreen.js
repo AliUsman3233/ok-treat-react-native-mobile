@@ -8,7 +8,7 @@ import {
   SunIcon,
   PawIcon
 } from '../../assets';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@expo/vector-icons/Ionicons';
 
 const { width } = Dimensions.get('window');
 
