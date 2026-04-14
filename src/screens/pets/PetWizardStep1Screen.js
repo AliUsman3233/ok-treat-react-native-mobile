@@ -88,7 +88,7 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
                 placeholder="Select pet type"
                 value={formData.petType}
                 onSelect={(value) => setFormData({ ...formData, petType: value })}
-                options={['Dog', 'Cat', 'Bird', 'Rabbit', 'Fish', 'Reptile', 'Hamster', 'Guinea Pig', 'Other']}
+                options={['Dog', 'Cat']}
                 leftIcon={
                   // formData.petType === 'Dog' ? (
                   //   <DogFaceIcon width={32} height={32} color="#FFFFFF" />

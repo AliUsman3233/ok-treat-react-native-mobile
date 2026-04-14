@@ -12,3 +12,7 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+
+# Stripe push provisioning (optional classes, safe to ignore if missing)
+-dontwarn com.stripe.android.pushProvisioning.**
+-keep class com.stripe.android.pushProvisioning.** { *; }

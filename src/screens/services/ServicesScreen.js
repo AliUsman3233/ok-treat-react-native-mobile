@@ -89,7 +89,7 @@ export default function ServicesScreen({ navigation }) {
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeText}>Services</Text>
-            <Text style={styles.emailText}>You can chose services</Text>
+            <Text style={styles.emailText}>You can choose services</Text>
           </View>
           <TouchableOpacity style={styles.filterButton}>
             <SliderIcon width={19} height={19} />
