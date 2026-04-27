@@ -6,6 +6,7 @@ import { Input, Button } from '../../components';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { getPetByQRCode } from '../../services/petService';
 import { createScan } from '../../services/scanService';
+import { extractQRCode } from '../../utils/qrCode';
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,20 +20,20 @@ export default function PetQRManualEntryScreen({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    // Validate tag ID
-    const trimmed = tagId.trim().toUpperCase();
-    if (!trimmed || trimmed.length < 4 || !/^[a-zA-Z0-9-]+$/.test(trimmed)) {
+    // Accept pasted URLs by running input through the same extractor the scanner uses
+    const code = extractQRCode(tagId);
+    if (!code || code.length < 4 || !/^[A-Z0-9-]+$/i.test(code)) {
       alert('Invalid Tag ID', 'Please enter a valid tag ID (e.g., OKTREAT-A1B2C3).', 'pending');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await getPetByQRCode(trimmed);
+      const response = await getPetByQRCode(code);
       if (response.data?.pet) {
         // Record the scan in background
-        createScan({ qrCode: trimmed }).catch(() => {});
-        navigation.replace('PetDetail', { petData: response.data.pet, qrCode: trimmed });
+        createScan({ qrCode: code }).catch(() => {});
+        navigation.replace('PetDetail', { petData: response.data.pet, qrCode: code });
       } else {
         alert('No Pet Found', 'No pet is linked with this tag ID. Please check and try again.', 'pending');
       }
@@ -42,6 +43,8 @@ export default function PetQRManualEntryScreen({ navigation }) {
         alert('Tag Deactivated', 'This QR tag has been deactivated and is no longer valid.', 'pending');
       } else if (reason === 'NOT_LINKED') {
         alert('Tag Not Linked', 'This QR tag is not linked to any pet yet.', 'pending');
+      } else if (reason === 'INVALID_FORMAT') {
+        alert('Invalid QR Code', "This doesn't appear to be a valid OkTreat QR code.", 'pending');
       } else {
         alert('Error', err?.message || 'Failed to look up this tag. Please try again.', 'pending');
       }

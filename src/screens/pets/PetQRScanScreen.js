@@ -7,6 +7,7 @@ import { BackArrowIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { getPetByQRCode } from '../../services/petService';
 import { createScan } from '../../services/scanService';
+import { extractQRCode } from '../../utils/qrCode';
 import * as Location from 'expo-location';
 
 const { width, height } = Dimensions.get('window');
@@ -18,25 +19,6 @@ if (isWeb) {
   import('jsqr').then(module => {
     jsQR = module.default;
   });
-}
-
-// Extract QR code from raw scanned data
-function extractQRCode(data) {
-  const trimmed = (data || '').trim();
-
-  // New format: OKTREAT-XXXXXX
-  const oktreatMatch = trimmed.match(/OKTREAT-[A-Z0-9]{4,}/i);
-  if (oktreatMatch) return oktreatMatch[0].toUpperCase();
-
-  // Old URL format: https://gondal.com/qr?qr-code=3356525135
-  try {
-    const url = new URL(trimmed);
-    const param = url.searchParams.get('qr-code') || url.searchParams.get('qrCode') || url.searchParams.get('code');
-    if (param) return param;
-  } catch (_) {}
-
-  // Raw data as-is
-  return trimmed;
 }
 
 // ─── Web QR Scanner ─────────────────────────────────────────
@@ -145,7 +127,7 @@ export default function PetQRScanScreen({ navigation, route }) {
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const processingRef = useRef(false);
   const locationPermRef = useRef(null); // Cache location permission status
-  const { fromScreen } = route.params || {};
+  const { fromScreen, currentQrCode } = route.params || {};
 
   // Reset on focus
   useFocusEffect(
@@ -225,8 +207,11 @@ export default function PetQRScanScreen({ navigation, route }) {
     if (processingRef.current) return;
     processingRef.current = true;
 
-    // Keep scan line animating during processing — only stop camera from re-scanning
+    // Stop the camera from firing more events while the async validation runs;
+    // without this, additional emits can slip through during the navigate-back
+    // window and trigger a second API call → second navigate → crash.
     setScanned(true);
+    setScanning(false);
     setLoading(true);
 
     const qrCode = extractQRCode(data);
@@ -256,18 +241,51 @@ export default function PetQRScanScreen({ navigation, route }) {
           }
         });
     } else {
-      // AddPet/EditPet flow — go back and pass QR code to the previous screen
-      setLoading(false);
-      const returnScreen = navigation.getState()?.routes?.find(r => r.name === 'PetQRScan')?.params?.returnScreen;
-      if (returnScreen) {
-        navigation.navigate({ name: returnScreen, params: { qrCode }, merge: true });
-      } else {
-        navigation.goBack();
+      // AddPet/EditPet link flow — pre-validate so the user finds out about
+      // bad codes here, not 4 steps later at Save.
+      // Note: don't reset processingRef here — useFocusEffect resets it when
+      // the scanner regains focus. Leaving it true during the unmount window
+      // prevents a second nav call from a stale event.
+      const returnWithCode = () => {
+        setLoading(false);
+        const returnScreen = navigation.getState()?.routes?.find(r => r.name === 'PetQRScan')?.params?.returnScreen;
+        if (returnScreen) {
+          navigation.navigate({ name: returnScreen, params: { qrCode }, merge: true });
+        } else {
+          navigation.goBack();
+        }
+      };
+
+      // Re-scanning the code already linked to this pet (EditPet) is a no-op accept
+      if (currentQrCode && qrCode === currentQrCode) {
+        returnWithCode();
+        return;
       }
-      // Reset immediately so scanner works if user navigates back
-      processingRef.current = false;
+
+      getPetByQRCode(qrCode)
+        .then((response) => {
+          // 200 = code is CONNECTED to some pet. We've already ruled out "this pet" above.
+          if (response.data?.pet) {
+            showError('Already Linked', 'This QR tag is already linked to another pet. Please use a different code.');
+          } else {
+            returnWithCode();
+          }
+        })
+        .catch((err) => {
+          const reason = err?.reason;
+          // NOT_LINKED = registered but free; NOT_FOUND = unregistered/legacy code — both OK to link
+          if (reason === 'NOT_LINKED' || reason === 'NOT_FOUND') {
+            returnWithCode();
+          } else if (reason === 'DEACTIVATED') {
+            showError('Tag Deactivated', 'This QR tag has been deactivated and cannot be linked.');
+          } else if (reason === 'INVALID_FORMAT') {
+            showError('Invalid QR Code', 'This doesn\'t appear to be a valid OkTreat QR code.');
+          } else {
+            showError('Error', err?.message || 'Failed to validate this QR code. Please try again.');
+          }
+        });
     }
-  }, [fromScreen, navigation]);
+  }, [fromScreen, currentQrCode, navigation]);
 
   const handleErrorModalClose = () => {
     setShowErrorModal(false);

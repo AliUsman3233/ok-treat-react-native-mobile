@@ -19,7 +19,7 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
   const returnScreen = isEditMode ? 'EditPet' : 'AddPet';
 
   const handleScanQR = () => {
-    navigation.navigate('PetQRScan', { returnScreen });
+    navigation.navigate('PetQRScan', { returnScreen, currentQrCode: formData?.qrCode || null });
   };
 
   const handleImageSelected = async (imageUri) => {
