@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#FFC2EB",
       "resizeMode": "contain"
     },
     "assetBundlePatterns": [
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFC2EB"
       },
       "package": "com.oktreat.app",
       "permissions": [
