@@ -15,7 +15,9 @@ import Icon from '@expo/vector-icons/Ionicons';
 const { height: screenHeight } = Dimensions.get('window');
 
 const MAX_VISIBLE_ITEMS = 6;
+const MIN_VISIBLE_ITEMS = 3; // floor so short lists (e.g. 2 options) don't render a cramped sheet
 const ITEM_HEIGHT = 52;
+const CHROME_HEIGHT = 100; // handle + title row + bottom safe-area padding
 
 /**
  * Reusable Dropdown Component — Bottom Sheet Style
@@ -35,7 +37,11 @@ export default function Dropdown({
   const [isVisible, setIsVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
 
-  const listHeight = Math.min(options.length, MAX_VISIBLE_ITEMS) * ITEM_HEIGHT + 60; // 60 for header
+  const visibleItems = Math.max(
+    MIN_VISIBLE_ITEMS,
+    Math.min(options.length, MAX_VISIBLE_ITEMS),
+  );
+  const sheetHeight = visibleItems * ITEM_HEIGHT + CHROME_HEIGHT;
 
   const handleOpen = () => {
     if (disabled) return;
@@ -92,7 +98,7 @@ export default function Dropdown({
             style={[
               styles.bottomSheet,
               {
-                maxHeight: listHeight,
+                height: sheetHeight,
                 transform: [{ translateY: slideAnim }],
               },
             ]}
