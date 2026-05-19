@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
-const splashSound = require('../../assets/media/splash_sound.mp3');
 
 // Safety: never wait on the video forever — if `playToEnd` doesn't fire
 // (load error, codec issue), advance after this many ms regardless.
@@ -20,20 +18,9 @@ export default function SplashScreen({ onServerReady }) {
 
   const videoPlayer = useVideoPlayer(splashVideo, (player) => {
     player.loop = false;
-    player.muted = true; // separate audio track plays alongside
+    player.muted = true;
     player.play();
   });
-
-  const audioPlayer = useAudioPlayer(splashSound);
-
-  useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-    try {
-      audioPlayer.play();
-    } catch (e) {
-      console.warn('Splash audio play failed:', e?.message);
-    }
-  }, [audioPlayer]);
 
   useEffect(() => {
     const sub = videoPlayer.addListener('playToEnd', () => {
