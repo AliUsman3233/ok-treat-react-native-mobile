@@ -74,7 +74,7 @@ export default function PetQRManualEntryScreen({ navigation }) {
       <View style={styles.content}>
         {/* Tag Image */}
         <Image
-          source={require('../../assets/icons/tag_image.png')}
+          source={require('../../assets/images/qr_placeholder_image.png')}
           style={styles.tagImage}
           resizeMode="contain"
         />
