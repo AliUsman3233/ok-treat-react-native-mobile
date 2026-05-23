@@ -42,14 +42,14 @@ export default function SupportScreen({ navigation }) {
                 title="Visit the Help Center"
                 onPress={handleVisitHelpCenter}
                 type="primary"
-                size="medium"
+                size="small"
                 style={styles.halfButton}
               />
               <Button
                 title="Chat with Support"
                 onPress={handleChatWithSupport}
                 type="secondary"
-                size="medium"
+                size="small"
                 style={styles.halfButton}
               />
             </View>
@@ -65,7 +65,7 @@ export default function SupportScreen({ navigation }) {
               title="Call OkTreat Support"
               onPress={handleCallSupport}
               type="primary"
-              size="medium"
+              size="small"
               fullWidth
             />
           </View>
@@ -113,15 +113,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 40,
-    elevation: 2,
-    borderRadius: 12,
-    gap: 12,
+    borderWidth: 1,
+    borderColor: '#ECEFF3',
+    borderRadius: 14,
+    gap: 10,
   },
   cardTitle: {
     color: '#0D0D12',

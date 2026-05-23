@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import Icon from '@expo/vector-icons/Ionicons';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { getUserBookings, cancelBooking } from '../../services/bookingService';
@@ -8,6 +9,40 @@ import { getUserBookings, cancelBooking } from '../../services/bookingService';
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -60;
 const DELETE_WIDTH = 40;
+
+// Maps a Booking.serviceType enum to a display label + Ionicons name
+const SERVICE_META = {
+  PET_WALKING:    { label: 'Pet Walking',   icon: 'walk-outline' },
+  BOARDING:       { label: 'Boarding',      icon: 'bed-outline' },
+  HOUSE_SITTING:  { label: 'House Sitting', icon: 'home-outline' },
+  DROP_IN_VISITS: { label: 'Drop-in Visit', icon: 'hand-right-outline' },
+  DAY_CARE:       { label: 'Day Care',      icon: 'sunny-outline' },
+};
+
+const STATUS_META = {
+  pending:   { label: 'Pending',   bg: '#FFF3D6', fg: '#B07B0B' },
+  confirmed: { label: 'Confirmed', bg: '#D9F3E4', fg: '#137A45' },
+  ongoing:   { label: 'Ongoing',   bg: '#D7ECFA', fg: '#1E6FA4' },
+  completed: { label: 'Completed', bg: '#E5E7EB', fg: '#4B5563' },
+  declined:  { label: 'Declined',  bg: '#FBE0DE', fg: '#A8221A' },
+  cancelled: { label: 'Cancelled', bg: '#E5E7EB', fg: '#6B7280' },
+};
+
+// Compact "May 25 - 27" / "May 25 - Jun 2" / "May 25" formatter
+const formatDateRange = (startIso, endIso) => {
+  if (!startIso) return '';
+  const s = new Date(startIso);
+  const e = endIso ? new Date(endIso) : null;
+  const fmt = (d, full = true) =>
+    d.toLocaleDateString('en-US', full
+      ? { month: 'short', day: 'numeric' }
+      : { day: 'numeric' });
+  if (!e || s.toDateString() === e.toDateString()) return fmt(s);
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    return `${fmt(s)} - ${fmt(e, false)}`;
+  }
+  return `${fmt(s)} - ${fmt(e)}`;
+};
 
 const getRelativeTime = (dateString) => {
   if (!dateString) return '';
@@ -117,26 +152,69 @@ const SwipeableRequestCard = ({ request, onPress, onDelete }) => {
           activeOpacity={0.7}
           disabled={isSwiping}
         >
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarPlaceholderText}>👤</Text>
-            </View>
-          </View>
-          <View style={styles.requestInfo}>
-            <View style={styles.requestHeader}>
-              <Text style={styles.requestName}>{request.name}</Text>
-              <Text style={styles.requestTime}>{request.time}</Text>
-            </View>
-            <View style={styles.messageRow}>
-              <Text style={styles.lastMessage} numberOfLines={1}>
-                {request.message}
-              </Text>
-              {request.status === 'pending' && (
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>Pending</Text>
+          {/* Row 1 — sitter identity */}
+          <View style={styles.row1}>
+            <View style={styles.avatarContainer}>
+              {request.avatar ? (
+                <Image source={{ uri: request.avatar }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Icon name="person" size={26} color="#9CA3AF" />
                 </View>
               )}
             </View>
+            <View style={styles.row1Body}>
+              <Text style={styles.requestName} numberOfLines={1}>{request.name}</Text>
+              <View style={styles.serviceBadge}>
+                <Icon
+                  name={SERVICE_META[request.serviceType]?.icon || 'pricetag-outline'}
+                  size={12}
+                  color="#32A6D8"
+                />
+                <Text style={styles.serviceBadgeText} numberOfLines={1}>
+                  {SERVICE_META[request.serviceType]?.label
+                    || request.serviceType?.replace(/_/g, ' ')
+                    || 'Service'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.requestTime}>{request.time}</Text>
+          </View>
+
+          {/* Row 2 — booking meta (date · pet) */}
+          {(request.startDate || request.petName) && (
+            <View style={styles.row2}>
+              {request.startDate && (
+                <View style={styles.metaItem}>
+                  <Icon name="calendar-outline" size={13} color="#6B7280" />
+                  <Text style={styles.metaText}>{formatDateRange(request.startDate, request.endDate)}</Text>
+                </View>
+              )}
+              {request.petName && (
+                <View style={styles.metaItem}>
+                  <Icon name="paw-outline" size={13} color="#6B7280" />
+                  <Text style={styles.metaText} numberOfLines={1}>{request.petName}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Row 3 — amount + status */}
+          <View style={styles.row3}>
+            <View style={styles.amountWrap}>
+              <Text style={styles.amountValue}>
+                {request.totalAmount ? Math.round(request.totalAmount).toLocaleString() : '—'}
+              </Text>
+              <Text style={styles.amountLabel}>coins</Text>
+            </View>
+            {(() => {
+              const meta = STATUS_META[request.status] || STATUS_META.pending;
+              return (
+                <View style={[styles.statusPill, { backgroundColor: meta.bg }]}>
+                  <Text style={[styles.statusPillText, { color: meta.fg }]}>{meta.label}</Text>
+                </View>
+              );
+            })()}
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -158,12 +236,15 @@ export default function OpenRequestsScreen({ navigation }) {
       const formatted = bookings.map(booking => ({
         id: booking.id,
         name: booking.sitter?.user?.fullName || 'Sitter',
-        message: booking.notes || booking.serviceType?.replace(/_/g, ' ') || '',
+        message: booking.notes || '',
         time: getRelativeTime(booking.createdAt),
         status: booking.status?.toLowerCase() || 'pending',
         avatar: booking.sitter?.user?.avatarUrl || null,
         serviceType: booking.serviceType,
         totalAmount: booking.totalAmount,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        petName: booking.pet?.name || null,
       }));
       setRequests(formatted);
     } catch (err) {
@@ -315,92 +396,135 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteButton: {
-    height: 69,
+    flex: 1,
     width: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
   requestCard: {
     width: width * 0.9,
-    height: 71,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginVertical: 5,
+    padding: 12,
+    marginVertical: 6,
     backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
     position: 'relative',
     elevation: 1,
     borderWidth: 1,
     borderColor: '#ECEFF3',
-    borderRadius: 12,
+    borderRadius: 14,
     marginHorizontal: width * 0.05,
+    gap: 10,
+  },
+  // Row 1 — sitter identity
+  row1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   avatarContainer: {
-    width: 55,
-    height: 55,
-    borderRadius: 60,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: 'hidden',
-    marginRight: 14,
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarPlaceholder: {
-    width: 55,
-    height: 55,
-    backgroundColor: '#E8E8E8',
+    width: 44,
+    height: 44,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 60,
+    borderRadius: 22,
   },
-  avatarPlaceholderText: {
-    fontSize: 28,
-    color: '#999999',
-  },
-  requestInfo: {
+  row1Body: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  requestHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
+    gap: 4,
+    minWidth: 0,
   },
   requestName: {
-    color: '#1E2661',
-    fontSize: 17,
+    color: '#0D0D12',
+    fontSize: 14,
     fontFamily: 'Poppins',
     fontWeight: '600',
   },
+  serviceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    backgroundColor: '#EAF6FC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    maxWidth: '100%',
+  },
+  serviceBadgeText: {
+    color: '#32A6D8',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+  },
   requestTime: {
     color: '#B5B8CB',
-    fontSize: 12,
-    fontFamily: 'Urbanist',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
     fontWeight: '500',
   },
-  messageRow: {
+  // Row 2 — booking meta
+  row2: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingLeft: 54, // align under name (avatar 44 + gap 10)
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    color: '#4B5563',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '500',
+  },
+  // Row 3 — amount + status
+  row3: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingLeft: 54,
   },
-  lastMessage: {
-    flex: 1,
-    color: '#B5B8CB',
-    fontSize: 13,
+  amountWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  amountValue: {
+    color: '#32A6D8',
+    fontSize: 16,
     fontFamily: 'Poppins',
-    fontWeight: '400',
+    fontWeight: '700',
   },
-  statusBadge: {
-    paddingHorizontal: 13,
+  amountLabel: {
+    color: '#818898',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '500',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: '#FFF3D0',
-    borderRadius: 30,
-    marginLeft: 8,
+    borderRadius: 999,
   },
-  statusText: {
-    color: '#E5A33D',
+  statusPillText: {
     fontSize: 10,
-    fontFamily: 'Urbanist',
-    fontWeight: '400',
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   centerContainer: {
     flex: 1,
