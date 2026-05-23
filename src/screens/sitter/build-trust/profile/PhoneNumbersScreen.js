@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -245,7 +245,10 @@ export default function PhoneNumbersScreen({ navigation }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -451,7 +454,7 @@ export default function PhoneNumbersScreen({ navigation }) {
             disabled={isSaving}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

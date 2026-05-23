@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCredentials } from '../../../store/slices/authSlice';
@@ -151,7 +151,10 @@ export default function VerifyIdentityScreen({ navigation }) {
   // ============ CARD ENTRY STEP ============
   return (
     <ScreenWrapper noBottomTabs>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
         {/* Header */}
         <View style={styles.cardHeader}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={isVerifying}>
@@ -254,7 +257,7 @@ export default function VerifyIdentityScreen({ navigation }) {
             </View>
           </View>
         </Modal>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useState } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -218,7 +218,10 @@ export default function AddCardBottomSheet({ visible, onClose, amount, onSuccess
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
         <View style={styles.bottomSheet}>
           {/* Header */}
           <View style={styles.header}>
@@ -431,7 +434,7 @@ export default function AddCardBottomSheet({ visible, onClose, amount, onSuccess
             />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

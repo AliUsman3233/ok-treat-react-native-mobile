@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -127,7 +128,10 @@ export default function ReportMissingScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
@@ -243,7 +247,7 @@ export default function ReportMissingScreen({ navigation, route }) {
             )}
           </TouchableOpacity>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

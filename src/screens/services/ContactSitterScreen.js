@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { useState, useEffect } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -174,7 +174,10 @@ export default function ContactSitterScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -390,7 +393,7 @@ export default function ContactSitterScreen({ navigation, route }) {
             </View>
           </View>
         </Modal>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

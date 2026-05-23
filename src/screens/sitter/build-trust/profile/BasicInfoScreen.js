@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -539,7 +539,10 @@ export default function BasicInfoScreen({ navigation, route }) {
           animationType="fade"
           onRequestClose={handleCancelBirthday}
         >
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}
+          >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Add Your Birthday</Text>
@@ -607,7 +610,7 @@ export default function BasicInfoScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Unsaved Changes Modal */}

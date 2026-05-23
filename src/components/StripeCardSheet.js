@@ -14,6 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Icon from '@expo/vector-icons/Ionicons';
 import { CardField, useConfirmPayment } from '@stripe/stripe-react-native';
@@ -81,7 +82,10 @@ export default function StripeCardSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Pay with Card</Text>
@@ -141,7 +145,7 @@ export default function StripeCardSheet({
             </Text>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

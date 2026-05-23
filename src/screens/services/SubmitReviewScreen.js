@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { useState } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -69,7 +69,10 @@ export default function SubmitReviewScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -137,7 +140,7 @@ export default function SubmitReviewScreen({ navigation, route }) {
         {submitting && (
           <ActivityIndicator size="small" color="#32A6D8" style={styles.loader} />
         )}
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }

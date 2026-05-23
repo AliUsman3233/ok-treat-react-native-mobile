@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -138,6 +140,10 @@ export default function OTPEntryScreen({ route, navigation }) {
 
   return (
     <ScreenWrapper style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <BackArrowIcon width={20} height={20} fill="#090E12" />
@@ -222,6 +228,7 @@ export default function OTPEntryScreen({ route, navigation }) {
           <Text style={styles.changeMethodText}>Change verification method</Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }
