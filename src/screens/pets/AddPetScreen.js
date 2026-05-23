@@ -157,8 +157,10 @@ export default function AddPetScreen({ navigation, route }) {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    // Navigate back to the root navigator, then to MainTabs, then to Pets tab
-    navigation.getParent()?.navigate('MainTabs', {
+    // AddPetScreen is registered at the RootStack level (MainNavigator.js:383),
+    // so `navigation` IS the root navigator — getParent() returns undefined here
+    // and the chain silently no-oped. Navigate directly to the Pets tab.
+    navigation.navigate('MainTabs', {
       screen: 'Pets',
       params: {
         screen: 'PetList',
