@@ -87,7 +87,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
             if (response.success && response.data.exists && response.data.settings) {
                 const settings = response.data.settings;
                 setIsExistingData(true);
-                setBaseRate(settings.baseRate || '1440');
+                setBaseRate(settings.baseRate || DEFAULT_BASE_RATE);
                 setAdditionalRates(settings.additionalRates || false);
                 setShowAdditionalRates(settings.showAdditionalRates || false);
                 setHolidayRate(settings.holidayRate || '');

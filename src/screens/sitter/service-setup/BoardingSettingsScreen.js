@@ -13,7 +13,9 @@ import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSe
 
 const { width } = Dimensions.get('window');
 
-const DEFAULT_BASE_RATE = '1140';
+// Recommended sitter baseRate per the product spec: 1 day = 1440 coins
+// (1 min = 1 coin, 24h shift). Pre-filled; sitter can still edit.
+const DEFAULT_BASE_RATE = '1440';
 const HOLIDAY_RATE_MULTIPLIER = 1.12;
 const ADDITIONAL_DOG_RATE_MULTIPLIER = 0.72;
 const PUPPY_RATE_MULTIPLIER = 0.72;
@@ -92,7 +94,7 @@ export default function BoardingSettingsScreen({ navigation }) {
                 setIsExistingData(true);
                 
                 // Populate all fields with saved data
-                setBaseRate(settings.baseRate || '1140');
+                setBaseRate(settings.baseRate || DEFAULT_BASE_RATE);
                 setAdditionalRates(settings.additionalRates || false);
                 setShowAdditionalRates(settings.showAdditionalRates || false);
                 setHolidayRate(settings.holidayRate || '');
