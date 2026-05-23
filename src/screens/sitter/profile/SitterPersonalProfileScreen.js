@@ -1,202 +1,449 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon, DogImage, ProfileImagePersonIcon } from '../../../assets';
+import { getSitterProfile } from '../../../services/sitterService';
+import { getUserPets } from '../../../services/petService';
+import api from '../../../config/api';
+
+const SERVICE_META = {
+  PET_WALKING:    { label: 'Pet Walking',   icon: 'walk-outline' },
+  BOARDING:       { label: 'Boarding',      icon: 'bed-outline' },
+  HOUSE_SITTING:  { label: 'House Sitting', icon: 'home-outline' },
+  DROP_IN_VISITS: { label: 'Drop-in Visit', icon: 'hand-right-outline' },
+  DAY_CARE:       { label: 'Day Care',      icon: 'sunny-outline' },
+};
+
+// Compact "Sep 25" style for review dates
+const formatReviewDate = (iso) => {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const formatPetAge = (years, months) => {
+  const parts = [];
+  if (Number.isFinite(years) && years > 0) parts.push(`${years}y`);
+  if (Number.isFinite(months) && months > 0) parts.push(`${months}m`);
+  return parts.join(' ') || '—';
+};
 
 export default function SitterPersonalProfileScreen({ navigation }) {
+  const { user } = useSelector((s) => s.auth);
   const [activeTab, setActiveTab] = useState('info');
+  const [sitter, setSitter] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [pets, setPets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleBack = () => {
-    navigation.goBack();
+  const fetchAll = useCallback(async () => {
+    try {
+      setError(null);
+      const sitterRes = await getSitterProfile();
+      const sitterPayload = sitterRes?.data?.sitter || sitterRes?.sitter || null;
+      setSitter(sitterPayload);
+
+      // Reviews (best-effort — empty list if endpoint fails)
+      if (sitterPayload?.id) {
+        api
+          .get(`/reviews/sitter/${sitterPayload.id}?take=20`)
+          .then((r) => {
+            const list = r.data?.data?.reviews || r.data?.reviews || [];
+            setReviews(Array.isArray(list) ? list : []);
+          })
+          .catch((e) => {
+            console.warn('Failed to load sitter reviews:', e?.message);
+            setReviews([]);
+          });
+      }
+
+      // Pets the sitter owns themselves (for the Info → Pets card)
+      getUserPets()
+        .then((r) => {
+          const list = r?.data?.pets || r?.pets || [];
+          setPets(Array.isArray(list) ? list : []);
+        })
+        .catch(() => setPets([]));
+    } catch (e) {
+      console.error('Failed to load sitter profile:', e?.message);
+      setError(e?.message || 'Could not load your profile.');
+      setSitter(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchAll();
+    }, [fetchAll])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
   };
 
+  // ─── Derived display values ───────────────────────────────────────────────
+  const displayName =
+    sitter?.name ||
+    [sitter?.firstName, sitter?.lastName].filter(Boolean).join(' ') ||
+    user?.fullName ||
+    'Your profile';
+  const businessTitle = sitter?.title || sitter?.businessName || '';
+  const cityState = [sitter?.city, sitter?.state].filter(Boolean).join(', ');
+  const rating = sitter?.averageRating ?? sitter?.rating ?? null;
+  const reviewCount = sitter?.totalReviews ?? reviews.length ?? 0;
+  const repeatClients = sitter?.repeatClients ?? null;
+  const isApproved = sitter?.approvalStatus === 'APPROVED';
+  const profileImage = sitter?.profileImage || sitter?.avatarUrl || user?.avatarUrl || null;
+  const coverImage = sitter?.coverImage || (Array.isArray(sitter?.photos) && sitter.photos[0]) || null;
+  const aboutText = sitter?.aboutPet || sitter?.about || '';
+
+  // ─── Loading / error states ───────────────────────────────────────────────
+  if (loading && !sitter) {
+    return (
+      <ScreenWrapper noBottomTabs>
+        <View style={[styles.container, styles.centered]}>
+          <ActivityIndicator size="large" color="#32A6D8" />
+          <Text style={styles.dimText}>Loading your profile…</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  if (!sitter) {
+    return (
+      <ScreenWrapper noBottomTabs>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <BackArrowIcon width={20} height={20} fill="#090E12" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Your Profile</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={[styles.centered, { flex: 1 }]}>
+            <Icon name="alert-circle-outline" size={48} color="#818898" />
+            <Text style={styles.dimText}>{error || 'Sitter profile not found.'}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); fetchAll(); }}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <ScreenWrapper noBottomTabs>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#32A6D8" />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} fill="#090E12" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Your Profile</Text>
           <View style={styles.placeholder} />
         </View>
 
-        {/* Cover and Profile Image Section */}
+        {/* Cover + avatar */}
         <View style={styles.profileSection}>
-          <Image source={DogImage} style={styles.coverImage} />
+          <Image
+            source={coverImage ? { uri: coverImage } : DogImage}
+            style={styles.coverImage}
+          />
           <View style={styles.profileImageWrapper}>
             <View style={styles.profileImageContainer}>
-              <Image source={ProfileImagePersonIcon} style={{ width: 103, height: 103, borderRadius: 51.5 }} resizeMode="cover" />
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={{ width: 103, height: 103, borderRadius: 51.5 }} />
+              ) : (
+                <Image source={ProfileImagePersonIcon} style={{ width: 103, height: 103, borderRadius: 51.5 }} resizeMode="cover" />
+              )}
             </View>
           </View>
         </View>
 
-        {/* Profile Info */}
+        {/* Profile info */}
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>Ashlyn T.</Text>
-          
-          {/* Verified Badge */}
-          <View style={styles.verifiedBadge}>
-            <Icon name="checkmark-circle" size={17} color="#00B100" />
-            <Text style={styles.verifiedText}>Verified</Text>
-          </View>
+          <Text style={styles.profileName}>{displayName}</Text>
 
-          {/* Stats Row 1 */}
+          {isApproved && (
+            <View style={styles.verifiedBadge}>
+              <Icon name="checkmark-circle" size={17} color="#00B100" />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
+
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Icon name="star" size={16} color="#FBBC04" />
-              <Text style={styles.statText}>5.0 (23 reviews)</Text>
+              <Text style={styles.statText}>
+                {rating != null ? `${Number(rating).toFixed(1)} (${reviewCount} review${reviewCount === 1 ? '' : 's'})` : 'No reviews yet'}
+              </Text>
             </View>
-            <View style={styles.statItem}>
-              <Icon name="people" size={16} color="#32A6D8" />
-              <Text style={styles.statText}>8 repeat clients</Text>
-            </View>
+            {repeatClients != null && (
+              <View style={styles.statItem}>
+                <Icon name="people" size={16} color="#32A6D8" />
+                <Text style={styles.statText}>{repeatClients} repeat client{repeatClients === 1 ? '' : 's'}</Text>
+              </View>
+            )}
           </View>
 
-          {/* Stats Row 2 */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Icon name="briefcase" size={14} color="#32A6D8" />
-              <Text style={styles.statTextGray}>Yaletown pet sitter & walker</Text>
+          {(businessTitle || cityState) && (
+            <View style={styles.statsRow}>
+              {!!businessTitle && (
+                <View style={styles.statItem}>
+                  <Icon name="briefcase" size={14} color="#32A6D8" />
+                  <Text style={styles.statTextGray} numberOfLines={1}>{businessTitle}</Text>
+                </View>
+              )}
+              {!!cityState && (
+                <View style={styles.statItem}>
+                  <Icon name="location" size={14} color="#32A6D8" />
+                  <Text style={styles.statTextGray} numberOfLines={1}>{cityState}</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.statItem}>
-              <Icon name="location" size={14} color="#32A6D8" />
-              <Text style={styles.statTextGray}>Vancouver, BC</Text>
-            </View>
-          </View>
+          )}
         </View>
 
-        {/* Tab Selector */}
+        {/* Tabs */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'info' && styles.activeTab]}
-            onPress={() => setActiveTab('info')}
-          >
-            <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>
-              Info
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'services' && styles.activeTab]}
-            onPress={() => setActiveTab('services')}
-          >
-            <Text style={[styles.tabText, activeTab === 'services' && styles.activeTabText]}>
-              Services
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'review' && styles.activeTab]}
-            onPress={() => setActiveTab('review')}
-          >
-            <Text style={[styles.tabText, activeTab === 'review' && styles.activeTabText]}>
-              Review
-            </Text>
-          </TouchableOpacity>
+          {['info', 'services', 'review'].map((t) => (
+            <TouchableOpacity
+              key={t}
+              style={[styles.tab, activeTab === t && styles.activeTab]}
+              onPress={() => setActiveTab(t)}
+            >
+              <Text style={[styles.tabText, activeTab === t && styles.activeTabText]}>
+                {t === 'info' ? 'Info' : t === 'services' ? 'Services' : 'Reviews'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Content based on active tab */}
+        {/* INFO TAB */}
         {activeTab === 'info' && (
           <View style={styles.contentContainer}>
-            {/* About Pet Card */}
+            {/* About */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>About Pet</Text>
-              <Text style={styles.cardSubtitle}>
-                Provide future sitters with important information about your pet's personality, behaviors, and specific care requirements.
-              </Text>
-              <Text style={styles.cardDescription}>
-                Very active outdoors but relaxed at home. He'll sleep next to you when I'm working from home.
-              </Text>
+              <Text style={styles.cardTitle}>About</Text>
+              {aboutText ? (
+                <Text style={styles.cardDescription}>{aboutText}</Text>
+              ) : (
+                <Text style={styles.cardSubtitle}>You haven't added an about section yet.</Text>
+              )}
             </View>
 
-            {/* Skills Card */}
+            {/* Skills */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Skills</Text>
-              <View style={styles.listContainer}>
-                <View style={styles.listItem}>
-                  <Icon name="checkmark-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Skilled in oral medication delivery</Text>
+              {Array.isArray(sitter.skills) && sitter.skills.length > 0 ? (
+                <View style={styles.listContainer}>
+                  {sitter.skills.map((skill, i) => (
+                    <View key={`${skill}-${i}`} style={styles.listItem}>
+                      <Icon name="checkmark-circle" size={20} color="#32A6D8" />
+                      <Text style={styles.listText}>{skill}</Text>
+                    </View>
+                  ))}
                 </View>
-                <View style={styles.listItem}>
-                  <Icon name="checkmark-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Experienced with senior dogs</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="checkmark-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Able to provide daily exercise</Text>
-                </View>
-              </View>
+              ) : (
+                <Text style={styles.cardSubtitle}>No skills added yet.</Text>
+              )}
             </View>
 
-            {/* Home Card */}
+            {/* Home */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Home</Text>
               <View style={styles.listContainer}>
+                {sitter.homeType && (
+                  <View style={styles.listItem}>
+                    <Icon name="home" size={20} color="#32A6D8" />
+                    <Text style={styles.listText}>Resides in {sitter.homeType.toLowerCase().includes('apartment') ? 'an apartment' : `a ${sitter.homeType.toLowerCase()}`}</Text>
+                  </View>
+                )}
+                {sitter.yardType && (
+                  <View style={styles.listItem}>
+                    <Icon name={String(sitter.yardType).toLowerCase() === 'none' ? 'close-circle' : 'checkmark-circle'} size={20} color="#32A6D8" />
+                    <Text style={styles.listText}>
+                      {String(sitter.yardType).toLowerCase() === 'none' ? 'No yard available' : `${sitter.yardType} yard`}
+                    </Text>
+                  </View>
+                )}
+                {sitter.smokingPolicy && (
+                  <View style={styles.listItem}>
+                    <Icon
+                      name={/non[- ]?smoker|no smoking/i.test(sitter.smokingPolicy) ? 'close-circle' : 'checkmark-circle'}
+                      size={20}
+                      color="#32A6D8"
+                    />
+                    <Text style={styles.listText}>{sitter.smokingPolicy}</Text>
+                  </View>
+                )}
+                {Array.isArray(sitter.petsInHome) && sitter.petsInHome.length > 0 && (
+                  <View style={styles.listItem}>
+                    <Icon name="paw" size={20} color="#32A6D8" />
+                    <Text style={styles.listText}>
+                      Pets at home: {sitter.petsInHome.join(', ')}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.listItem}>
-                  <Icon name="home" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Resides in an apartment</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="close-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>No yard available</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="close-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Smoke-free home</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="paw" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>One dog in the household</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="close-circle" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>No children in the home</Text>
-                </View>
-                <View style={styles.listItem}>
-                  <Icon name="paw" size={20} color="#32A6D8" />
-                  <Text style={styles.listText}>Only spayed/neutered dogs</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Location Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Location</Text>
-              <View style={styles.listContainer}>
-                <View style={styles.listItem}>
-                  <Icon name="location" size={20} color="#FFC2EB" />
-                  <Text style={styles.listText}>Vancouver, BC</Text>
-                </View>
-                <Image source={DogImage} style={styles.mapImage} />
-              </View>
-            </View>
-
-            {/* Pets Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Pets</Text>
-              <View style={styles.petItem}>
-                <Image source={DogImage} style={styles.petAvatar} />
-                <View style={styles.petInfo}>
-                  <Text style={styles.petName}>Bean</Text>
-                  <Text style={styles.petDetails}>
-                    Beagle{'\n'}30 lbs, 3years & 7 months
+                  <Icon name={sitter.childrenInHome ? 'checkmark-circle' : 'close-circle'} size={20} color="#32A6D8" />
+                  <Text style={styles.listText}>
+                    {sitter.childrenInHome ? 'Children live in the home' : 'No children in the home'}
                   </Text>
                 </View>
+                {Array.isArray(sitter.petRestrictions) && sitter.petRestrictions.length > 0 && (
+                  <View style={styles.listItem}>
+                    <Icon name="alert-circle" size={20} color="#32A6D8" />
+                    <Text style={styles.listText}>{sitter.petRestrictions.flat().join(' · ')}</Text>
+                  </View>
+                )}
               </View>
+            </View>
+
+            {/* Location */}
+            {(cityState || sitter.address) && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Location</Text>
+                <View style={styles.listContainer}>
+                  <View style={styles.listItem}>
+                    <Icon name="location" size={20} color="#FFC2EB" />
+                    <Text style={styles.listText}>
+                      {[sitter.address, cityState].filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Pets the sitter owns */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Your Pets</Text>
+              {pets.length === 0 ? (
+                <Text style={styles.cardSubtitle}>You haven't added any of your own pets yet.</Text>
+              ) : (
+                pets.map((p) => (
+                  <View key={p.id} style={styles.petItem}>
+                    <Image
+                      source={p.photoUrl ? { uri: p.photoUrl } : DogImage}
+                      style={styles.petAvatar}
+                    />
+                    <View style={styles.petInfo}>
+                      <Text style={styles.petName}>{p.name}</Text>
+                      <Text style={styles.petDetails}>
+                        {[p.breed || p.type, p.weight ? `${p.weight} kg` : null, formatPetAge(p.ageYears, p.ageMonths)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         )}
 
+        {/* SERVICES TAB */}
         {activeTab === 'services' && (
           <View style={styles.contentContainer}>
-            <Text style={styles.placeholderText}>Services content coming soon</Text>
+            {(() => {
+              const services = sitter.services || {};
+              const offered = Object.entries(services).filter(
+                ([, cfg]) => cfg?.isOffered !== false && cfg?.isCompleted !== false
+              );
+              if (offered.length === 0) {
+                return (
+                  <View style={styles.card}>
+                    <Text style={styles.cardSubtitle}>No services configured yet.</Text>
+                  </View>
+                );
+              }
+              return offered.map(([type, cfg]) => {
+                const meta = SERVICE_META[type] || { label: type, icon: 'pricetag-outline' };
+                return (
+                  <View key={type} style={styles.card}>
+                    <View style={styles.serviceHeader}>
+                      <Icon name={meta.icon} size={18} color="#32A6D8" />
+                      <Text style={styles.cardTitle}>{meta.label}</Text>
+                    </View>
+                    <View style={styles.serviceRow}>
+                      <Text style={styles.serviceLabel}>Base rate</Text>
+                      <Text style={styles.serviceValue}>
+                        {cfg.baseRate ? `${Number(cfg.baseRate).toLocaleString()} coins` : '—'}
+                      </Text>
+                    </View>
+                    {Array.isArray(cfg.selectedDays) && cfg.selectedDays.length > 0 && (
+                      <View style={styles.serviceRow}>
+                        <Text style={styles.serviceLabel}>Days</Text>
+                        <Text style={styles.serviceValue}>{cfg.selectedDays.join(', ')}</Text>
+                      </View>
+                    )}
+                    {cfg.timeSlots?.start && cfg.timeSlots?.end && (
+                      <View style={styles.serviceRow}>
+                        <Text style={styles.serviceLabel}>Hours</Text>
+                        <Text style={styles.serviceValue}>{cfg.timeSlots.start} – {cfg.timeSlots.end}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              });
+            })()}
           </View>
         )}
 
+        {/* REVIEWS TAB */}
         {activeTab === 'review' && (
           <View style={styles.contentContainer}>
-            <Text style={styles.placeholderText}>Reviews content coming soon</Text>
+            {reviews.length === 0 ? (
+              <View style={styles.card}>
+                <Text style={styles.cardSubtitle}>No reviews yet. Reviews appear here after you complete bookings.</Text>
+              </View>
+            ) : (
+              reviews.map((r) => (
+                <View key={r.id} style={styles.card}>
+                  <View style={styles.reviewHeader}>
+                    <Image
+                      source={r.user?.avatarUrl ? { uri: r.user.avatarUrl } : ProfileImagePersonIcon}
+                      style={styles.reviewAvatar}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewName}>{r.user?.fullName || 'Anonymous'}</Text>
+                      <Text style={styles.reviewDate}>{formatReviewDate(r.createdAt)}</Text>
+                    </View>
+                    <View style={styles.reviewRating}>
+                      <Icon name="star" size={14} color="#FBBC04" />
+                      <Text style={styles.reviewRatingText}>{r.rating}</Text>
+                    </View>
+                  </View>
+                  {!!r.comment && <Text style={styles.cardDescription}>{r.comment}</Text>}
+                </View>
+              ))
+            )}
           </View>
         )}
       </ScrollView>
@@ -205,10 +452,18 @@ export default function SitterPersonalProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  dimText: { color: '#818898', fontSize: 14, fontFamily: 'Avenir LT Std', marginTop: 8 },
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#32A6D8',
+    borderRadius: 999,
   },
+  retryText: { color: '#FFFFFF', fontFamily: 'Avenir LT Std', fontWeight: '700' },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -217,40 +472,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: 'black',
-    fontSize: 16,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 24.8,
-  },
-  placeholder: {
-    width: 40,
-  },
-  profileSection: {
-    height: 233,
-    marginHorizontal: 24,
-    marginTop: 8,
-    position: 'relative',
-  },
-  coverImage: {
-    width: '100%',
-    height: 182,
-    borderRadius: 20,
-  },
-  profileImageWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: '50%',
-    marginLeft: -51.5,
-  },
+  backButton: { width: 40, height: 40, borderRadius: 999, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: 'black', fontSize: 16, fontFamily: 'Poppins', fontWeight: '500', lineHeight: 24.8 },
+  placeholder: { width: 40 },
+
+  profileSection: { height: 233, marginHorizontal: 24, marginTop: 8, position: 'relative' },
+  coverImage: { width: '100%', height: 182, borderRadius: 20 },
+  profileImageWrapper: { position: 'absolute', bottom: 0, left: '50%', marginLeft: -51.5 },
   profileImageContainer: {
     width: 103,
     height: 103,
@@ -262,181 +490,82 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileInfo: {
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 16,
-    paddingHorizontal: 24,
-  },
+
+  profileInfo: { alignItems: 'center', gap: 14, marginTop: 16, paddingHorizontal: 24 },
   profileName: {
-    color: '#0D0D12',
-    fontSize: 24,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 37.2,
-    textAlign: 'center',
+    color: '#0D0D12', fontSize: 22, fontFamily: 'Poppins', fontWeight: '500', textAlign: 'center',
   },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  verifiedText: {
-    color: 'black',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  verifiedText: { color: 'black', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '600' },
+
   statsRow: {
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statText: {
-    color: 'black',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  statTextGray: {
-    color: '#818898',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 13,
+    flexWrap: 'wrap',
     gap: 8,
   },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  statText: { color: 'black', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '600' },
+  statTextGray: { color: '#818898', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '600' },
+
+  tabContainer: { flexDirection: 'row', marginHorizontal: 24, marginTop: 16, marginBottom: 13, gap: 8 },
   tab: {
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(203.75, 203.75, 203.75, 0.15)',
+    backgroundColor: 'rgba(203, 203, 203, 0.15)',
     borderRadius: 40,
     borderWidth: 1,
     borderColor: '#D9D9D9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeTab: {
-    backgroundColor: 'rgba(255, 194, 235, 0.15)',
-    borderColor: '#FFC2EB',
-  },
-  tabText: {
-    color: '#666D80',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  activeTabText: {
-    color: '#32A6D8',
-  },
-  contentContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-    gap: 13,
-  },
+  activeTab: { backgroundColor: 'rgba(255, 194, 235, 0.15)', borderColor: '#FFC2EB' },
+  tabText: { color: '#666D80', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '600' },
+  activeTabText: { color: '#32A6D8' },
+
+  contentContainer: { paddingHorizontal: 24, paddingBottom: 30, gap: 13 },
   card: {
-    padding: 12,
+    padding: 14,
     backgroundColor: 'white',
-    shadowColor: 'rgba(0, 0, 0, 0.04)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 40,
-    elevation: 2,
-    borderRadius: 12,
-    gap: 12,
+    borderWidth: 1,
+    borderColor: '#ECEFF3',
+    borderRadius: 14,
+    gap: 10,
   },
-  cardTitle: {
-    color: '#0D0D12',
-    fontSize: 14,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 21.7,
-  },
-  cardSubtitle: {
-    color: '#818898',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  cardDescription: {
-    color: '#676869',
-    fontSize: 13,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20.15,
-  },
-  listContainer: {
-    gap: 8,
-  },
-  listItem: {
+  cardTitle: { color: '#0D0D12', fontSize: 14, fontFamily: 'Poppins', fontWeight: '600' },
+  cardSubtitle: { color: '#818898', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '500', lineHeight: 18 },
+  cardDescription: { color: '#4B5563', fontSize: 13, fontFamily: 'Avenir LT Std', lineHeight: 19 },
+
+  listContainer: { gap: 8 },
+  listItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  listText: { flex: 1, color: '#4B5563', fontSize: 13, fontFamily: 'Avenir LT Std', lineHeight: 19 },
+
+  petItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  petAvatar: { width: 40, height: 40, borderRadius: 20 },
+  petInfo: { flex: 1, gap: 2 },
+  petName: { color: '#0D0D12', fontSize: 13, fontFamily: 'Poppins', fontWeight: '600' },
+  petDetails: { color: '#818898', fontSize: 12, fontFamily: 'Avenir LT Std' },
+
+  serviceHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  serviceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  serviceLabel: { color: '#818898', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '500' },
+  serviceValue: { color: '#0D0D12', fontSize: 13, fontFamily: 'Avenir LT Std', fontWeight: '600' },
+
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reviewAvatar: { width: 38, height: 38, borderRadius: 19 },
+  reviewName: { color: '#0D0D12', fontSize: 13, fontFamily: 'Poppins', fontWeight: '600' },
+  reviewDate: { color: '#818898', fontSize: 11, fontFamily: 'Avenir LT Std' },
+  reviewRating: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 4,
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
-  listText: {
-    flex: 1,
-    color: '#676869',
-    fontSize: 13,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20.15,
-  },
-  mapImage: {
-    width: '100%',
-    height: 215.43,
-    borderRadius: 10,
-    marginTop: 8,
-  },
-  petItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  petAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 38,
-  },
-  petInfo: {
-    gap: 5,
-  },
-  petName: {
-    color: '#0D0D12',
-    fontSize: 13,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 20.15,
-  },
-  petDetails: {
-    color: '#818898',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
-  },
-  placeholderText: {
-    color: '#898D8F',
-    fontSize: 16,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 40,
-  },
+  reviewRatingText: { color: '#0D0D12', fontSize: 12, fontFamily: 'Avenir LT Std', fontWeight: '700' },
 });
