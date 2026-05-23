@@ -11,6 +11,7 @@ import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
 import { AlertProvider } from './src/context/AlertContext';
+import { PaymentConfigProvider, usePaymentConfig } from './src/context/PaymentConfigContext';
 
 // Set up notification handler at top level (outside component)
 Notifications.setNotificationHandler({
@@ -88,47 +89,63 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51PgjtYRqubrSQQCdjlmC4WGWMaLKUwubFJrAXsETgRqOf1LoM4LAT50mjWxzjTgCjIXzaNdPYjImndpPoGxq22ws00lVglZbzH'}>
-        <Provider store={store}>
-          <NavigationContainer
-            ref={navigationRef}
-            onReady={() => {
-              // Set navigation reference for axios interceptor
-              setNavigationRef(navigationRef.current);
-            }}
-          >
-            <AlertProvider>
-              <RootNavigator />
-            </AlertProvider>
-            <StatusBar style="auto" />
-          </NavigationContainer>
+      <PaymentConfigProvider>
+        <StripeWrapper>
+          <Provider store={store}>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={() => {
+                // Set navigation reference for axios interceptor
+                setNavigationRef(navigationRef.current);
+              }}
+            >
+              <AlertProvider>
+                <RootNavigator />
+              </AlertProvider>
+              <StatusBar style="auto" />
+            </NavigationContainer>
 
-          {/* Session Expired Modal */}
-          <Modal
-            visible={showSessionExpired}
-            transparent
-            animationType="fade"
-            statusBarTranslucent
-            onRequestClose={() => {}}
-          >
-            <View style={appStyles.overlay}>
-              <View style={appStyles.dialog}>
-                <View style={appStyles.iconCircle}>
-                  <Icon name="time-outline" size={36} color="#FFFFFF" />
+            {/* Session Expired Modal */}
+            <Modal
+              visible={showSessionExpired}
+              transparent
+              animationType="fade"
+              statusBarTranslucent
+              onRequestClose={() => {}}
+            >
+              <View style={appStyles.overlay}>
+                <View style={appStyles.dialog}>
+                  <View style={appStyles.iconCircle}>
+                    <Icon name="time-outline" size={36} color="#FFFFFF" />
+                  </View>
+                  <Text style={appStyles.title}>Session Expired</Text>
+                  <Text style={appStyles.message}>
+                    Your session has expired. Please login again to continue.
+                  </Text>
+                  <TouchableOpacity style={appStyles.button} onPress={handleLoginAgain} activeOpacity={0.8}>
+                    <Text style={appStyles.buttonText}>Login Again</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={appStyles.title}>Session Expired</Text>
-                <Text style={appStyles.message}>
-                  Your session has expired. Please login again to continue.
-                </Text>
-                <TouchableOpacity style={appStyles.button} onPress={handleLoginAgain} activeOpacity={0.8}>
-                  <Text style={appStyles.buttonText}>Login Again</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          </Modal>
-        </Provider>
-      </StripeProvider>
+            </Modal>
+          </Provider>
+        </StripeWrapper>
+      </PaymentConfigProvider>
     </SafeAreaProvider>
+  );
+}
+
+// StripeProvider with publishable key fetched at runtime from /api/coins/config.
+// Re-mounts (key={publishableKey}) when the key changes so a server-side mode
+// flip propagates without a full app restart.
+function StripeWrapper({ children }) {
+  const { publishableKey } = usePaymentConfig();
+  // Pass an empty string while the key is loading — SDK no-ops payment APIs
+  // until a real key is supplied, and screens already guard on missing config.
+  return (
+    <StripeProvider key={publishableKey || 'pending'} publishableKey={publishableKey || ''}>
+      {children}
+    </StripeProvider>
   );
 }
 

@@ -1,76 +1,151 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CoinIcon } from '../../assets';
 import { Button } from '../../components';
-import AddCardBottomSheet from '../../components/AddCardBottomSheet';
+import StripeCardSheet from '../../components/StripeCardSheet';
 import api from '../../config/api';
 import { useAppAlert } from '../../context/AlertContext';
+import { usePaymentConfig } from '../../context/PaymentConfigContext';
+
+// Format priceInCents → "$24.99"
+const formatPrice = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 
 export default function ShopCoinsScreen({ navigation }) {
   const alert = useAppAlert();
-  const [selectedPackage, setSelectedPackage] = useState('100');
-  const [customAmount, setCustomAmount] = useState('0');
-  const [showBottomSheet, setShowBottomSheet] = useState(false);
-  const [totalCoins, setTotalCoins] = useState(0);
-  const [loadingBalance, setLoadingBalance] = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
+  const { mode, publishableKey } = usePaymentConfig();
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+  const [packages, setPackages] = useState([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [selectedPackageId, setSelectedPackageId] = useState(null);
 
-  const packages = [
-    { price: '$10.99', coins: '50', id: 'pkg_50' },
-    { price: '$18.99', coins: '100', id: 'pkg_100' },
-    { price: '$40.99', coins: '250', id: 'pkg_250' },
-    { price: '$70.99', coins: '500', id: 'pkg_500' },
-  ];
+  const [balance, setBalance] = useState(0);
+  const [balanceLoading, setBalanceLoading] = useState(true);
 
-  useEffect(() => {
-    fetchBalance();
-  }, []);
+  const [showCardSheet, setShowCardSheet] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  const fetchBalance = async () => {
+  const handleBack = () => navigation.goBack();
+
+  const fetchBalance = useCallback(async () => {
     try {
       const response = await api.get('/coins/balance');
       const data = response.data?.data || response.data || {};
-      setTotalCoins(data.balance || data.coins || 0);
+      setBalance(Number(data.coinBalance || 0));
     } catch (err) {
-      console.error('Error fetching coin balance:', err);
+      console.warn('Error fetching coin balance:', err?.message);
     } finally {
-      setLoadingBalance(false);
+      setBalanceLoading(false);
     }
-  };
+  }, []);
 
-  const handleContinue = () => {
-    setShowBottomSheet(true);
-  };
-
-  const handlePurchaseSuccess = async (cardData) => {
-    setShowBottomSheet(false);
-    setPurchasing(true);
-
-    const selectedPkg = packages.find(p => p.coins === selectedPackage);
-    const amount = selectedPkg ? parseFloat(selectedPkg.price.replace('$', '')) : parseFloat(customAmount) || 0;
-    const packageId = selectedPkg?.id || 'custom';
-
+  const fetchPackages = useCallback(async () => {
     try {
-      await api.post('/coins/purchase', { amount, packageId, cardData });
-      await fetchBalance();
-      alert('Success', 'Coins purchased successfully!', 'success');
+      setPackagesLoading(true);
+      const response = await api.get('/coins/packages');
+      const data = response.data?.data || response.data || {};
+      const list = data.packages || [];
+      setPackages(list);
+      // Default-select the second package (a common "good middle option")
+      // unless there are fewer.
+      if (list.length > 0) {
+        setSelectedPackageId(list[Math.min(1, list.length - 1)].id);
+      }
     } catch (err) {
-      console.error('Error purchasing coins:', err);
-      alert('Error', err.response?.data?.message || 'Failed to purchase coins. Please try again.', 'error');
+      console.warn('Error fetching packages:', err?.message);
+      setPackages([]);
     } finally {
-      setPurchasing(false);
+      setPackagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBalance();
+    fetchPackages();
+  }, [fetchBalance, fetchPackages]);
+
+  const selectedPackage = packages.find((p) => p.id === selectedPackageId);
+
+  // Called by StripeCardSheet when the user taps Pay. We create the
+  // PaymentIntent at this moment (not at sheet-open) so abandoned sheets
+  // don't litter Stripe with unconfirmed intents. Returns the clientSecret
+  // for the SDK's confirmPayment call.
+  const requestPaymentIntent = async () => {
+    if (!selectedPackage) {
+      return { message: 'Please select a package.' };
+    }
+    try {
+      const response = await api.post('/coins/purchase', { packageId: selectedPackage.id });
+      const data = response.data?.data || {};
+      if (!data.clientSecret) {
+        return { message: response.data?.message || 'Server did not return a clientSecret.' };
+      }
+      return { clientSecret: data.clientSecret, paymentIntentId: data.paymentIntentId };
+    } catch (err) {
+      console.error('Purchase error:', err);
+      return { message: err.response?.data?.message || 'Failed to start purchase.' };
     }
   };
+
+  // After Stripe confirms the charge, the backend webhook credits the user.
+  // The webhook is async, so we poll the balance for a few seconds until it
+  // increases. The card sheet stays closed at this point.
+  const handlePaymentConfirmed = async () => {
+    setShowCardSheet(false);
+    setConfirming(true);
+    const expectedDelta = selectedPackage
+      ? selectedPackage.coins + (selectedPackage.bonusCoins || 0)
+      : 0;
+    const before = balance;
+
+    let credited = false;
+    for (let attempt = 0; attempt < 8 && !credited; attempt++) {
+      // Webhook usually lands within 1–3 seconds; we poll up to ~12s.
+      await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const response = await api.get('/coins/balance');
+        const data = response.data?.data || {};
+        const newBalance = Number(data.coinBalance || 0);
+        setBalance(newBalance);
+        if (newBalance >= before + expectedDelta) {
+          credited = true;
+        }
+      } catch (e) {
+        // Ignore transient errors and keep polling.
+      }
+    }
+
+    setConfirming(false);
+    if (credited) {
+      alert(
+        'Success',
+        `${expectedDelta} coins added to your account.`,
+        'success',
+      );
+    } else {
+      // Payment succeeded but webhook hasn't credited yet. Common reasons:
+      // webhook secret misconfig, network blip. Tell the user it's pending.
+      alert(
+        'Payment received',
+        'Your payment was charged. Coins will appear in your balance shortly.',
+        'success',
+      );
+    }
+  };
+
+  const stripeReady = !!publishableKey;
+  const canPay = !!selectedPackage && stripeReady && !confirming;
 
   return (
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
@@ -79,85 +154,94 @@ export default function ShopCoinsScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
+        <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Total Coins Display */}
+          {/* Balance */}
           <View style={styles.totalCoinsSection}>
             <View style={styles.coinIconWrapper}>
               <CoinIcon width={70} height={70} />
             </View>
-            <Text style={styles.totalCoinsAmount}>{loadingBalance ? '...' : totalCoins}</Text>
+            <Text style={styles.totalCoinsAmount}>
+              {balanceLoading ? '...' : balance.toLocaleString()}
+            </Text>
             <Text style={styles.totalCoinsLabel}>Total Coins</Text>
           </View>
 
-          {/* Coin Packages */}
-          <View style={styles.packagesSection}>
-            {packages.map((pkg, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.packageCard,
-                  selectedPackage === pkg.coins && styles.packageCardSelected
-                ]}
-                onPress={() => setSelectedPackage(pkg.coins)}
-              >
-                <Text style={styles.packagePrice}>{pkg.price}</Text>
-                <View style={styles.packageCoins}>
-                  <CoinIcon width={18} height={18} />
-                  <Text style={styles.packageCoinsText}>{pkg.coins} Coins</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-
-            {/* Custom Amount */}
-            <View style={styles.customAmountSection}>
-              <Text style={styles.customAmountLabel}>Enter Other Amount</Text>
-              <TouchableOpacity 
-                style={styles.packageCard}
-                onPress={() => setSelectedPackage('custom')}
-              >
-                <TextInput
-                  style={styles.customAmountInput}
-                  value={customAmount}
-                  onChangeText={(text) => {
-                    const numericOnly = text.replace(/[^0-9.]/g, '');
-                    setCustomAmount(numericOnly);
-                    setSelectedPackage('custom');
-                  }}
-                  placeholder="$0"
-                  placeholderTextColor="#090E12"
-                  keyboardType="numeric"
-                />
-                <View style={styles.packageCoins}>
-                  <CoinIcon width={18} height={18} />
-                  <Text style={styles.packageCoinsText}>   0 Coins</Text>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.customAmountHelper}>Enter a custom amount (minimum $1)</Text>
+          {/* Test-mode banner */}
+          {mode === 'test' && (
+            <View style={styles.testBanner}>
+              <Text style={styles.testBannerText}>
+                TEST MODE — test cards (4242 4242 4242 4242) are accepted; real cards are not charged.
+              </Text>
             </View>
+          )}
+
+          {/* Packages */}
+          <View style={styles.packagesSection}>
+            {packagesLoading ? (
+              <View style={styles.packagesLoading}>
+                <ActivityIndicator color="#32A6D8" />
+              </View>
+            ) : packages.length === 0 ? (
+              <View style={styles.packagesLoading}>
+                <Text style={styles.emptyText}>No packages available right now.</Text>
+              </View>
+            ) : (
+              packages.map((pkg) => {
+                const selected = selectedPackageId === pkg.id;
+                const totalCoins = pkg.coins + (pkg.bonusCoins || 0);
+                return (
+                  <TouchableOpacity
+                    key={pkg.id}
+                    style={[styles.packageCard, selected && styles.packageCardSelected]}
+                    onPress={() => setSelectedPackageId(pkg.id)}
+                  >
+                    <View style={styles.packageLeft}>
+                      <Text style={styles.packagePrice}>{formatPrice(pkg.priceInCents)}</Text>
+                      {pkg.bonusCoins > 0 && (
+                        <Text style={styles.bonusText}>+{pkg.bonusCoins} bonus</Text>
+                      )}
+                    </View>
+                    <View style={styles.packageCoins}>
+                      <CoinIcon width={18} height={18} />
+                      <Text style={styles.packageCoinsText}>
+                        {totalCoins.toLocaleString()} Coins
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
         </ScrollView>
 
-        {/* Continue Button */}
         <View style={styles.buttonContainer}>
           <Button
-            title={purchasing ? 'Processing...' : `Continue to Pay ${packages.find(p => p.coins === selectedPackage)?.price || '$0'}`}
-            onPress={handleContinue}
+            title={
+              confirming
+                ? 'Crediting coins...'
+                : !stripeReady
+                ? 'Payments unavailable'
+                : selectedPackage
+                ? `Continue to Pay ${formatPrice(selectedPackage.priceInCents)}`
+                : 'Select a package'
+            }
+            onPress={() => setShowCardSheet(true)}
             fullWidth
             size="medium"
-            disabled={purchasing || (selectedPackage === 'custom' && (!customAmount || parseFloat(customAmount) <= 0)) || (!selectedPackage)}
+            disabled={!canPay}
           />
         </View>
 
-        {/* Add Card Bottom Sheet */}
-        <AddCardBottomSheet
-          visible={showBottomSheet}
-          onClose={() => setShowBottomSheet(false)}
-          amount={packages.find(p => p.coins === selectedPackage)?.price || '$0'}
-          onSuccess={handlePurchaseSuccess}
+        <StripeCardSheet
+          visible={showCardSheet}
+          onClose={() => setShowCardSheet(false)}
+          amountLabel={selectedPackage ? formatPrice(selectedPackage.priceInCents) : '$0'}
+          fetchClientSecret={requestPaymentIntent}
+          onSuccess={handlePaymentConfirmed}
         />
       </View>
     </ScreenWrapper>
@@ -193,18 +277,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 24.8,
   },
-  placeholder: {
-    width: 40,
-  },
+  placeholder: { width: 40 },
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 100, // Space for fixed button
+    paddingBottom: 100,
   },
-  totalCoinsSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
+  totalCoinsSection: { alignItems: 'center', marginBottom: 32 },
   coinIconWrapper: {
     width: 80,
     height: 80,
@@ -218,12 +297,11 @@ const styles = StyleSheet.create({
   },
   totalCoinsAmount: {
     color: 'black',
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: 'Poppins',
     fontWeight: '500',
-    lineHeight: 31,
+    lineHeight: 32,
     textAlign: 'center',
-    marginTop: 0,
   },
   totalCoinsLabel: {
     color: '#818898',
@@ -233,13 +311,35 @@ const styles = StyleSheet.create({
     lineHeight: 18.6,
     textAlign: 'center',
   },
-  packagesSection: {
-    gap: 10,
+  testBanner: {
+    backgroundColor: '#FEF5E7',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  testBannerText: {
+    fontSize: 12,
+    color: '#8C5A0E',
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '500',
+  },
+  packagesSection: { gap: 10 },
+  packagesLoading: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#818898',
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
   },
   packageCard: {
-    height: 56,
+    minHeight: 64,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EBEBEB',
@@ -251,12 +351,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#32A6D8',
   },
+  packageLeft: { gap: 4 },
   packagePrice: {
     color: '#090E12',
     fontSize: 14,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
     lineHeight: 20,
+  },
+  bonusText: {
+    color: '#3FA477',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
   },
   packageCoins: {
     flexDirection: 'row',
@@ -270,32 +377,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 21.34,
     textAlign: 'center',
-  },
-  customAmountSection: {
-    gap: 8,
-    marginTop: 8,
-  },
-  customAmountLabel: {
-    color: 'rgba(0, 0, 0, 0.90)',
-    fontSize: 12.72,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-  },
-  customAmountInput: {
-    flex: 1,
-    color: '#090E12',
-    fontSize: 14,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20,
-    padding: 0,
-  },
-  customAmountHelper: {
-    color: '#898D8F',
-    fontSize: 11,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '400',
-    marginTop: 4,
   },
   buttonContainer: {
     position: 'absolute',
