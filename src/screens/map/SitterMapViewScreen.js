@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { getNearbySitters } from '../../services/sitterService';
+
+const DEFAULT_FILTERS = {
+  service: 'all',          // 'all' | 'PET_WALKING' | 'BOARDING' | ...
+  minRating: 0,            // 0 | 4
+  distance: '10',          // mile radius for fetch
+  availableToday: false,
+};
 
 export default function SitterMapViewScreen({ navigation, route }) {
   const [selectedSitter, setSelectedSitter] = useState(null);
   const [sitters, setSitters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    service: 'all',
-    rating: 'all',
-    distance: '10',
-  });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   const fetchSitters = useCallback(async () => {
     try {
@@ -46,6 +49,60 @@ export default function SitterMapViewScreen({ navigation, route }) {
     fetchSitters();
   }, [fetchSitters]);
 
+  // Client-side filters applied on top of the fetched list
+  const visibleSitters = useMemo(() => {
+    return sitters.filter((s) => {
+      if (filters.minRating > 0 && (s.rating || 0) < filters.minRating) return false;
+      if (filters.service !== 'all') {
+        const services = Array.isArray(s.services) ? s.services : [];
+        const match = services.some((v) =>
+          String(v).toUpperCase().includes(filters.service)
+        );
+        if (!match) return false;
+      }
+      // availableToday: best-effort — if sitter exposes selectedDays, check today
+      if (filters.availableToday && Array.isArray(s.selectedDays) && s.selectedDays.length > 0) {
+        const todayCode = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][new Date().getDay()];
+        if (!s.selectedDays.includes(todayCode)) return false;
+      }
+      return true;
+    });
+  }, [sitters, filters]);
+
+  // Filter-chip toggles
+  const toggleServiceFilter = () => {
+    const cycle = ['all', 'PET_WALKING', 'BOARDING', 'HOUSE_SITTING', 'DROP_IN', 'DAY_CARE'];
+    const i = cycle.indexOf(filters.service);
+    setFilters((f) => ({ ...f, service: cycle[(i + 1) % cycle.length] }));
+  };
+  const toggleRatingFilter = () => setFilters((f) => ({ ...f, minRating: f.minRating === 4 ? 0 : 4 }));
+  const toggleDistanceFilter = () => setFilters((f) => ({ ...f, distance: f.distance === '5' ? '10' : '5' }));
+  const toggleAvailabilityFilter = () => setFilters((f) => ({ ...f, availableToday: !f.availableToday }));
+
+  // Map controls — adjust radius (zoom proxy) + recenter
+  const zoomIn = () => setFilters((f) => ({ ...f, distance: String(Math.max(1, parseFloat(f.distance) / 2)) }));
+  const zoomOut = () => setFilters((f) => ({ ...f, distance: String(Math.min(50, parseFloat(f.distance) * 2)) }));
+  const recenter = () => fetchSitters();
+
+  // Gear icon — clear-all confirmation
+  const openSettings = () => {
+    const dirty =
+      filters.service !== 'all' || filters.minRating !== 0 ||
+      filters.distance !== '10' || filters.availableToday;
+    if (!dirty) {
+      Alert.alert('No active filters', 'All sitters within range are shown.');
+      return;
+    }
+    Alert.alert(
+      'Clear all filters?',
+      'Reset to show all sitters within a 10 mile radius.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => setFilters(DEFAULT_FILTERS) },
+      ]
+    );
+  };
+
   const Wrapper = Platform.OS === 'web' ? 'div' : View;
   const ScrollWrapper = Platform.OS === 'web' ? 'div' : ScrollView;
   const wrapperStyle = Platform.OS === 'web' 
@@ -60,7 +117,7 @@ export default function SitterMapViewScreen({ navigation, route }) {
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sitters Near You</Text>
-        <TouchableOpacity onPress={() => {}}>
+        <TouchableOpacity onPress={openSettings}>
           <Text style={styles.filterButton}>⚙️</Text>
         </TouchableOpacity>
       </View>
@@ -70,11 +127,11 @@ export default function SitterMapViewScreen({ navigation, route }) {
         <View style={styles.mapPlaceholder}>
           <Text style={styles.mapIcon}>🗺️</Text>
           <Text style={styles.mapText}>Map View</Text>
-          <Text style={styles.mapSubtext}>Showing {sitters.length} sitters within {filters.distance} miles</Text>
-          
+          <Text style={styles.mapSubtext}>Showing {visibleSitters.length} of {sitters.length} sitters within {filters.distance} miles</Text>
+
           {/* Map Markers Simulation */}
           <View style={styles.markersContainer}>
-            {sitters.map((sitter, index) => (
+            {visibleSitters.map((sitter, index) => (
               <TouchableOpacity
                 key={sitter.id}
                 style={[
@@ -92,13 +149,13 @@ export default function SitterMapViewScreen({ navigation, route }) {
 
         {/* Map Controls */}
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.controlButton}>
+          <TouchableOpacity style={styles.controlButton} onPress={zoomIn}>
             <Text style={styles.controlIcon}>+</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
+          <TouchableOpacity style={styles.controlButton} onPress={zoomOut}>
             <Text style={styles.controlIcon}>−</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton}>
+          <TouchableOpacity style={styles.controlButton} onPress={recenter}>
             <Text style={styles.controlIcon}>📍</Text>
           </TouchableOpacity>
         </View>
@@ -107,17 +164,37 @@ export default function SitterMapViewScreen({ navigation, route }) {
       {/* Filters */}
       <View style={styles.filtersBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity style={styles.filterChip}>
-            <Text style={styles.filterChipText}>All Services</Text>
+          <TouchableOpacity
+            style={[styles.filterChip, filters.service !== 'all' && styles.filterChipActive]}
+            onPress={toggleServiceFilter}
+          >
+            <Text style={[styles.filterChipText, filters.service !== 'all' && styles.filterChipTextActive]}>
+              {filters.service === 'all' ? 'All Services' : filters.service.replace(/_/g, ' ')}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterChip}>
-            <Text style={styles.filterChipText}>4+ Stars</Text>
+          <TouchableOpacity
+            style={[styles.filterChip, filters.minRating === 4 && styles.filterChipActive]}
+            onPress={toggleRatingFilter}
+          >
+            <Text style={[styles.filterChipText, filters.minRating === 4 && styles.filterChipTextActive]}>
+              4+ Stars
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterChip}>
-            <Text style={styles.filterChipText}>Within 5 mi</Text>
+          <TouchableOpacity
+            style={[styles.filterChip, filters.distance === '5' && styles.filterChipActive]}
+            onPress={toggleDistanceFilter}
+          >
+            <Text style={[styles.filterChipText, filters.distance === '5' && styles.filterChipTextActive]}>
+              Within {filters.distance} mi
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.filterChip}>
-            <Text style={styles.filterChipText}>Available Today</Text>
+          <TouchableOpacity
+            style={[styles.filterChip, filters.availableToday && styles.filterChipActive]}
+            onPress={toggleAvailabilityFilter}
+          >
+            <Text style={[styles.filterChipText, filters.availableToday && styles.filterChipTextActive]}>
+              Available Today
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -136,13 +213,17 @@ export default function SitterMapViewScreen({ navigation, route }) {
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : sitters.length === 0 ? (
+        ) : visibleSitters.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No sitters found nearby</Text>
+            <Text style={styles.emptyText}>
+              {sitters.length === 0
+                ? 'No sitters found nearby'
+                : 'No sitters match your filters. Tap the gear icon to clear them.'}
+            </Text>
           </View>
         ) : (
         <View style={styles.sittersList}>
-          {sitters.map(sitter => (
+          {visibleSitters.map(sitter => (
             <TouchableOpacity
               key={sitter.id}
               style={[
@@ -314,6 +395,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#666',
+  },
+  filterChipActive: {
+    backgroundColor: '#FF6B6B',
+    borderColor: '#FF6B6B',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
   sittersList: {
     padding: 20,

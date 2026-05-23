@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenWrapper from '../../../components/ScreenWrapper';
@@ -15,9 +15,18 @@ export default function StripeVerificationScreen({ navigation }) {
   };
 
   const handleDecline = () => {
-    // TODO: Handle decline action
-    console.log('Decline pressed');
-    navigation.goBack();
+    Alert.alert(
+      'Skip identity verification?',
+      'Without verification you won\'t be able to receive payouts or be approved as a sitter. You can come back and complete this any time.',
+      [
+        { text: 'Continue verifying', style: 'cancel' },
+        {
+          text: 'Skip for now',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
+      ]
+    );
   };
 
   return (

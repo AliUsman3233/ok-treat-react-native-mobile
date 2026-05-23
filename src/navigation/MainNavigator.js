@@ -54,6 +54,7 @@ import TransactionHistoryScreen from '../screens/financial/TransactionHistoryScr
 import ChatListScreen from '../screens/messages/ChatListScreen';
 import ChatConversationScreen from '../screens/messages/ChatConversationScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import NotificationPreferencesScreen from '../screens/notifications/NotificationPreferencesScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import SupportScreen from '../screens/profile/SupportScreen';
@@ -391,6 +392,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="PetQRScan" component={PetQRScanScreen} />
       <RootStack.Screen name="PetQRManualEntry" component={PetQRManualEntryScreen} />
       <RootStack.Screen name="Notifications" component={NotificationsScreen} />
+      <RootStack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
       <RootStack.Screen name="ChatList" component={ChatListScreen} />
       <RootStack.Screen name="ChatConversation" component={ChatConversationScreen} />
       {/* Service detail screens without bottom tabs */}

@@ -122,10 +122,15 @@ export default function MoreScreen({ navigation }) {
       screen: 'TransactionHistory',
       component: CreditCardIcon 
     },
-    { 
-      title: 'Settings', 
+    {
+      title: 'Settings',
       screen: 'Settings',
-      component: SettingsIcon 
+      component: SettingsIcon
+    },
+    {
+      title: 'Notification Preferences',
+      screen: 'NotificationPreferences',
+      component: SettingsIcon
     },
     { 
       title: 'AlohaPay', 

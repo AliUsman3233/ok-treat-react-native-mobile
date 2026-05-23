@@ -138,7 +138,11 @@ export default function NotificationsScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => navigation.navigate('NotificationPreferences')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Setting2Icon width={16.36} height={16.36} color="#1C1C28" />
           </TouchableOpacity>
         </View>
