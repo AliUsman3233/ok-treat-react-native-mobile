@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Share } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -18,7 +18,10 @@ import {
   PotyIcon,
   CpuIcon
 } from '../../assets';
-import { getPetById, updatePet } from '../../services/petService';
+import { getPetById, updatePet, markPetSafe } from '../../services/petService';
+
+// Public QR-tag page lives on the admin dashboard
+const PUBLIC_TAG_BASE = 'https://ok-treat-admin-dashboard-bufbf.ondigitalocean.app/tag';
 import api from '../../config/api';
 
 const dogImage = require('../../assets/images/dog_image.png');
@@ -66,7 +69,47 @@ export default function MyPetProfileScreen({ route, navigation }) {
   };
 
   const handleReportMissing = () => {
-    console.log('Report pet as missing');
+    navigation.navigate('ReportMissing', { pet });
+  };
+
+  const handleMarkSafe = () => {
+    alert(
+      'Mark as safe?',
+      `Confirm that ${pet?.name} has been found. The emergency banner on the QR tag page will be replaced with a "Recently safe!" notice for 24 hours.`,
+      'confirm',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as safe',
+          style: 'default',
+          onPress: async () => {
+            try {
+              await markPetSafe(pet.id);
+              await fetchPetData();
+              alert('Glad they\'re safe!', `${pet?.name} is no longer marked missing.`, 'success');
+            } catch (e) {
+              alert('Failed', e?.message || 'Could not update status. Try again.', 'error');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSharePetTag = async () => {
+    if (!pet?.qrCode) {
+      alert('No QR tag linked', 'This pet doesn\'t have a QR tag attached yet, so there\'s no public page to share.', 'info');
+      return;
+    }
+    const url = `${PUBLIC_TAG_BASE}/${pet.qrCode}`;
+    const message = pet.isMissing
+      ? `🚨 MISSING — ${pet.name} (${pet.breed || pet.type}). Please call if you've seen them. Details: ${url}`
+      : `${pet.name}'s OkTreat tag: ${url}`;
+    try {
+      await Share.share({ message, url });
+    } catch (e) {
+      // Share dismissal is fine
+    }
   };
 
   const handleAIGenerateDescription = async () => {
@@ -215,8 +258,25 @@ export default function MyPetProfileScreen({ route, navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Your Pet Profile</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity style={styles.placeholder} onPress={handleSharePetTag}>
+            <Icon name="share-social-outline" size={22} color="#0D0D12" />
+          </TouchableOpacity>
         </View>
+
+        {/* Missing Pet Banner */}
+        {pet?.isMissing && (
+          <View style={styles.missingBanner}>
+            <Icon name="warning" size={20} color="#FFFFFF" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.missingBannerTitle}>
+                {pet.name} is marked MISSING
+              </Text>
+              <Text style={styles.missingBannerSub}>
+                Anyone scanning the QR tag sees an emergency alert. You'll be notified on each scan.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Content */}
         <View style={styles.contentContainer}>
@@ -452,11 +512,18 @@ export default function MyPetProfileScreen({ route, navigation }) {
               )}
             </View>
 
-            {/* Report Missing Button */}
-            <TouchableOpacity style={styles.reportButton} onPress={handleReportMissing}>
-              <InfoCircleIcon width={20} height={20} color="white" />
-              <Text style={styles.reportButtonText}>Report Pet as Missing</Text>
-            </TouchableOpacity>
+            {/* Report Missing / Mark Safe Button */}
+            {pet?.isMissing ? (
+              <TouchableOpacity style={styles.safeButton} onPress={handleMarkSafe}>
+                <Icon name="checkmark-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.reportButtonText}>Mark {pet.name} as Safe</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.reportButton} onPress={handleReportMissing}>
+                <InfoCircleIcon width={20} height={20} color="white" />
+                <Text style={styles.reportButtonText}>Report Pet as Missing</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -773,6 +840,42 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 24.8,
     textAlign: 'center',
+  },
+  safeButton: {
+    height: 50,
+    paddingHorizontal: width * 0.05,
+    paddingVertical: 8,
+    backgroundColor: '#1F9E5C',
+    borderRadius: 52,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 18,
+  },
+  missingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#D93025',
+    borderRadius: 10,
+  },
+  missingBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  missingBannerSub: {
+    color: '#FFE7E1',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    lineHeight: 16,
   },
   loadingContainer: {
     flex: 1,

@@ -1,11 +1,13 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import { BackArrowIcon, MapPinIcon, SliderIcon, StarIcon, ShieldCheckIcon, CalendarNewIcon, ImageHereIcon, CoinIcon, CoinBackgroundIcon, LocationPinIcon } from '../../assets';
 import SearchFilterModal from '../../components/SearchFilterModal';
 import { searchSitters } from '../../services/sitterService';
+import { getUserPets } from '../../services/petService';
+import { rankSitters } from '../../services/sitterMatching';
 
 export default function SearchResultsScreen({ navigation, route }) {
   const { serviceType = 'Boarding', searchParams = {} } = route?.params || {};
@@ -16,6 +18,24 @@ export default function SearchResultsScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusModalConfig, setStatusModalConfig] = useState({});
+  const [pets, setPets] = useState([]);
+  const [activePetIndex, setActivePetIndex] = useState(0);
+
+  // Fetch user's pets once (used as ML context)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getUserPets();
+        const list = res?.data?.pets || res?.pets || [];
+        setPets(list);
+      } catch (e) {
+        // Non-fatal — ranking will fall back to neutral pet context
+        console.log('Could not fetch pets for matching context:', e?.message);
+      }
+    })();
+  }, []);
+
+  const activePet = pets[activePetIndex] || null;
 
   // Log received search payload
   useEffect(() => {
@@ -108,7 +128,7 @@ export default function SearchResultsScreen({ navigation, route }) {
           const lastUpdate = new Date(sitter.lastUpdate);
           const now = new Date();
           const daysSince = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
-          
+
           return {
             ...sitter,
             lastUpdateDays: daysSince
@@ -116,6 +136,8 @@ export default function SearchResultsScreen({ navigation, route }) {
         });
 
         setSitters(sittersWithUpdate);
+        // Reset filtered list so ranked order shows by default after a new search
+        setFilteredSitters(null);
       } catch (err) {
         console.error('❌ Error fetching sitters:', err);
         setError(err.response?.data?.message || 'Failed to fetch sitters');
@@ -126,6 +148,24 @@ export default function SearchResultsScreen({ navigation, route }) {
 
     fetchSitters();
   }, [serviceType, searchParams]);
+
+  // Rank sitters with the edge ML matcher whenever sitters/pet changes
+  const rankedSitters = useMemo(() => {
+    const enumServiceType = serviceType.toUpperCase().replace(/ /g, '_');
+    const baseList = filteredSitters ?? sitters;
+    if (!baseList || baseList.length === 0) return [];
+    return rankSitters(baseList, {
+      pet: activePet,
+      user: { firstTimeUser: false },
+      serviceType: enumServiceType,
+      maxDistance: 30,
+    });
+  }, [sitters, filteredSitters, activePet, serviceType]);
+
+  const cyclePet = () => {
+    if (pets.length <= 1) return;
+    setActivePetIndex((i) => (i + 1) % pets.length);
+  };
 
   const handleBack = () => {
     navigation.goBack();
@@ -220,6 +260,13 @@ export default function SearchResultsScreen({ navigation, route }) {
                        : item.approvalStatus === 'PENDING' ? '#FF9800'
                        : '#EBEBEB';
 
+    const matchScore = item.matchScore;
+    const matchTier =
+      matchScore >= 90 ? { label: 'Top match', color: '#1F9E5C' }
+      : matchScore >= 80 ? { label: 'Great match', color: '#32A6D8' }
+      : matchScore >= 70 ? { label: 'Good match', color: '#FBBC04' }
+      : null;
+
     return (
       <TouchableOpacity
         style={[styles.sitterCard, { borderColor }]}
@@ -227,6 +274,21 @@ export default function SearchResultsScreen({ navigation, route }) {
         activeOpacity={0.7}
       >
         <View style={styles.cardContent}>
+          {/* Match Score Strip */}
+          {matchScore !== undefined && matchTier && (
+            <View style={styles.matchHeader}>
+              <View style={[styles.matchBadge, { backgroundColor: matchTier.color }]}>
+                <Icon name="sparkles" size={12} color="#FFFFFF" />
+                <Text style={styles.matchBadgeText}>{matchScore}% {matchTier.label}</Text>
+              </View>
+              {item.matchReasons?.length > 0 && (
+                <Text style={styles.matchReasonsInline} numberOfLines={1}>
+                  {item.matchReasons.join(' · ')}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Top Row: Avatar, Name, Business, Distance, Coins */}
           <View style={styles.topRow}>
             <View style={styles.leftSection}>
@@ -298,9 +360,24 @@ export default function SearchResultsScreen({ navigation, route }) {
         </View>
 
         {/* AI Matching Label */}
-        <View style={styles.matchingContainer}>
-          <Text style={styles.matchingText}>AI Enabled Matching</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.matchingContainer}
+          onPress={cyclePet}
+          activeOpacity={pets.length > 1 ? 0.6 : 1}
+        >
+          <Icon name="sparkles" size={12} color="#32A6D8" style={{ marginRight: 4 }} />
+          {activePet ? (
+            <Text style={styles.matchingText}>
+              <Text style={{ color: '#32A6D8' }}>AI Matched</Text>
+              {' for '}
+              <Text style={{ color: '#0D0D12', fontWeight: '600' }}>{activePet.name}</Text>
+              {activePet.type ? ` · ${activePet.type}` : ''}
+              {pets.length > 1 ? '  ⇄ tap to switch' : ''}
+            </Text>
+          ) : (
+            <Text style={styles.matchingText}>AI Enabled Matching</Text>
+          )}
+        </TouchableOpacity>
 
         {/* Loading State */}
         {loading && (
@@ -319,7 +396,7 @@ export default function SearchResultsScreen({ navigation, route }) {
         )}
 
         {/* Empty State */}
-        {!loading && !error && (filteredSitters || sitters).length === 0 && (
+        {!loading && !error && rankedSitters.length === 0 && (
           <View style={styles.emptyContainer}>
             <Icon name="search-outline" size={48} color="#818898" />
             <Text style={styles.emptyText}>No sitters found</Text>
@@ -328,9 +405,9 @@ export default function SearchResultsScreen({ navigation, route }) {
         )}
 
         {/* Sitters List */}
-        {!loading && !error && (filteredSitters || sitters).length > 0 && (
+        {!loading && !error && rankedSitters.length > 0 && (
           <FlatList
-            data={filteredSitters || sitters}
+            data={rankedSitters}
             renderItem={renderSitterCard}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
@@ -402,6 +479,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   matchingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingBottom: 8,
   },
@@ -411,6 +490,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
     lineHeight: 18.6,
+    flexShrink: 1,
+  },
+  matchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  matchBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  matchReasonsInline: {
+    flex: 1,
+    color: '#818898',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '500',
+    lineHeight: 16,
   },
   listContent: {
     paddingHorizontal: 24,

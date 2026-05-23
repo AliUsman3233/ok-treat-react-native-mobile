@@ -76,6 +76,39 @@ export const deletePet = async (petId) => {
   }
 };
 
+// Report pet as missing — body: { lastSeenAt, lastSeenLat?, lastSeenLng?, lastSeenAddress?, contactPhone, notes? }
+export const reportPetMissing = async (petId, payload) => {
+  try {
+    const response = await authApi.post(`/pets/${petId}/report-missing`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Report missing error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to report pet missing' };
+  }
+};
+
+// Mark pet as safe (resolves active missing-pet report)
+export const markPetSafe = async (petId) => {
+  try {
+    const response = await authApi.put(`/pets/${petId}/mark-safe`);
+    return response.data;
+  } catch (error) {
+    console.error('Mark safe error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to mark pet safe' };
+  }
+};
+
+// Fetch active missing-pet report for a pet (owner only)
+export const getMissingReport = async (petId) => {
+  try {
+    const response = await authApi.get(`/pets/${petId}/missing-report`);
+    return response.data;
+  } catch (error) {
+    console.error('Get missing report error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to fetch missing report' };
+  }
+};
+
 // Get pet by QR code (public endpoint - no auth needed)
 export const getPetByQRCode = async (qrCode) => {
   try {
