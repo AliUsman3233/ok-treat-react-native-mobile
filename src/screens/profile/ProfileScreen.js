@@ -297,7 +297,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuTitle: {
-    flex: 1,
+    // No flex — the title is inside a column wrap, so flex:1 would stretch the
+    // Text box vertically and pin the visible glyphs to the top of the row.
     color: 'black',
     fontSize: 12,
     fontFamily: 'Poppins',
