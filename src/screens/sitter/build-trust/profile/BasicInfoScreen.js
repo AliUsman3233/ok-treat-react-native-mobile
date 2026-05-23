@@ -38,16 +38,11 @@ export default function BasicInfoScreen({ navigation, route }) {
   const hasProcessedLocationParamsRef = useRef(false);
 
   // Handle location selection from LocationPicker - FIRST PRIORITY
+  // NOTE: never log raw address/lat/lng — PII in device logs.
   useEffect(() => {
-    console.log('🔄 useEffect triggered');
-    console.log('📦 Full route.params:', JSON.stringify(route.params, null, 2));
-    
     if (route.params?.selectedLocation) {
-      console.log('✅ Inside if block - selectedLocation exists');
       const location = route.params.selectedLocation;
-      console.log('📍 Received location data:', JSON.stringify(location, null, 2));
-      
-      console.log('� Setting state values...');
+
       setSelectedLocation(location.address || '');
       setAddressLine1(location.addressLine1 || '');
       setCity(location.city || '');
@@ -57,68 +52,31 @@ export default function BasicInfoScreen({ navigation, route }) {
       setLongitude(location.longitude || null);
       setHasSelectedLocation(true);
       hasProcessedLocationParamsRef.current = true;
-      console.log('🔧 State values set! hasProcessedLocationParamsRef.current =', hasProcessedLocationParamsRef.current);
-      
+
       // Clear the route params to prevent re-triggering
       navigation.setParams({ selectedLocation: undefined });
-      
-      console.log('✅ Location data applied successfully');
     }
   }, [route.params]);
 
   // Fetch existing data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔍 useFocusEffect triggered, hasProcessedLocationParamsRef.current:', hasProcessedLocationParamsRef.current);
-      
       // Only fetch if we haven't just processed location params
       if (!hasProcessedLocationParamsRef.current) {
-        console.log('📥 Fetching basic info from database...');
         fetchBasicInfo();
       } else {
-        console.log('⏭️ Skipping fetchBasicInfo because we just processed location params');
-        // Reset the flag for next time the screen is focused
         hasProcessedLocationParamsRef.current = false;
       }
     }, [])
   );
 
-  // Debug: Log state changes
-  React.useEffect(() => {
-    console.log('🖼️ Profile photo state updated:', profilePhoto);
-  }, [profilePhoto]);
-
-  React.useEffect(() => {
-    console.log('🏠 addressLine1 state updated:', addressLine1);
-  }, [addressLine1]);
-
-  React.useEffect(() => {
-    console.log('🏙️ city state updated:', city);
-  }, [city]);
-
-  React.useEffect(() => {
-    console.log('🗺️ state state updated:', state);
-  }, [state]);
-
-  React.useEffect(() => {
-    console.log('📮 zipCode state updated:', zipCode);
-  }, [zipCode]);
-
-  React.useEffect(() => {
-    console.log('✅ hasSelectedLocation state updated:', hasSelectedLocation);
-  }, [hasSelectedLocation]);
-
   const fetchBasicInfo = async () => {
     try {
-      console.log('🔍 Fetching basic info...');
       const response = await getBuildTrustSection('BASIC_INFO');
-      
-      console.log('📦 BuildTrust response:', JSON.stringify(response, null, 2));
-      
+
       if (response.success && response.data.exists && response.data.settings) {
         const settings = response.data.settings;
-        console.log('📝 BuildTrust settings:', settings);
-        
+
         setProfilePhoto(settings.profilePhoto || '');
         setAddressLine1(settings.addressLine1 || '');
         setAddressLine2(settings.addressLine2 || '');
@@ -129,19 +87,14 @@ export default function BasicInfoScreen({ navigation, route }) {
         setLongitude(settings.longitude || null);
         setSelectedLocation(settings.addressLine1 || '');
         setBirthday(settings.birthday || '');
-        
+
         // If address exists, show the fields
         if (settings.addressLine1 || settings.city) {
           setHasSelectedLocation(true);
         }
-        
-        console.log('✅ Profile photo set to:', settings.profilePhoto);
-        console.log('✅ Location loaded - Lat:', settings.latitude, 'Lng:', settings.longitude);
-      } else {
-        console.log('⚠️ No BuildTrust data found');
       }
     } catch (error) {
-      console.error('❌ Failed to fetch basic info:', error);
+      console.error('Failed to fetch basic info:', error?.message);
     }
   };
 
@@ -153,9 +106,7 @@ export default function BasicInfoScreen({ navigation, route }) {
       // Upload to Cloudinary
       const result = await uploadToCloudinary(imageUri, CLOUDINARY_FOLDERS.PROFILES);
       const photoUrl = result.url;
-      
-      console.log('✅ Image uploaded to Cloudinary:', photoUrl);
-      
+
       // Update local state
       setProfilePhoto(photoUrl);
       
@@ -386,12 +337,11 @@ export default function BasicInfoScreen({ navigation, route }) {
                   </View>
                 ) : profilePhoto ? (
                   <View style={styles.photoPreviewContainer}>
-                    <Image 
-                      key={profilePhoto} 
-                      source={{ uri: profilePhoto }} 
+                    <Image
+                      key={profilePhoto}
+                      source={{ uri: profilePhoto }}
                       style={styles.photoPreview}
-                      onError={(error) => console.error('Image load error:', error.nativeEvent.error)}
-                      onLoad={() => console.log('✅ Image loaded successfully:', profilePhoto)}
+                      onError={(error) => console.error('Image load error:', error.nativeEvent?.error)}
                     />
                     <View style={styles.changePhotoOverlay}>
                       <View style={styles.uploadIconContainer}>

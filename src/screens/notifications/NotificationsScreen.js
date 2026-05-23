@@ -130,11 +130,19 @@ export default function NotificationsScreen({ navigation }) {
         return;
       case 'BOOKING_CONFIRMED':
       case 'BOOKING_DECLINED':
-        navigation.navigate('Bookings', { initialTab: 'Upcoming', bookingId: data.bookingId });
+        if (data.bookingId) {
+          navigation.navigate('BookingDetail', { bookingId: data.bookingId });
+        } else {
+          navigation.navigate('Bookings', { initialTab: 'Upcoming' });
+        }
         return;
       case 'BOOKING_COMPLETED':
       case 'BOOKING_CANCELLED':
-        navigation.navigate('Bookings', { initialTab: 'Past', bookingId: data.bookingId });
+        if (data.bookingId) {
+          navigation.navigate('BookingDetail', { bookingId: data.bookingId });
+        } else {
+          navigation.navigate('Bookings', { initialTab: 'Past' });
+        }
         return;
 
       // ── Messaging ──
@@ -153,7 +161,11 @@ export default function NotificationsScreen({ navigation }) {
 
       // ── Reviews — sitter receives a review on their profile ──
       case 'REVIEW':
-        navigation.navigate('Bookings', { initialTab: 'Past', bookingId: data.bookingId });
+        if (data.bookingId) {
+          navigation.navigate('BookingDetail', { bookingId: data.bookingId });
+        } else {
+          navigation.navigate('Bookings', { initialTab: 'Past' });
+        }
         return;
 
       // ── Payments / Coins ──

@@ -171,27 +171,16 @@ export default function LocationPickerScreen({ navigation, route }) {
   const handleConfirm = async () => {
     if (markerPosition) {
       try {
-        console.log('📍 Marker position:', markerPosition);
-        
-        // Get detailed address components
+        // Get detailed address components from reverse geocoding.
+        // NOTE: never log the raw lat/lng or address — PII in device logs.
         const result = await Location.reverseGeocodeAsync({
           latitude: markerPosition.latitude,
           longitude: markerPosition.longitude
         });
-        
-        console.log('🔍 Reverse geocode result:', JSON.stringify(result, null, 2));
-        
+
         if (result.length > 0) {
           const address = result[0];
-          console.log('📋 Address object:', JSON.stringify(address, null, 2));
-          console.log('📋 Address fields:');
-          console.log('  - streetNumber:', address.streetNumber);
-          console.log('  - street:', address.street);
-          console.log('  - city:', address.city);
-          console.log('  - region:', address.region);
-          console.log('  - postalCode:', address.postalCode);
-          console.log('  - country:', address.country);
-          
+
           const locationData = {
             address: selectedAddress || 'Selected Location',
             addressLine1: `${address.streetNumber || ''} ${address.street || ''}`.trim() || selectedAddress,
@@ -202,31 +191,19 @@ export default function LocationPickerScreen({ navigation, route }) {
             latitude: markerPosition.latitude,
             longitude: markerPosition.longitude
           };
-          
-          console.log('✅ Location data to return:', JSON.stringify(locationData, null, 2));
-          console.log('✅ Location data fields:');
-          console.log('  - address:', locationData.address);
-          console.log('  - addressLine1:', locationData.addressLine1);
-          console.log('  - city:', locationData.city);
-          console.log('  - state:', locationData.state);
-          console.log('  - zipCode:', locationData.zipCode);
-          console.log('  - country:', locationData.country);
-          
+
           // Check if we have a callback or need to navigate back with params
           if (route.params?.onLocationSelect) {
-            console.log('📤 Using onLocationSelect callback');
             route.params.onLocationSelect(locationData);
             navigation.goBack();
             return;
           } else if (route.params?.returnScreen) {
-            console.log('📤 Navigating to:', route.params.returnScreen, 'with params:', { selectedLocation: locationData });
-            // Navigate back to the return screen with location data
             navigation.navigate(route.params.returnScreen, { selectedLocation: locationData });
             return;
           }
         }
       } catch (error) {
-        console.error('❌ Error getting address details:', error);
+        console.error('Error getting address details:', error?.message);
       }
     }
     navigation.goBack();

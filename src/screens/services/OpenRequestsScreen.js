@@ -277,13 +277,9 @@ export default function OpenRequestsScreen({ navigation }) {
   };
 
   const handleRequestPress = (requestId) => {
-    // Find the request to pick the right initial tab (Pending/Confirmed → Upcoming,
-    // Completed/Cancelled/Declined → Past). Falls back to All.
-    const req = requests.find((r) => r.id === requestId);
-    const initialTab = ['completed', 'cancelled', 'declined'].includes(req?.status)
-      ? 'Past'
-      : 'Upcoming';
-    navigation.navigate('Bookings', { initialTab, bookingId: requestId });
+    // Open the per-booking detail page. Pass the bookingId; BookingDetailScreen
+    // will refresh from the API on focus to pick up any status changes.
+    navigation.navigate('BookingDetail', { bookingId: requestId });
   };
 
   const handleDeleteRequest = async (requestId) => {

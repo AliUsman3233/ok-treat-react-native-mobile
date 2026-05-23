@@ -42,22 +42,7 @@ export default function ServiceSearchScreen({ navigation, route }) {
       },
     };
 
-    console.log('=================================');
-    console.log(`🔍 ${serviceType.toUpperCase()} SEARCH PAYLOAD`);
-    console.log('=================================');
-    console.log('Service Type:', searchPayload.serviceType);
-    console.log('Start Date (Local):', startDate ? moment(startDate).format('ddd, MMM D, YYYY') : 'Not selected');
-    console.log('Start Date (UTC):', startDateUTC);
-    console.log('End Date (Local):', endDate ? moment(endDate).format('ddd, MMM D, YYYY') : 'Not selected');
-    console.log('End Date (UTC):', endDateUTC);
-    console.log('Location:', selectedLocation);
-    console.log('Latitude:', locationData?.latitude || 'Not available');
-    console.log('Longitude:', locationData?.longitude || 'Not available');
-    console.log('Date Range:', formatDateRange());
-    console.log('=================================');
-    console.log('Full Payload:', JSON.stringify(searchPayload, null, 2));
-    console.log('=================================');
-
+    // Search payload includes user location — don't log it in production.
     navigation.navigate('SearchResults', searchPayload);
   };
 

@@ -37,57 +37,7 @@ export default function SearchResultsScreen({ navigation, route }) {
 
   const activePet = pets[activePetIndex] || null;
 
-  // Log received search payload
-  useEffect(() => {
-    console.log('\n========================================');
-    console.log('🔍 SEARCH RESULTS SCREEN - RECEIVED DATA');
-    console.log('========================================');
-    console.log('Service Type:', serviceType);
-    console.log('----------------------------------------');
-    
-    if (searchParams.startDate) {
-      const startDate = new Date(searchParams.startDate);
-      console.log('Start Date:', startDate.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      }));
-    }
-    
-    if (searchParams.endDate) {
-      const endDate = new Date(searchParams.endDate);
-      console.log('End Date:', endDate.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      }));
-    }
-    
-    if (searchParams.startDate && searchParams.endDate) {
-      const start = new Date(searchParams.startDate);
-      const end = new Date(searchParams.endDate);
-      const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-      console.log('Duration:', nights, 'night(s)');
-    }
-    
-    if (searchParams.location) {
-      console.log('Location:', searchParams.location);
-    }
-    
-    if (searchParams.latitude && searchParams.longitude) {
-      console.log('Latitude:', searchParams.latitude);
-      console.log('Longitude:', searchParams.longitude);
-      console.log('Coordinates:', `${searchParams.latitude}, ${searchParams.longitude}`);
-    } else {
-      console.log('Coordinates: Not available');
-    }
-    
-    console.log('----------------------------------------');
-    console.log('Full Search Params:', JSON.stringify(searchParams, null, 2));
-    console.log('========================================\n');
-  }, [serviceType, searchParams]);
+  // (Search params include user location — not logged in production.)
 
   // Fetch sitters based on search criteria
   useEffect(() => {
@@ -103,14 +53,6 @@ export default function SearchResultsScreen({ navigation, route }) {
           return;
         }
 
-        console.log('🔍 Fetching sitters with params:', {
-          serviceType,
-          latitude: searchParams.latitude,
-          longitude: searchParams.longitude,
-          startDate: searchParams.startDate,
-          endDate: searchParams.endDate
-        });
-
         const response = await searchSitters(
           serviceType.toUpperCase().replace(/ /g, '_'), // Convert "Boarding" to "BOARDING"
           searchParams.latitude,
@@ -119,9 +61,6 @@ export default function SearchResultsScreen({ navigation, route }) {
           searchParams.endDate,
           30 // 30km radius
         );
-
-        console.log('✅ Sitters fetched:', response.data.count);
-        console.log('📋 Sitters data:', JSON.stringify(response.data.sitters, null, 2));
 
         // Calculate days since last update for each sitter
         const sittersWithUpdate = response.data.sitters.map(sitter => {

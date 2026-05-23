@@ -122,9 +122,11 @@ export default function BookingsScreen({ navigation, route }) {
       highlightedBookingId && (booking.id === highlightedBookingId || booking._id === highlightedBookingId);
 
     return (
-      <View
+      <TouchableOpacity
         key={booking.id || booking._id}
         style={[styles.bookingCard, isHighlighted && styles.bookingCardHighlighted]}
+        onPress={() => navigation.navigate('BookingDetail', { booking })}
+        activeOpacity={0.7}
       >
         {/* Top Section */}
         <View style={styles.topSection}>
@@ -193,7 +195,7 @@ export default function BookingsScreen({ navigation, route }) {
             <Text style={styles.coinsText}>{totalPayment} Coins</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

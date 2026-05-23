@@ -19,6 +19,7 @@ import {
 
 import HomeScreen from '../screens/main/HomeScreen';
 import BookingsScreen from '../screens/main/BookingsScreen';
+import BookingDetailScreen from '../screens/main/BookingDetailScreen';
 import RebookScreen from '../screens/main/RebookScreen';
 import MoreScreen from '../screens/main/MoreScreen';
 
@@ -380,6 +381,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="SitterTabs" component={SitterTabNavigator} />
       {/* Modal-like screens without bottom tabs */}
       <RootStack.Screen name="Bookings" component={BookingsScreen} />
+      <RootStack.Screen name="BookingDetail" component={BookingDetailScreen} />
       <RootStack.Screen name="AddPet" component={AddPetScreen} />
       <RootStack.Screen name="EditPet" component={EditPetScreen} />
       <RootStack.Screen name="PetDetail" component={PetDetailScreen} />
