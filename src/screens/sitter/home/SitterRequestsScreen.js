@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../../context/AlertContext';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../../components/ProfileVerifiedModal';
@@ -8,6 +9,7 @@ import { getSitterRequests, updateBookingStatus } from '../../../services/bookin
 import { getSocket } from '../../../config/socket';
 
 export default function SitterRequestsScreen({ navigation }) {
+  const alert = useAppAlert();
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chats'
   const [requests, setRequests] = useState([]);
   const [chats, setChats] = useState([]);
@@ -229,7 +231,11 @@ export default function SitterRequestsScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} fill="#090E12" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Inbox</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => alert('Inbox Filters', 'Coming after release', 'pending')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Setting2IconAlt width={16.36} height={16.36} />
           </TouchableOpacity>
         </View>

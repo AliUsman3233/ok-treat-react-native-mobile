@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, PanResponder, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon, ImageHereIcon, ClockIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import api from '../../config/api';
@@ -145,6 +146,7 @@ const SwipeableChatCard = ({ chat, onPress, onDelete }) => {
 };
 
 export default function ChatListScreen({ navigation }) {
+  const alert = useAppAlert();
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -230,7 +232,11 @@ export default function ChatListScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Inbox</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => alert('Chat Settings', 'Coming after release', 'pending')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Setting2IconAlt width={16.36} height={16.36} />
           </TouchableOpacity>
         </View>

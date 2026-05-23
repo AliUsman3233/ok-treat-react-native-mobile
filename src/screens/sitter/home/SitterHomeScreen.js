@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../../context/AlertContext';
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
@@ -9,6 +10,8 @@ import { getSitterEarnings, getSitterBookings, getSitterRequests } from '../../.
 
 export default function SitterHomeScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
+  const alert = useAppAlert();
+  const comingSoon = (label) => () => alert(label, 'Coming after release', 'pending');
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
@@ -76,6 +79,7 @@ export default function SitterHomeScreen({ navigation }) {
 
       setUpcomingBookings(bookingsArray.slice(0, 5).map(booking => ({
         id: booking.id || booking._id,
+        clientUserId: booking.user?.id || null,
         clientName: booking.user?.fullName || booking.client?.name || 'Client',
         clientImage: booking.user?.avatarUrl ? { uri: booking.user.avatarUrl } : DogImage,
         serviceType: booking.serviceType || '',
@@ -161,7 +165,11 @@ export default function SitterHomeScreen({ navigation }) {
             <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.userName}>{user?.fullName || 'Sitter'}</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('Notifications')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Icon name="notifications-outline" size={24.55} color="#212121" />
           </TouchableOpacity>
         </View>
@@ -178,11 +186,11 @@ export default function SitterHomeScreen({ navigation }) {
 
           {/* Filter Buttons */}
           <View style={styles.filterButtons}>
-            <TouchableOpacity style={styles.filterButton}>
+            <TouchableOpacity style={styles.filterButton} onPress={comingSoon('Date Range Filter')}>
               <Text style={styles.filterButtonText}>Monthly</Text>
               <Icon name="chevron-down" size={14.03} color="#808D9E" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.downloadButton}>
+            <TouchableOpacity style={styles.downloadButton} onPress={comingSoon('Download Report')}>
               <Text style={styles.downloadButtonText}>Download Report</Text>
               <Icon name="download-outline" size={14.03} color="#5CADF4" />
             </TouchableOpacity>
@@ -343,7 +351,14 @@ export default function SitterHomeScreen({ navigation }) {
                     </View>
                   </View>
 
-                  <TouchableOpacity style={styles.bookingChatButton}>
+                  <TouchableOpacity
+                    style={styles.bookingChatButton}
+                    onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                      otherUserId: booking.clientUserId,
+                      chatName: booking.clientName,
+                    })}
+                    disabled={!booking.clientUserId}
+                  >
                     <ChatIcon width={21.05} height={21.05} />
                   </TouchableOpacity>
                 </View>

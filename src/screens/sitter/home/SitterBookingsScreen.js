@@ -63,7 +63,8 @@ export default function SitterBookingsScreen({ navigation }) {
 
         return {
           id: booking.id || booking._id,
-          clientName: booking.client?.name || booking.clientName || booking.user?.name || 'Client',
+          clientUserId: booking.user?.id || booking.client?.id || null,
+          clientName: booking.client?.name || booking.clientName || booking.user?.fullName || booking.user?.name || 'Client',
           clientImage: booking.client?.profileImage || booking.clientImage ? { uri: booking.client?.profileImage || booking.clientImage } : DogImage,
           serviceType: booking.serviceType || booking.service || '',
           date: formatShortDate(startDate),
@@ -279,7 +280,14 @@ export default function SitterBookingsScreen({ navigation }) {
           </View>
 
           {isUpcoming && (
-            <TouchableOpacity style={styles.chatButton}>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                otherUserId: booking.clientUserId,
+                chatName: booking.clientName,
+              })}
+              disabled={!booking.clientUserId}
+            >
               <ChatIcon width={21.05} height={21.05} />
             </TouchableOpacity>
           )}

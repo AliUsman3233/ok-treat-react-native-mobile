@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon } from '../../assets';
@@ -223,6 +224,7 @@ const SwipeableRequestCard = ({ request, onPress, onDelete }) => {
 };
 
 export default function OpenRequestsScreen({ navigation }) {
+  const alert = useAppAlert();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -289,7 +291,11 @@ export default function OpenRequestsScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Requests</Text>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => alert('Request Filters', 'Coming after release', 'pending')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Setting2IconAlt width={16.36} height={16.36} />
           </TouchableOpacity>
         </View>

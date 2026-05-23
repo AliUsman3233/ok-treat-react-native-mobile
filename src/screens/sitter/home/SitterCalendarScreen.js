@@ -79,7 +79,8 @@ export default function SitterCalendarScreen({ navigation }) {
 
       setAllBookings(bookingsArray.map(booking => ({
         id: booking.id || booking._id,
-        clientName: booking.client?.name || booking.clientName || booking.user?.name || 'Client',
+        clientUserId: booking.user?.id || booking.client?.id || null,
+        clientName: booking.client?.name || booking.clientName || booking.user?.fullName || booking.user?.name || 'Client',
         clientImage: booking.client?.profileImage || booking.clientImage
           ? { uri: booking.client?.profileImage || booking.clientImage }
           : DogImage,
@@ -346,7 +347,14 @@ export default function SitterCalendarScreen({ navigation }) {
                       </View>
                     </View>
 
-                    <TouchableOpacity style={styles.bookingChatButton}>
+                    <TouchableOpacity
+                      style={styles.bookingChatButton}
+                      onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                        otherUserId: booking.clientUserId,
+                        chatName: booking.clientName,
+                      })}
+                      disabled={!booking.clientUserId}
+                    >
                       <ChatIcon width={21.05} height={21.05} />
                     </TouchableOpacity>
                   </View>

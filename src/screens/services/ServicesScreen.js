@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { useAppAlert } from '../../context/AlertContext';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { Calendar2Icon, CalendarIconBlue, SplashIcon } from '../../assets';
 import { 
@@ -71,6 +72,7 @@ const ServiceIcon = ({ iconName }) => {
 };
 
 export default function ServicesScreen({ navigation }) {
+  const alert = useAppAlert();
   const handleServicePress = (service) => {
     navigation.navigate('ServiceSearch', {
       serviceType: service.serviceType,
@@ -91,7 +93,11 @@ export default function ServicesScreen({ navigation }) {
             <Text style={styles.welcomeText}>Services</Text>
             <Text style={styles.emailText}>You can choose services</Text>
           </View>
-          <TouchableOpacity style={styles.filterButton}>
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => alert('Service Filters', 'Coming after release', 'pending')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <SliderIcon width={19} height={19} />
           </TouchableOpacity>
         </View>
