@@ -142,8 +142,8 @@ export default function ProfileScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.fullName || user?.name || 'Vesta T. Hunter'}</Text>
-              <Text style={styles.profileEmail}>{user?.email || 'vestahunter@gmail.com'}</Text>
+              <Text style={styles.profileName}>{user?.fullName || user?.name || 'Your name'}</Text>
+              <Text style={styles.profileEmail}>{user?.email || ''}</Text>
             </View>
           </View>
 

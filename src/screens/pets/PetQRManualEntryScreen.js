@@ -32,7 +32,7 @@ export default function PetQRManualEntryScreen({ navigation }) {
       const response = await getPetByQRCode(code);
       if (response.data?.pet) {
         // Record the scan in background
-        createScan({ qrCode: code }).catch(() => {});
+        createScan({ qrCode: code }).catch((err) => console.warn('Manual scan record failed:', err?.message));
         navigation.replace('PetDetail', { petData: response.data.pet, qrCode: code });
       } else {
         alert('No Pet Found', 'No pet is linked with this tag ID. Please check and try again.', 'pending');

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, ShieldCheckIcon, CoinIcon } from '../../assets';
@@ -42,11 +42,20 @@ const formatDateRange = (startDate, endDate) => {
   return `${start} to ${end}`;
 };
 
-export default function BookingsScreen({ navigation }) {
-  const [selectedTab, setSelectedTab] = useState('All');
+export default function BookingsScreen({ navigation, route }) {
+  // `initialTab` lets deep links from notifications/requests land on the right list
+  // (e.g. BOOKING_COMPLETED notification → Past tab). `bookingId` is read by the
+  // card-render to highlight the just-tapped booking briefly.
+  const initialTab = route?.params?.initialTab;
+  const highlightedBookingId = route?.params?.bookingId || null;
+
+  const [selectedTab, setSelectedTab] = useState(
+    ['All', 'Upcoming', 'Past'].includes(initialTab) ? initialTab : 'All'
+  );
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const tabs = ['All', 'Upcoming', 'Past'];
 
@@ -68,6 +77,12 @@ export default function BookingsScreen({ navigation }) {
 
   useEffect(() => {
     fetchBookings();
+  }, [fetchBookings]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
   }, [fetchBookings]);
 
   const handleBack = () => {
@@ -103,8 +118,14 @@ export default function BookingsScreen({ navigation }) {
     const reviews = booking.sitter?.reviewCount || booking.reviews || 0;
     const totalPayment = booking.totalAmount || booking.totalPayment || 0;
 
+    const isHighlighted =
+      highlightedBookingId && (booking.id === highlightedBookingId || booking._id === highlightedBookingId);
+
     return (
-      <View key={booking.id || booking._id} style={styles.bookingCard}>
+      <View
+        key={booking.id || booking._id}
+        style={[styles.bookingCard, isHighlighted && styles.bookingCardHighlighted]}
+      >
         {/* Top Section */}
         <View style={styles.topSection}>
           {/* Left: Avatar and Info */}
@@ -234,6 +255,13 @@ export default function BookingsScreen({ navigation }) {
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#32A6D8"
+                />
+              }
             >
               {filteredBookings.map(renderBookingCard)}
             </ScrollView>
@@ -389,6 +417,11 @@ const styles = StyleSheet.create({
     borderColor: '#EBEBEB',
     padding: 12,
     marginBottom: 7,
+  },
+  bookingCardHighlighted: {
+    borderColor: '#32A6D8',
+    borderWidth: 2,
+    backgroundColor: '#F0F9FE',
   },
   topSection: {
     flexDirection: 'row',

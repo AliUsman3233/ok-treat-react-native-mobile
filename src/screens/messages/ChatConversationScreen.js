@@ -44,7 +44,7 @@ const MessageBubble = ({ message }) => {
 };
 
 export default function ChatConversationScreen({ route, navigation }) {
-  const { chatName = 'Ashlyn', otherUserId, chatId } = route?.params || {};
+  const { chatName = 'Chat', otherUserId, chatId } = route?.params || {};
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -174,9 +174,13 @@ export default function PetQRScanScreen({ navigation, route }) {
   // Only called AFTER we confirm the QR code is valid
   const recordScanInBackground = (qrCode) => {
     (async () => {
+      const recordScan = (extra) =>
+        createScan({ qrCode, ...extra }).catch((err) =>
+          console.warn('Scan record failed:', err?.message)
+        );
       try {
         if (locationPermRef.current !== 'granted') {
-          createScan({ qrCode }).catch(() => {});
+          recordScan({});
           return;
         }
         const loc = await Promise.race([
@@ -187,10 +191,13 @@ export default function PetQRScanScreen({ navigation, route }) {
         try {
           const addr = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
           addressData = { address: addr[0]?.street || '', city: addr[0]?.city || '', country: addr[0]?.country || '' };
-        } catch (_) {}
-        createScan({ qrCode, latitude: loc.coords.latitude, longitude: loc.coords.longitude, ...addressData }).catch(() => {});
-      } catch (_) {
-        createScan({ qrCode }).catch(() => {});
+        } catch (e) {
+          console.warn('Reverse geocode failed:', e?.message);
+        }
+        recordScan({ latitude: loc.coords.latitude, longitude: loc.coords.longitude, ...addressData });
+      } catch (e) {
+        console.warn('Scan location lookup failed:', e?.message);
+        recordScan({});
       }
     })();
   };

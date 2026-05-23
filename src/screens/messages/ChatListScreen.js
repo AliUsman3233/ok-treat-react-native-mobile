@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, PanResponder, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, PanResponder, Dimensions, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { BackArrowIcon, Setting2IconAlt, DeleteIcon, ImageHereIcon, ClockIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -150,6 +150,13 @@ export default function ChatListScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchConversations();
+    setRefreshing(false);
+  };
 
   const fetchConversations = async () => {
     try {
@@ -265,6 +272,13 @@ export default function ChatListScreen({ navigation }) {
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#32A6D8"
+                />
+              }
             >
               {chats.map((chat) => (
                 <SwipeableChatCard

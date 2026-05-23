@@ -24,7 +24,7 @@ const getRelativeTime = (dateString) => {
 };
 
 const NotificationItem = ({ notification, onPress }) => {
-  const IconComp = notification.type === 'payment' ? MoneySendIcon : Calendar2Icon;
+  const IconComp = notification.iconType === 'payment' ? MoneySendIcon : Calendar2Icon;
 
   return (
     <TouchableOpacity
@@ -62,9 +62,20 @@ export default function NotificationsScreen({ navigation }) {
 
       const formatted = list.map(n => {
         const createdAt = new Date(n.createdAt || n.created_at);
+        const rawType = n.type || 'SYSTEM';
+        // Icon selection — payment-ish events show a money icon, everything else a calendar.
+        // Previously this was inlined buggy (`n.type || X ? 'payment' : 'reminder'` always
+        // overwrote the raw type with 'payment' or 'reminder', breaking routing below).
+        const iconType =
+          /^COINS_|^PAYMENT|^REFUND/i.test(rawType) ||
+          (n.message || '').toLowerCase().includes('payment')
+            ? 'payment'
+            : 'reminder';
         return {
           id: n.id || n._id,
-          type: n.type || (n.message || '').toLowerCase().includes('payment') ? 'payment' : 'reminder',
+          type: rawType,         // raw backend type — drives routing
+          iconType,              // 'payment' | 'reminder' — drives icon
+          title: n.title || '',
           message: n.message || n.title || '',
           time: getRelativeTime(n.createdAt || n.created_at),
           isNew: !n.read && !n.isRead,
@@ -106,18 +117,86 @@ export default function NotificationsScreen({ navigation }) {
       }
     }
 
-    // Navigate based on notification type
+    // Route based on the raw backend `type` value (set in fetchNotifications above).
+    // Deep-link params come from the `data` JSON the backend wrote on each event.
     const notifType = notification.type;
-    if (notifType === 'BOOKING_REQUEST') {
-      navigation.navigate('SitterRequests');
-    } else if (notifType === 'BOOKING_CONFIRMED' || notifType === 'BOOKING_DECLINED' || notifType === 'BOOKING_COMPLETED' || notifType === 'BOOKING_CANCELLED') {
-      navigation.navigate('Bookings');
-    } else if (notifType === 'message' || notifType === 'NEW_MESSAGE') {
-      navigation.navigate('ChatList');
-    } else if (notifType === 'payment') {
-      navigation.navigate('Bookings');
-    } else {
-      navigation.navigate('Bookings');
+    const data = notification.data || {};
+
+    switch (notifType) {
+      // ── Bookings — pre-select the right tab so the user lands at the relevant list ──
+      case 'BOOKING_REQUEST':
+        // Sitter side: jump to the requests inbox
+        navigation.navigate('SitterRequests');
+        return;
+      case 'BOOKING_CONFIRMED':
+      case 'BOOKING_DECLINED':
+        navigation.navigate('Bookings', { initialTab: 'Upcoming', bookingId: data.bookingId });
+        return;
+      case 'BOOKING_COMPLETED':
+      case 'BOOKING_CANCELLED':
+        navigation.navigate('Bookings', { initialTab: 'Past', bookingId: data.bookingId });
+        return;
+
+      // ── Messaging ──
+      case 'MESSAGE':
+      case 'message':
+      case 'NEW_MESSAGE':
+        if (data.senderId) {
+          navigation.navigate('ChatConversation', {
+            otherUserId: data.senderId,
+            chatName: data.senderName || 'Chat',
+          });
+        } else {
+          navigation.navigate('ChatList');
+        }
+        return;
+
+      // ── Reviews — sitter receives a review on their profile ──
+      case 'REVIEW':
+        navigation.navigate('Bookings', { initialTab: 'Past', bookingId: data.bookingId });
+        return;
+
+      // ── Payments / Coins ──
+      case 'COINS_PURCHASED':
+      case 'COINS_REFUNDED':
+      case 'COINS_EARNED':
+        navigation.navigate('PaymentMethods');
+        return;
+      case 'COINS_PURCHASE_FAILED':
+      case 'LOW_COIN_BALANCE':
+        navigation.navigate('ShopCoins');
+        return;
+
+      // ── Pet alerts ──
+      case 'PET_SCANNED_WHILE_MISSING':
+      case 'PET_QR_LINKED':
+      case 'PET_QR_DISCONNECTED':
+        if (data.petId) {
+          navigation.navigate('MyPetProfile', { petId: data.petId });
+        } else {
+          // No petId — fall back to the pets tab
+          navigation.navigate('MainTabs', { screen: 'Pets', params: { screen: 'PetList' } });
+        }
+        return;
+
+      // ── Account / system ──
+      case 'SITTER_APPROVED':
+      case 'SITTER_REJECTED':
+      case 'PHONE_VERIFIED':
+      case 'PASSWORD_RESET_SUCCESSFUL':
+      case 'SYSTEM':
+        // Informational — stay on the notifications screen
+        return;
+
+      // ── Promotional ──
+      case 'REFERRAL_REWARD_EARNED':
+        navigation.navigate('PaymentMethods');
+        return;
+
+      default:
+        // Unknown type — safest fallback is the bookings list (most common case)
+        navigation.navigate('Bookings');
+        return;
     }
   };
 

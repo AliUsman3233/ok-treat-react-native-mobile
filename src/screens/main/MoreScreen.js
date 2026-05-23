@@ -33,7 +33,10 @@ export default function MoreScreen({ navigation }) {
         try {
           const response = await api.get('/sitter/status');
           if (response.data?.success) {
-            const { sitter, hasSitterProfile: hasProfile } = response.data.data;
+            // Backend wraps as { success, data: { sitter, hasSitterProfile } } —
+            // fall back to a flat shape just in case the wrapper changes.
+            const payload = response.data?.data || response.data || {};
+            const { sitter, hasSitterProfile: hasProfile } = payload;
             setHasSitterProfile(hasProfile);
             setSitterStatus(sitter?.approvalStatus || null);
             // Only keep sitter mode on if approved and was previously on

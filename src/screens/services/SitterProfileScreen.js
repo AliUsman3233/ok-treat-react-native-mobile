@@ -30,8 +30,9 @@ export default function SitterProfileScreen({ navigation, route }) {
 
         const response = await api.get(`/sitter/${sitterId}/public`);
         if (response.data?.success) {
-          setSitterData(prev => ({ ...prev, ...response.data.data.sitter }));
-          setReviews(response.data.data.reviews || []);
+          const payload = response.data?.data || response.data || {};
+          if (payload.sitter) setSitterData(prev => ({ ...prev, ...payload.sitter }));
+          setReviews(payload.reviews || []);
         }
       } catch (error) {
         console.log('Using navigation params for sitter data');

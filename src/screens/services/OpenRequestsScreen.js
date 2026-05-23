@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Animated, PanResponder, ActivityIndicator, RefreshControl } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -228,6 +228,7 @@ export default function OpenRequestsScreen({ navigation }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
 
   const fetchRequests = async () => {
@@ -265,12 +266,24 @@ export default function OpenRequestsScreen({ navigation }) {
     }, [])
   );
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchRequests();
+    setRefreshing(false);
+  }, []);
+
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleRequestPress = (requestId) => {
-    navigation.navigate('Bookings');
+    // Find the request to pick the right initial tab (Pending/Confirmed → Upcoming,
+    // Completed/Cancelled/Declined → Past). Falls back to All.
+    const req = requests.find((r) => r.id === requestId);
+    const initialTab = ['completed', 'cancelled', 'declined'].includes(req?.status)
+      ? 'Past'
+      : 'Upcoming';
+    navigation.navigate('Bookings', { initialTab, bookingId: requestId });
   };
 
   const handleDeleteRequest = async (requestId) => {
@@ -324,6 +337,13 @@ export default function OpenRequestsScreen({ navigation }) {
               style={styles.scrollView}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor="#32A6D8"
+                />
+              }
             >
               {requests.map((request) => (
                 <SwipeableRequestCard

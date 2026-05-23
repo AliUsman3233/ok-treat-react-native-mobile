@@ -44,7 +44,12 @@ export default function PaymentMethodsScreen({ navigation }) {
     try {
       // Wallet balance lives in WalletContext; this fetch is only for the
       // transaction tabs. The wallet refresh runs in parallel below.
-      const txRes = await api.get('/coins/transactions').catch(() => ({ data: {} }));
+      let txFetchFailed = false;
+      const txRes = await api.get('/coins/transactions').catch((err) => {
+        console.warn('Failed to load coin transactions:', err?.message);
+        txFetchFailed = true;
+        return { data: {} };
+      });
       const txList = txRes.data?.data?.transactions || txRes.data?.transactions || [];
       const transactions = Array.isArray(txList) ? txList : [];
 
@@ -72,7 +77,8 @@ export default function PaymentMethodsScreen({ navigation }) {
           source: tx.source || 'PURCHASED',
           cashableAt: tx.cashableAt || null,
           phone: '',
-          amount: amount >= 0 ? `+${amount.toFixed(0)}` : `${amount.toFixed(0)}`,
+          // Coins are integers — format with thousands separators, prepend "+" for credits
+          amount: (amount >= 0 ? '+' : '') + Math.round(amount).toLocaleString(),
           status: 'Completed',
           statusColor: '#3FA477',
         };
