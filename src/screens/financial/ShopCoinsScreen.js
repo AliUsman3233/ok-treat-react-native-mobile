@@ -14,6 +14,7 @@ import StripeCardSheet from '../../components/StripeCardSheet';
 import api from '../../config/api';
 import { useAppAlert } from '../../context/AlertContext';
 import { usePaymentConfig } from '../../context/PaymentConfigContext';
+import { useWallet } from '../../context/WalletContext';
 
 // Format priceInCents → "$24.99"
 const formatPrice = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
@@ -21,6 +22,7 @@ const formatPrice = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 export default function ShopCoinsScreen({ navigation }) {
   const alert = useAppAlert();
   const { mode, publishableKey } = usePaymentConfig();
+  const wallet = useWallet();
 
   const [packages, setPackages] = useState([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
@@ -123,6 +125,10 @@ export default function ShopCoinsScreen({ navigation }) {
     }
 
     setConfirming(false);
+    // Propagate the new balance to every screen that uses WalletContext —
+    // some screens won't re-mount on navigation so the global refresh is
+    // what keeps the rest of the app in sync.
+    wallet.refresh();
     if (credited) {
       alert(
         'Success',

@@ -24,7 +24,9 @@ export default function TransactionHistoryScreen({ navigation }) {
       // Fetch balance
       const balanceRes = await api.get('/coins/balance').catch(() => ({ data: {} }));
       const balData = balanceRes.data?.data || balanceRes.data || {};
-      setTotalCoins(balData.balance || balData.coins || 0);
+      // Backend returns `coinBalance` (sum of purchased + earned buckets).
+      // The .balance / .coins fallbacks are kept for older API responses.
+      setTotalCoins(Number(balData.coinBalance ?? balData.balance ?? balData.coins ?? 0));
 
       // Fetch transactions
       const txRes = await api.get('/coins/transactions');

@@ -7,6 +7,7 @@ import { BackArrowIcon, CalendarIcon, CheckCircleIcon } from '../../assets';
 import { Button } from '../../components';
 import { createBooking } from '../../services/bookingService';
 import { getUserPets } from '../../services/petService';
+import { useWallet } from '../../context/WalletContext';
 import moment from 'moment';
 
 const { width } = Dimensions.get('window');
@@ -38,6 +39,7 @@ const SERVICE_TYPE_MAP = {
 
 export default function ContactSitterScreen({ navigation, route }) {
   const alert = useAppAlert();
+  const wallet = useWallet();
   const { sitter, service, serviceType, startDate, endDate } = route?.params || {};
   const [message, setMessage] = useState('');
   const [pets, setPets] = useState([]);
@@ -45,6 +47,13 @@ export default function ContactSitterScreen({ navigation, route }) {
   const [loadingPets, setLoadingPets] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Refresh balance whenever this screen opens — covers the case where the
+  // user pulled coins via ShopCoins on a sibling stack and came back.
+  useEffect(() => {
+    wallet.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch user's pets on mount
   useEffect(() => {
@@ -89,6 +98,14 @@ export default function ContactSitterScreen({ navigation, route }) {
     navigation.goBack();
   };
 
+  // Backend rounds totalPrice to an int before deducting (Float→Int safety)
+  // so we mirror that here for the precheck — otherwise the displayed
+  // "100 coins" cost would let a 99.5-coin balance pass the precheck and
+  // then fail server-side.
+  const totalCost = Math.max(0, Math.round(getBaseRate() * (getDaysCount() || 1)));
+  const balance = wallet.coinBalance;
+  const insufficient = totalCost > 0 && balance < totalCost;
+
   const handleSendRequest = async () => {
     if (!message.trim()) {
       alert('Message Required', 'Please enter a message before sending your request.', 'pending');
@@ -105,12 +122,17 @@ export default function ContactSitterScreen({ navigation, route }) {
       return;
     }
 
+    if (insufficient) {
+      alert(
+        'Not Enough Coins',
+        `You need ${totalCost} coins for this booking but only have ${balance}. Tap Buy Coins to top up.`,
+        'pending',
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
-
-      const days = getDaysCount() || 1;
-      const rate = getBaseRate();
-      const totalPrice = rate * days;
 
       const bookingData = {
         sitterId: sitter?.id || sitter?._id,
@@ -118,18 +140,23 @@ export default function ContactSitterScreen({ navigation, route }) {
         serviceType: serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING',
         startDate: startDate,
         endDate: endDate,
-        totalPrice: totalPrice,
+        totalPrice: totalCost,
         notes: message.trim(),
       };
 
       await createBooking(bookingData);
+      // Server-side hold dropped the balance — pull the new total so
+      // every other screen sees the update without a remount.
+      wallet.refresh();
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Failed to create booking:', err);
+      // The backend's "Insufficient coin balance" error message is fine to
+      // surface verbatim — it already contains the needed/have numbers.
       alert(
         'Request Failed',
         err?.message || 'Failed to send your request. Please try again.',
-        'error'
+        'error',
       );
     } finally {
       setSubmitting(false);
@@ -191,15 +218,45 @@ export default function ContactSitterScreen({ navigation, route }) {
             </View>
           </View>
 
-          {/* Price Summary */}
+          {/* Price Summary + balance + Buy Coins CTA */}
           {baseRate > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Price Estimate</Text>
               <View style={styles.card}>
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>{baseRate} coins x {daysCount || 1} {(daysCount || 1) === 1 ? 'day' : 'days'}</Text>
-                  <Text style={styles.priceValue}>{totalEstimate} coins</Text>
+                  <Text style={styles.priceValue}>{totalCost} coins</Text>
                 </View>
+                <View style={[styles.priceRow, { marginTop: 8 }]}>
+                  <Text style={[styles.priceLabel, { fontSize: 12, color: '#818898' }]}>Your balance</Text>
+                  <Text style={[
+                    styles.priceLabel,
+                    { fontWeight: '600', color: insufficient ? '#E53E3E' : '#3FA477' }
+                  ]}>
+                    {balance.toLocaleString()} coins
+                  </Text>
+                </View>
+                {insufficient && (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={{ fontSize: 12, color: '#E53E3E', marginBottom: 8, fontFamily: 'Avenir LT Std' }}>
+                      You need {(totalCost - balance).toLocaleString()} more coins.
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ShopCoins')}
+                      style={{
+                        alignSelf: 'flex-start',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                        backgroundColor: '#32A6D8',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, fontFamily: 'Avenir LT Std' }}>
+                        Buy Coins
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -298,11 +355,13 @@ export default function ContactSitterScreen({ navigation, route }) {
             </View>
           ) : (
             <Button
-              title="Send Request"
+              title={insufficient ? 'Not Enough Coins' : 'Send Request'}
               onPress={handleSendRequest}
               fullWidth
               size="medium"
-              disabled={!message?.trim() || !selectedPetId || !startDate || submitting}
+              disabled={
+                !message?.trim() || !selectedPetId || !startDate || submitting || insufficient
+              }
             />
           )}
         </View>

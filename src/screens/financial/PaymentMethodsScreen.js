@@ -5,16 +5,32 @@ import { BackArrowIcon, CoinIcon, CoinInIcon } from '../../assets';
 import { Button } from '../../components';
 import api from '../../config/api';
 import { useFocusEffect } from '@react-navigation/native';
+import CashOutComingSoonDialog from '../../components/CashOutComingSoonDialog';
+import { useWallet } from '../../context/WalletContext';
+
+// Map a CoinTransaction.type to which tab it belongs in. SPEND and ADJUST
+// land in Payments (money the user spent); EARN/REFUND/PURCHASE/BONUS in
+// Earning (money coming in). Cash-out related types are reserved for
+// Phase 2 (CASHOUT / CASHOUT_FEE → Withdrawals tab).
+const TAB_FOR_TYPE = {
+  PURCHASE: 'Earning',
+  EARN: 'Earning',
+  REFUND: 'Earning',
+  BONUS: 'Earning',
+  SPEND: 'Payments',
+  ADJUST: 'Payments',
+  CASHOUT: 'Withdrawals',
+  CASHOUT_FEE: 'Withdrawals',
+};
 
 export default function PaymentMethodsScreen({ navigation }) {
+  const wallet = useWallet();
   const [selectedTab, setSelectedTab] = useState('Earning');
   const [earningsOverview, setEarningsOverview] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState(false);
   const [documents, setDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [upcomingEarnings, setUpcomingEarnings] = useState(0);
-  const [processingPayments, setProcessingPayments] = useState(0);
+  const [cashOutDialogOpen, setCashOutDialogOpen] = useState(false);
   const [tabData, setTabData] = useState({
     Earning: [],
     'Pending Earnings': [],
@@ -22,76 +38,83 @@ export default function PaymentMethodsScreen({ navigation }) {
     Payments: [],
   });
 
-  const fetchPaymentData = async () => {
+  const isSitter = wallet.role === 'sitter';
+
+  const fetchTransactions = useCallback(async () => {
     try {
-      // Fetch balance
-      const balanceRes = await api.get('/coins/balance').catch(() => ({ data: {} }));
-      const balData = balanceRes.data?.data || balanceRes.data || {};
-      setWalletBalance(balData.balance || balData.coins || 0);
-      setUpcomingEarnings(balData.upcomingEarnings || balData.upcoming || 0);
-      setProcessingPayments(balData.processingPayments || balData.processing || 0);
-
-      // Fetch payment methods / transactions
-      const payRes = await api.get('/stripe/payment-methods').catch(() => ({ data: {} }));
-      const methods = payRes.data?.data || payRes.data?.paymentMethods || [];
-
-      // Fetch transactions for tab data
+      // Wallet balance lives in WalletContext; this fetch is only for the
+      // transaction tabs. The wallet refresh runs in parallel below.
       const txRes = await api.get('/coins/transactions').catch(() => ({ data: {} }));
-      const txList = txRes.data?.data || txRes.data?.transactions || txRes.data || [];
+      const txList = txRes.data?.data?.transactions || txRes.data?.transactions || [];
       const transactions = Array.isArray(txList) ? txList : [];
 
-      const earning = [];
-      const pending = [];
-      const withdrawals = [];
-      const payments = [];
+      // Classify each ledger row by its `type` field (PURCHASE/EARN/SPEND
+      // etc.) using the TAB_FOR_TYPE map. Earlier code classified by sign
+      // which incorrectly bucketed owner SPEND rows into "Withdrawals".
+      const buckets = { Earning: [], 'Pending Earnings': [], Withdrawals: [], Payments: [] };
 
-      transactions.forEach(tx => {
+      transactions.forEach((tx) => {
+        const amount = Number(tx.amount || 0);
         const formatted = {
-          id: tx.id || tx._id || String(Math.random()).slice(2, 12),
-          date: tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('en-US') + ' @ ' + new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          type: tx.type || tx.description || 'Transaction',
-          phone: tx.phone || tx.reference || '',
-          amount: tx.amount >= 0 ? `+${Number(tx.amount).toFixed(2)}` : `${Number(tx.amount).toFixed(2)}`,
-          status: tx.status || 'Completed',
-          statusColor: tx.status === 'Pending' ? '#FFA500' : '#3FA477',
+          id: tx.id || String(Math.random()).slice(2, 12),
+          date: tx.createdAt
+            ? new Date(tx.createdAt).toLocaleDateString('en-US') +
+              ' @ ' +
+              new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '',
+          type: tx.description || tx.type || 'Transaction',
+          source: tx.source || 'PURCHASED',
+          cashableAt: tx.cashableAt || null,
+          phone: '',
+          amount: amount >= 0 ? `+${amount.toFixed(0)}` : `${amount.toFixed(0)}`,
+          status: 'Completed',
+          statusColor: '#3FA477',
         };
 
-        if (tx.status === 'Pending' || tx.status === 'pending') {
-          pending.push(formatted);
-        } else if (tx.type === 'withdrawal' || tx.type === 'Withdrawal' || (tx.amount < 0)) {
-          withdrawals.push(formatted);
-        } else if (tx.type === 'payment' || tx.type === 'Payment') {
-          payments.push(formatted);
-        } else {
-          earning.push(formatted);
+        // EARN rows still in 30-day hold → Pending Earnings tab.
+        if (
+          tx.type === 'EARN' &&
+          tx.cashableAt &&
+          new Date(tx.cashableAt) > new Date()
+        ) {
+          buckets['Pending Earnings'].push({
+            ...formatted,
+            status: 'Cashable ' + new Date(tx.cashableAt).toLocaleDateString('en-US'),
+            statusColor: '#F59E0B',
+          });
+          return;
         }
+
+        const target = TAB_FOR_TYPE[tx.type] || 'Payments';
+        buckets[target].push(formatted);
       });
 
-      setTabData({
-        Earning: earning,
-        'Pending Earnings': pending,
-        Withdrawals: withdrawals,
-        Payments: payments,
-      });
+      setTabData(buckets);
     } catch (err) {
-      console.error('Error fetching payment data:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching transactions:', err);
     }
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      fetchPaymentData();
-    }, [])
+      Promise.all([wallet.refresh(), fetchTransactions()]).finally(() => setLoading(false));
+      // wallet.refresh is stable; safe to omit from deps.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fetchTransactions])
   );
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const tabs = ['Earning', 'Pending Earnings', 'Withdrawals', 'Payments'];
+  // Owners don't earn coins from the system today; hide Earning + Pending
+  // Earnings tabs for them so the wallet view stays focused on what's
+  // relevant. Withdrawals is always shown — it's gated behind a coming-soon
+  // dialog so the user knows the feature exists.
+  const tabs = isSitter
+    ? ['Earning', 'Pending Earnings', 'Withdrawals', 'Payments']
+    : ['Payments', 'Withdrawals'];
 
   if (loading) {
     return (
@@ -127,40 +150,54 @@ export default function PaymentMethodsScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* Payment Info Cards */}
           <View style={styles.infoSection}>
-            {/* Wallet */}
+            {/* Wallet — total balance */}
             <View style={styles.infoCard}>
               <View style={styles.infoLeft}>
                 <Text style={styles.infoTitle}>Wallet</Text>
-                <Text style={styles.promoText}>Apply Promo Code</Text>
+                <Text style={styles.promoText}>
+                  {wallet.purchasedCoinBalance.toLocaleString()} purchased + {wallet.earnedCoinBalance.toLocaleString()} earned
+                </Text>
               </View>
               <View style={styles.coinsDisplay}>
                 <CoinIcon width={18} height={18} />
-                <Text style={styles.coinsText}>{walletBalance} Coins</Text>
+                <Text style={styles.coinsText}>{wallet.coinBalance.toLocaleString()} Coins</Text>
               </View>
             </View>
 
-            {/* Upcoming Earnings */}
+            {/* Upcoming Earnings — sitter-only. EARN tx still in 30-day hold. */}
+            {isSitter && (
+              <View style={styles.infoCard}>
+                <View style={styles.infoLeft}>
+                  <Text style={styles.infoTitle}>Upcoming Earnings</Text>
+                  <Text style={styles.promoText}>In 30-day hold before cash-out</Text>
+                </View>
+                <View style={styles.coinsDisplay}>
+                  <CoinIcon width={18} height={18} />
+                  <Text style={styles.coinsText}>{wallet.upcomingEarnings.toLocaleString()} Coins</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Processing Payments — role-dependent meaning. */}
             <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>Upcoming Earnings</Text>
+              <View style={styles.infoLeft}>
+                <Text style={styles.infoTitle}>Processing Payments</Text>
+                <Text style={styles.promoText}>
+                  {isSitter
+                    ? 'Coins arriving from CONFIRMED bookings'
+                    : 'Coins held for your active bookings'}
+                </Text>
+              </View>
               <View style={styles.coinsDisplay}>
                 <CoinIcon width={18} height={18} />
-                <Text style={styles.coinsText}>{upcomingEarnings} Coins</Text>
+                <Text style={styles.coinsText}>{wallet.processingPayments.toLocaleString()} Coins</Text>
               </View>
             </View>
 
-            {/* Processing Payments */}
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>Processing Payments</Text>
-              <View style={styles.coinsDisplay}>
-                <CoinIcon width={18} height={18} />
-                <Text style={styles.coinsText}>{processingPayments} Coins</Text>
-              </View>
-            </View>
-
-            {/* Manage Payout Button */}
+            {/* Cash Out — Phase 2. Shows the coming-soon dialog for now. */}
             <Button
-              title="Manage Payout Methods"
-              onPress={() => console.log('Manage Payout')}
+              title="Cash Out"
+              onPress={() => setCashOutDialogOpen(true)}
               fullWidth
               size="medium"
             />
@@ -220,7 +257,22 @@ export default function PaymentMethodsScreen({ navigation }) {
           </View>
 
           {/* Transaction List */}
-          {tabData[selectedTab] && tabData[selectedTab].length > 0 ? (
+          {selectedTab === 'Withdrawals' ? (
+            // Withdrawals are gated behind the cash-out feature, which is
+            // not live yet. Show a coming-soon CTA instead of an empty list
+            // so the user understands why it's empty.
+            <View style={styles.withdrawalsEmpty}>
+              <Text style={styles.emptyText}>
+                Withdrawals will be available once cash-out launches.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setCashOutDialogOpen(true)}
+                style={styles.learnMoreBtn}
+              >
+                <Text style={styles.learnMoreText}>Learn more</Text>
+              </TouchableOpacity>
+            </View>
+          ) : tabData[selectedTab] && tabData[selectedTab].length > 0 ? (
             <View style={styles.transactionList}>
               {tabData[selectedTab].map((transaction) => (
                 <View key={transaction.id} style={styles.transactionCard}>
@@ -239,7 +291,9 @@ export default function PaymentMethodsScreen({ navigation }) {
                       </View>
                       <View style={styles.transactionInfo}>
                         <Text style={styles.transactionType}>{transaction.type}</Text>
-                        <Text style={styles.transactionPhone}>{transaction.phone}</Text>
+                        <Text style={styles.transactionPhone}>
+                          {transaction.source === 'EARNED' ? 'Earned coins' : 'Purchased coins'}
+                        </Text>
                       </View>
                     </View>
 
@@ -263,9 +317,14 @@ export default function PaymentMethodsScreen({ navigation }) {
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>No transaction history found.</Text>
+            <Text style={styles.emptyText}>No transactions in this tab yet.</Text>
           )}
         </ScrollView>
+
+        <CashOutComingSoonDialog
+          visible={cashOutDialogOpen}
+          onClose={() => setCashOutDialogOpen(false)}
+        />
       </View>
     </ScreenWrapper>
   );
@@ -424,6 +483,24 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#32A6D8',
+  },
+  withdrawalsEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  learnMoreBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#32A6D8',
+  },
+  learnMoreText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
   },
   emptyText: {
     color: '#818898',

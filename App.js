@@ -12,6 +12,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
 import { AlertProvider } from './src/context/AlertContext';
 import { PaymentConfigProvider, usePaymentConfig } from './src/context/PaymentConfigContext';
+import { WalletProvider } from './src/context/WalletContext';
 
 // Set up notification handler at top level (outside component)
 Notifications.setNotificationHandler({
@@ -91,19 +92,20 @@ export default function App() {
     <SafeAreaProvider>
       <PaymentConfigProvider>
         <StripeWrapper>
-          <Provider store={store}>
-            <NavigationContainer
-              ref={navigationRef}
-              onReady={() => {
-                // Set navigation reference for axios interceptor
-                setNavigationRef(navigationRef.current);
-              }}
-            >
-              <AlertProvider>
-                <RootNavigator />
-              </AlertProvider>
-              <StatusBar style="auto" />
-            </NavigationContainer>
+          <WalletProvider>
+            <Provider store={store}>
+              <NavigationContainer
+                ref={navigationRef}
+                onReady={() => {
+                  // Set navigation reference for axios interceptor
+                  setNavigationRef(navigationRef.current);
+                }}
+              >
+                <AlertProvider>
+                  <RootNavigator />
+                </AlertProvider>
+                <StatusBar style="auto" />
+              </NavigationContainer>
 
             {/* Session Expired Modal */}
             <Modal
@@ -129,6 +131,7 @@ export default function App() {
               </View>
             </Modal>
           </Provider>
+          </WalletProvider>
         </StripeWrapper>
       </PaymentConfigProvider>
     </SafeAreaProvider>
