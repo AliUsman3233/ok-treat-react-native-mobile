@@ -307,6 +307,7 @@ const styles = StyleSheet.create({
   menuItemTextWrap: {
     flex: 1,
     gap: 2,
+    justifyContent: 'center',
   },
   menuItemDisabled: {
     opacity: 0.55,
