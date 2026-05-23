@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import api from '../../config/api';
+import { useAppAlert } from '../../context/AlertContext';
 import {
   BackArrowIcon,
   UserProfileIcon,
@@ -22,6 +23,7 @@ import {
 
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
+  const alert = useAppAlert();
   const { user, token } = useSelector(state => state.auth);
 
   // Refresh profile data when screen gets focus
@@ -53,26 +55,28 @@ export default function ProfileScreen({ navigation }) {
     {
       title: 'Personal information',
       component: UserProfileIcon,
-      screen: 'EditProfile',
+      screen: 'EditProfileDetails',
       color: '#32A6D8'
     },
     {
       title: 'My Bookings',
       component: NotebookProfileIcon,
-      screen: 'BookingHistory',
+      screen: 'Bookings',
       color: '#32A6D8'
     },
     {
       title: 'Notification',
       component: NotificationProfileIcon,
-      screen: 'NotificationSettings',
+      screen: 'Notifications',
       color: '#32A6D8'
     },
     {
       title: 'Refer a Friend',
       component: ReferFriendIcon,
-      screen: 'ReferralProgram',
-      color: '#32A6D8'
+      screen: null,
+      color: '#32A6D8',
+      action: 'coming_soon',
+      comingSoonLabel: 'Refer a Friend',
     },
     {
       title: 'Support',
@@ -85,7 +89,8 @@ export default function ProfileScreen({ navigation }) {
       component: RateUsIcon,
       screen: null,
       color: '#32A6D8',
-      action: 'rate'
+      action: 'coming_soon',
+      comingSoonLabel: 'Rate Us',
     },
     {
       title: 'Log out',
@@ -98,12 +103,9 @@ export default function ProfileScreen({ navigation }) {
 
   const handleMenuPress = (item) => {
     if (item.action === 'logout') {
-      console.log('handleLogout');
-
       handleLogout();
-    } else if (item.action === 'rate') {
-      // Handle rate us action
-      console.log('Rate us');
+    } else if (item.action === 'coming_soon') {
+      alert(item.comingSoonLabel || item.title, 'Coming after release', 'pending');
     } else if (item.screen) {
       navigation.navigate(item.screen);
     }
@@ -149,10 +151,11 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.menuContainer}>
             {menuItems.map((item, index) => {
               const IconComponent = item.component;
+              const isComingSoon = item.action === 'coming_soon';
               return (
                 <TouchableOpacity
                   key={index}
-                  style={styles.menuItem}
+                  style={[styles.menuItem, isComingSoon && styles.menuItemDisabled]}
                   onPress={() => handleMenuPress(item)}
                   activeOpacity={0.7}
                 >
@@ -160,9 +163,18 @@ export default function ProfileScreen({ navigation }) {
                     <View style={styles.iconCircle}>
                       <IconComponent width={20} height={20} fill={item.color} />
                     </View>
-                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <View style={styles.menuItemTextWrap}>
+                      <Text style={[styles.menuTitle, isComingSoon && styles.menuTitleDisabled]}>
+                        {item.title}
+                      </Text>
+                      {isComingSoon && <Text style={styles.comingSoonBadge}>Coming soon</Text>}
+                    </View>
                   </View>
-                  <Icon name="chevron-forward" size={20} color="#040404" />
+                  <Icon
+                    name="chevron-forward"
+                    size={20}
+                    color={isComingSoon ? '#C7CAD1' : '#040404'}
+                  />
                 </TouchableOpacity>
               );
             })}
@@ -291,5 +303,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
     fontWeight: '500',
     lineHeight: 16.8,
+  },
+  menuItemTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  menuItemDisabled: {
+    opacity: 0.55,
+  },
+  menuTitleDisabled: {
+    color: '#818898',
+  },
+  comingSoonBadge: {
+    color: '#818898',
+    fontSize: 10,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
 });

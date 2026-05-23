@@ -2,23 +2,21 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import { Button } from '../../components';
+import { useAppAlert } from '../../context/AlertContext';
 
 export default function SupportScreen({ navigation }) {
+  const alert = useAppAlert();
+
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleVisitHelpCenter = () => {
-    console.log('Visit Help Center');
-  };
+  const comingSoon = (label) => () =>
+    alert(label, 'Coming after release', 'pending');
 
-  const handleChatWithSupport = () => {
-    console.log('Chat with Support');
-  };
-
-  const handleCallSupport = () => {
-    console.log('Call OkTreat Support');
-  };
+  const handleVisitHelpCenter = comingSoon('Help Center');
+  const handleChatWithSupport = comingSoon('Live Chat');
+  const handleCallSupport = comingSoon('Phone Support');
 
   return (
     <ScreenWrapper noBottomTabs>

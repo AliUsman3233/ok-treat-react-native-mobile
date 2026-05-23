@@ -162,9 +162,15 @@ export default function MoreScreen({ navigation }) {
   ];
 
   const handleMenuPress = (screen) => {
-    if (screen) {
-      navigation.navigate(screen);
+    if (!screen) return;
+    // PetList lives inside the Pets tab stack, not at the root. Calling
+    // navigate('PetList') from the More tab stack doesn't resolve. Use
+    // nested navigation to hop tabs first.
+    if (screen === 'PetList') {
+      navigation.navigate('MainTabs', { screen: 'Pets', params: { screen: 'PetList' } });
+      return;
     }
+    navigation.navigate(screen);
   };
 
   return (
