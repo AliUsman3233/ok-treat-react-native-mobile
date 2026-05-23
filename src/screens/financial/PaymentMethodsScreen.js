@@ -55,8 +55,14 @@ export default function PaymentMethodsScreen({ navigation }) {
 
       transactions.forEach((tx) => {
         const amount = Number(tx.amount || 0);
+        const rawId = tx.id || String(Math.random()).slice(2, 12);
+        // Shorten long ids (e.g. UUIDs) with a middle ellipsis so the card
+        // header doesn't overflow — full id stays in `rawId` for React keys.
+        const displayId =
+          rawId.length > 14 ? `${rawId.slice(0, 6)}***${rawId.slice(-4)}` : rawId;
         const formatted = {
-          id: tx.id || String(Math.random()).slice(2, 12),
+          id: rawId,
+          displayId,
           date: tx.createdAt
             ? new Date(tx.createdAt).toLocaleDateString('en-US') +
               ' @ ' +
@@ -278,8 +284,12 @@ export default function PaymentMethodsScreen({ navigation }) {
                 <View key={transaction.id} style={styles.transactionCard}>
                   {/* Header Row */}
                   <View style={styles.transactionHeader}>
-                    <Text style={styles.transactionId}>ID# {transaction.id}</Text>
-                    <Text style={styles.transactionDate}>{transaction.date}</Text>
+                    <Text style={styles.transactionId} numberOfLines={1} ellipsizeMode="middle">
+                      ID# {transaction.displayId || transaction.id}
+                    </Text>
+                    <Text style={styles.transactionDate} numberOfLines={1}>
+                      {transaction.date}
+                    </Text>
                   </View>
 
                   {/* Content Row */}
@@ -290,8 +300,10 @@ export default function PaymentMethodsScreen({ navigation }) {
                         <CoinInIcon width={16} height={16} />
                       </View>
                       <View style={styles.transactionInfo}>
-                        <Text style={styles.transactionType}>{transaction.type}</Text>
-                        <Text style={styles.transactionPhone}>
+                        <Text style={styles.transactionType} numberOfLines={1}>
+                          {transaction.type}
+                        </Text>
+                        <Text style={styles.transactionPhone} numberOfLines={1}>
                           {transaction.source === 'EARNED' ? 'Earned coins' : 'Purchased coins'}
                         </Text>
                       </View>
@@ -525,6 +537,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   transactionId: {
     color: '#32A6D8',
@@ -532,6 +545,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
     fontWeight: '500',
     lineHeight: 15.6,
+    flexShrink: 1,
   },
   transactionDate: {
     color: '#969696',
@@ -539,6 +553,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
     fontWeight: '400',
     lineHeight: 15.6,
+    flexShrink: 0,
   },
   transactionContent: {
     flexDirection: 'row',
@@ -561,6 +576,8 @@ const styles = StyleSheet.create({
   },
   transactionInfo: {
     gap: 2,
+    flex: 1,
+    minWidth: 0,
   },
   transactionType: {
     color: '#32A6D8',
