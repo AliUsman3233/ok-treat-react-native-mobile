@@ -178,7 +178,11 @@ export default function EditPetScreen({ navigation, route }) {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error updating pet:', error);
-      alert('Error', error.message || 'Failed to update pet. Please try again.', 'error');
+      const userMessage = error?.message || 'Failed to update pet. Please try again.';
+      const detail = error?.error;
+      const text =
+        detail && detail !== userMessage ? `${userMessage}\n\n${detail}` : userMessage;
+      alert('Could not update pet', text, 'error');
     } finally {
       setSaving(false);
     }

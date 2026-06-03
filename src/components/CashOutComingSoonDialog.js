@@ -9,8 +9,6 @@ import React from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from '@expo/vector-icons/Ionicons';
 
-const CASH_OUT_AVAILABLE_DATE = 'August 2026';
-
 export default function CashOutComingSoonDialog({ visible, onClose }) {
   return (
     <Modal
@@ -25,7 +23,7 @@ export default function CashOutComingSoonDialog({ visible, onClose }) {
           <View style={styles.iconCircle}>
             <Icon name="cash-outline" size={36} color="#FFFFFF" />
           </View>
-          <Text style={styles.title}>Cash-out coming {CASH_OUT_AVAILABLE_DATE}</Text>
+          <Text style={styles.title}>Cash-out coming soon</Text>
           <Text style={styles.message}>
             Soon you'll be able to withdraw your earned coins as real cash. This feature is in development — for now, your earnings stay in your wallet and can be spent on services.
           </Text>

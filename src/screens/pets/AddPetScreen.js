@@ -144,11 +144,18 @@ export default function AddPetScreen({ navigation, route }) {
           'error'
         );
       } else {
-        alert(
-          'Error',
-          error.message || 'Failed to add pet. Please try again.',
-          'error'
-        );
+        // Backend returns either:
+        //   400 → { message: '<specific reason>' }   (validation, QR conflicts, etc.)
+        //   500 → { message: 'Failed to create pet', error: '<prisma/runtime detail>' }
+        // The 500 case had only the generic message reaching the user. Surface
+        // the technical detail too so they can tell us what actually failed.
+        const userMessage = error?.message || 'Failed to add pet. Please try again.';
+        const detail = error?.error;
+        const text =
+          detail && detail !== userMessage
+            ? `${userMessage}\n\n${detail}`
+            : userMessage;
+        alert('Could not add pet', text, 'error');
       }
     } finally {
       setLoading(false);

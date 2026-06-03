@@ -120,13 +120,10 @@ export default function PaymentMethodsScreen({ navigation }) {
     navigation.goBack();
   };
 
-  // Owners don't earn coins from the system today; hide Earning + Pending
-  // Earnings tabs for them so the wallet view stays focused on what's
-  // relevant. Withdrawals is always shown — it's gated behind a coming-soon
-  // dialog so the user knows the feature exists.
-  const tabs = isSitter
-    ? ['Earning', 'Pending Earnings', 'Withdrawals', 'Payments']
-    : ['Payments', 'Withdrawals'];
+  // All users see the same tabs. Owners can still have Earning rows from
+  // refunds (cancelled bookings → REFUND → Earning per TAB_FOR_TYPE), so
+  // hiding those tabs was misleading. Empty tabs render their own empty state.
+  const tabs = ['Earning', 'Pending Earnings', 'Withdrawals', 'Payments'];
 
   if (loading) {
     return (
