@@ -43,27 +43,14 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
     }
   };
 
-  const handleDateChange = (start, end) => {
+  // Adoption Date is a single calendar day — the picker is in mode='single'
+  // and calls back with the same date for both start and end.
+  const handleDateChange = (start) => {
     setStartDate(start);
-    setEndDate(end);
-    
-    // Format and save to formData
-    if (start && end) {
-      const formattedDate = formatDateRange(start, end);
-      setFormData({ ...formData, adoptionDate: formattedDate });
+    setEndDate(start);
+    if (start) {
+      setFormData({ ...formData, adoptionDate: moment(start).format('D MMM YYYY') });
     }
-  };
-
-  const formatDateRange = (start, end) => {
-    if (!start || !end) return 'Select date range';
-    
-    const startMoment = moment(start);
-    const endMoment = moment(end);
-    
-    if (startMoment.month() === endMoment.month()) {
-      return `${startMoment.format('D')}-${endMoment.format('D MMM')}`;
-    }
-    return `${startMoment.format('D MMM')}-${endMoment.format('D MMM')}`;
   };
 
   return (
@@ -155,12 +142,13 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
               endDate={endDate}
               onDateChange={handleDateChange}
               direction="past"
+              mode="single"
             >
               <View style={styles.datePickerButton}>
                 <View style={styles.datePickerContent}>
                   <CalendarIcon width={20} height={20} fill="#FFC2EB" />
                   <Text style={styles.datePickerText}>
-                    {formData.adoptionDate || 'Select date range'}
+                    {formData.adoptionDate || 'Select date'}
                   </Text>
                 </View>
                 <AngleDownIcon width={20} height={20} fill="#32A6D8" />

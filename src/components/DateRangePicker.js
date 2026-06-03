@@ -11,6 +11,9 @@ export default function DateRangePicker({
   // 'future' (default) blocks past dates — used by booking/search flows.
   // 'past' blocks future dates — used by Adoption Date (the event already happened).
   direction = 'future',
+  // 'range' (default) requires both start AND end. 'single' picks one date —
+  // the start and end are set to the same day so existing callers/highlighters work.
+  mode = 'range',
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const [tempStartDate, setTempStartDate] = useState(startDate);
@@ -37,6 +40,14 @@ export default function DateRangePicker({
   };
 
   const handleDatePress = (date) => {
+    // Single-pick mode: each tap sets both endpoints to the same day so Apply
+    // enables immediately and the existing highlight logic still works.
+    if (mode === 'single') {
+      setTempStartDate(date);
+      setTempEndDate(date);
+      return;
+    }
+
     if (!tempStartDate || (tempStartDate && tempEndDate)) {
       // Start new selection
       setTempStartDate(date);
