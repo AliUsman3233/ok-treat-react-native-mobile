@@ -4,7 +4,7 @@
 // PaymentIntent clientSecret from /coins/purchase, then the server-side
 // webhook credits the coins.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import Icon from '@expo/vector-icons/Ionicons';
 import { CardField, useConfirmPayment } from '@stripe/stripe-react-native';
@@ -37,6 +37,30 @@ export default function StripeCardSheet({
   const [cardComplete, setCardComplete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  // Track keyboard height ourselves — KeyboardAvoidingView is unreliable inside
+  // a Modal on Android (the Modal renders in a separate native window which
+  // doesn't inherit the activity's windowSoftInputMode). Listener works the
+  // same on both platforms.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible) return undefined;
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e) => {
+      setKeyboardHeight(e?.endCoordinates?.height || 0);
+      // Scroll to the card field area on Android where soft keyboard appears later.
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    };
+    const onHide = () => setKeyboardHeight(0);
+    const subShow = Keyboard.addListener(showEvt, onShow);
+    const subHide = Keyboard.addListener(hideEvt, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, [visible]);
 
   const handlePay = async () => {
     setErrorMessage('');
@@ -81,11 +105,16 @@ export default function StripeCardSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      {/* Padding the overlay's bottom by keyboardHeight pushes the sheet up
+          so the CardField + Pay button stay above the keyboard. */}
+      <View style={[styles.overlay, { paddingBottom: keyboardHeight }]}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Pay with Card</Text>
@@ -94,7 +123,11 @@ export default function StripeCardSheet({
             </TouchableOpacity>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
+          <ScrollView
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 16 }}
+          >
             {mode === 'test' && (
               <View style={styles.testBanner}>
                 <Text style={styles.testBannerText}>
@@ -145,7 +178,7 @@ export default function StripeCardSheet({
             </Text>
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
