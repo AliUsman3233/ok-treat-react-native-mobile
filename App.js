@@ -3,10 +3,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as Notifications from 'expo-notifications';
 import Icon from '@expo/vector-icons/Ionicons';
+import { useFonts, Kodchasan_500Medium } from '@expo-google-fonts/kodchasan';
+import { Lexend_300Light } from '@expo-google-fonts/lexend';
 import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
@@ -26,6 +28,14 @@ Notifications.setNotificationHandler({
 export default function App() {
   const navigationRef = useRef();
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+
+  // Load custom Google Fonts used on the onboarding screen.
+  // Other screens use system-fallback font names ('Poppins', 'Avenir LT Std')
+  // and aren't affected by whether this hook resolves.
+  const [fontsLoaded] = useFonts({
+    Kodchasan_500Medium,
+    Lexend_300Light,
+  });
 
   useEffect(() => {
     // Set token expired modal handler (only once)
@@ -87,6 +97,16 @@ export default function App() {
     setShowSessionExpired(false);
     await handleTokenExpiredAction();
   };
+
+  // Render a tiny spinner until fonts are ready. Without this the first paint
+  // of OnboardingScreen would briefly show system-fallback text.
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F7F7F7', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#32A6D8" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>

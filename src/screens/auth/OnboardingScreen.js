@@ -21,8 +21,8 @@ const onboardingData = [
   },
   {
     id: '2',
-    title: 'Find Trusted Pet Sitters',
-    description: 'Connect with verified pet sitters in your area. Book services and keep your pets happy and safe',
+    title: 'All Vet Records, One Safe Place',
+    description: 'Store vaccinations & medical history. Access your pet’s records anytime, anywhere- right when you need them most',
     image: OnboardingImage2
   },
   {
@@ -225,21 +225,23 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   title: {
+    // Figma: Kodchasan Medium 30 / lineHeight 36 / #100604
+    // Custom font key from @expo-google-fonts/kodchasan — don't combine with
+    // a fontWeight string; the weight is encoded in the font name.
     textAlign: 'center',
     color: '#100604',
-    fontSize: 28,
-    fontFamily: 'Kodchasan',
-    fontWeight: '500',
+    fontSize: 30,
+    fontFamily: 'Kodchasan_500Medium',
     lineHeight: 36,
     marginBottom: 8,
   },
   description: {
+    // Figma: Lexend Light 14 / lineHeight 19.6 / #A1A1A1
     textAlign: 'center',
     color: '#A1A1A1',
     fontSize: 14,
-    fontFamily: 'Lexend',
-    fontWeight: '300',
-    lineHeight: 19.60,
+    fontFamily: 'Lexend_300Light',
+    lineHeight: 19.6,
     marginBottom: 16,
   },
   nextButton: {
