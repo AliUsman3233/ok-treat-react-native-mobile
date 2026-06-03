@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Share, Alert } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -73,10 +73,12 @@ export default function MyPetProfileScreen({ route, navigation }) {
   };
 
   const handleMarkSafe = () => {
-    alert(
+    // Use RN's native Alert.alert for confirmation — the app's useAppAlert()
+    // only supports a single button. Passing a buttons array there crashes
+    // ProfileVerifiedModal which tries to render the array as a Text label.
+    Alert.alert(
       'Mark as safe?',
       `Confirm that ${pet?.name} has been found. The emergency banner on the QR tag page will be replaced with a "Recently safe!" notice for 24 hours.`,
-      'confirm',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -86,7 +88,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
             try {
               await markPetSafe(pet.id);
               await fetchPetData();
-              alert('Glad they\'re safe!', `${pet?.name} is no longer marked missing.`, 'success');
+              alert(`${pet?.name} is safe!`, 'No longer marked missing.', 'success');
             } catch (e) {
               alert('Failed', e?.message || 'Could not update status. Try again.', 'error');
             }

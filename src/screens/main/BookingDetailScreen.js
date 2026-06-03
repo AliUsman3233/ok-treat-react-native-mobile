@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   Linking,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -89,10 +90,12 @@ export default function BookingDetailScreen({ navigation, route }) {
   );
 
   const handleCancel = () => {
-    alert(
+    // Use RN's native Alert.alert for confirmation — the app's useAppAlert()
+    // only supports a single button, and passing a buttons array there crashes
+    // the ProfileVerifiedModal renderer.
+    Alert.alert(
       'Cancel this booking?',
       'The sitter will be notified and any held coins will be returned to your wallet.',
-      'confirm',
       [
         { text: 'Keep it', style: 'cancel' },
         {

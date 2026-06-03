@@ -8,7 +8,12 @@ export function AlertProvider({ children }) {
   const [config, setConfig] = useState({});
 
   const showAlert = useCallback((title, description, iconType = 'success', buttonText = 'OK', onClose) => {
-    setConfig({ title, description, iconType, buttonText, onClose });
+    // Defensive coercion — earlier code mistook this for RN's native Alert.alert
+    // and passed a buttons array as the 4th arg, which then crashed the modal
+    // (it tried to render an array of objects as a Text label). Falling back to
+    // 'OK' keeps the modal usable even if the caller is buggy.
+    const safeButtonText = typeof buttonText === 'string' ? buttonText : 'OK';
+    setConfig({ title, description, iconType, buttonText: safeButtonText, onClose });
     setVisible(true);
   }, []);
 
