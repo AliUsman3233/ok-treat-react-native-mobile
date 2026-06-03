@@ -115,10 +115,10 @@ export default function EditProfileDetailsScreen({ navigation }) {
   const handleImageSelected = async (imageUri) => {
     try {
       setUploading(true);
-      
+
       // Upload to Cloudinary
       const result = await uploadToCloudinary(imageUri, CLOUDINARY_FOLDERS.USERS);
-      
+
       // Update avatar on backend
       const response = await fetch(API_ENDPOINTS.UPDATE_AVATAR, {
         method: 'PATCH',
@@ -138,12 +138,29 @@ export default function EditProfileDetailsScreen({ navigation }) {
       }
 
       setProfilePhoto(result.url);
-      
-      // Update Redux state
-      dispatch(setCredentials({
-        user: { ...user, avatarUrl: result.url },
-        token,
-      }));
+
+      // Refetch the canonical user from /auth/profile so redux has every field
+      // up-to-date (instead of spreading a potentially-stale closure-captured
+      // `user`). This is what ProfileScreen displays on the front page.
+      try {
+        const fresh = await fetch(API_ENDPOINTS.GET_PROFILE, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const freshData = await fresh.json();
+        const updatedUser = freshData?.data?.user;
+        if (updatedUser) {
+          dispatch(setCredentials({ user: updatedUser, token }));
+          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        } else {
+          // Fall back to local merge if the refetch shape was unexpected
+          dispatch(setCredentials({ user: { ...user, avatarUrl: result.url }, token }));
+        }
+      } catch (refetchErr) {
+        // Refetch failed — at least update redux with the new avatar so the UI
+        // still reflects the upload.
+        dispatch(setCredentials({ user: { ...user, avatarUrl: result.url }, token }));
+      }
 
       alert('Success', 'Profile photo updated successfully!', 'success');
     } catch (error) {
@@ -243,7 +260,11 @@ export default function EditProfileDetailsScreen({ navigation }) {
                     <ActivityIndicator size="small" color="#32A6D8" />
                   </View>
                 ) : profilePhoto ? (
-                  <Image source={{ uri: profilePhoto }} style={styles.profileImageActual} />
+                  <Image
+                    key={profilePhoto}
+                    source={{ uri: profilePhoto }}
+                    style={styles.profileImageActual}
+                  />
                 ) : (
                   <Image source={ProfileImagePersonIcon} style={{ width: 60, height: 60, borderRadius: 30 }} resizeMode="cover" />
                 )}

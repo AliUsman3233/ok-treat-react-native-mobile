@@ -129,7 +129,14 @@ export default function ProfileScreen({ navigation }) {
             <View style={styles.profileImageWrapper}>
               <View style={styles.profileImageContainer}>
                 {user?.avatarUrl ? (
-                  <Image source={{ uri: user.avatarUrl }} style={styles.profileImage} />
+                  // key={user.avatarUrl} forces React to remount the Image when the
+                  // URL changes — RN's <Image> aggressively caches by URI and won't
+                  // refresh a freshly-uploaded avatar otherwise.
+                  <Image
+                    key={user.avatarUrl}
+                    source={{ uri: user.avatarUrl }}
+                    style={styles.profileImage}
+                  />
                 ) : (
                   <Image source={ProfileImagePersonIcon} style={{ width: 88, height: 88, borderRadius: 44 }} resizeMode="cover" />
                 )}
