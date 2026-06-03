@@ -154,6 +154,7 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
               startDate={startDate}
               endDate={endDate}
               onDateChange={handleDateChange}
+              direction="past"
             >
               <View style={styles.datePickerButton}>
                 <View style={styles.datePickerContent}>

@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import moment from 'moment';
 import { AngleDownIcon } from '../assets';
 
-export default function DateRangePicker({ 
-  startDate, 
-  endDate, 
+export default function DateRangePicker({
+  startDate,
+  endDate,
   onDateChange,
-  children 
+  children,
+  // 'future' (default) blocks past dates — used by booking/search flows.
+  // 'past' blocks future dates — used by Adoption Date (the event already happened).
+  direction = 'future',
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const [tempStartDate, setTempStartDate] = useState(startDate);
@@ -142,14 +145,19 @@ export default function DateRangePicker({
                   {week.map((day, dayIndex) => {
                     const isCurrentMonth = day.month() === currentMonth.month();
                     const isInRange = isDateInRange(day);
-                    const isPast = day.isBefore(moment(), 'day');
+                    // Block dates in the wrong direction (future when picking
+                    // a past event, or past when picking a future booking).
+                    const isDisabled =
+                      direction === 'past'
+                        ? day.isAfter(moment(), 'day')
+                        : day.isBefore(moment(), 'day');
 
                     return (
                       <TouchableOpacity
                         key={day.format('YYYY-MM-DD')}
                         style={styles.dayCell}
-                        onPress={() => !isPast && handleDatePress(day)}
-                        disabled={isPast}
+                        onPress={() => !isDisabled && handleDatePress(day)}
+                        disabled={isDisabled}
                       >
                         <View style={[
                           styles.dayCircle,
@@ -159,6 +167,7 @@ export default function DateRangePicker({
                             style={[
                               styles.dayText,
                               !isCurrentMonth && styles.dayTextOtherMonth,
+                              isDisabled && styles.dayTextDisabled,
                               isInRange && styles.dayTextSelected,
                             ]}
                           >
@@ -286,6 +295,9 @@ const styles = StyleSheet.create({
   },
   dayTextOtherMonth: {
     color: '#A4ACB9',
+  },
+  dayTextDisabled: {
+    color: '#D1D5DB',
   },
   dayTextSelected: {
     color: 'white',
