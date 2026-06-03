@@ -122,7 +122,17 @@ export default function HomeScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
-            <Image source={SplashIcon} style={{ width: 30, height: 30 }} resizeMode="contain" />
+            {user?.avatarUrl ? (
+              // key={url} forces remount when the avatar changes — RN <Image>
+              // caches by URI and would otherwise keep showing the old photo.
+              <Image
+                key={user.avatarUrl}
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Image source={SplashIcon} style={{ width: 30, height: 30 }} resizeMode="contain" />
+            )}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -298,6 +308,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 45,
+    height: 45,
+    borderRadius: 37.5,
   },
   avatarPlaceholder: {
     width: 30,

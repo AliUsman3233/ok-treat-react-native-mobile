@@ -182,11 +182,22 @@ export default function MoreScreen({ navigation }) {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Image
-              source={require('../../assets/images/Pet_default_image.png')}
-              style={styles.profileImage}
-              resizeMode="cover"
-            />
+            {user?.avatarUrl ? (
+              // key={url} forces remount when the avatar changes — RN <Image>
+              // caches by URI and would otherwise keep showing the old photo.
+              <Image
+                key={user.avatarUrl}
+                source={{ uri: user.avatarUrl }}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require('../../assets/images/Pet_default_image.png')}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            )}
           </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>More</Text>
