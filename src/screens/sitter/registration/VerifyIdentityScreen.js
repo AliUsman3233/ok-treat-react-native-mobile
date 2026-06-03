@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCredentials } from '../../../store/slices/authSlice';
@@ -84,6 +84,25 @@ export default function VerifyIdentityScreen({ navigation }) {
     navigation.replace('ProfileSetup');
   };
 
+  // "Skip for now" used to just call navigation.goBack(), which dumped the
+  // user back on the BecomeASitterIntro screen with no path forward — they
+  // couldn't reach the sitter info sections. Now it confirms the skip and
+  // advances to ProfileSetup (same destination as a successful verify).
+  const handleSkipVerification = () => {
+    Alert.alert(
+      'Skip identity verification?',
+      'Without verification you can still fill out your sitter profile, but you won\'t be approved or receive payouts until verification is complete. You can come back any time.',
+      [
+        { text: 'Continue verifying', style: 'cancel' },
+        {
+          text: 'Skip for now',
+          style: 'destructive',
+          onPress: () => navigation.replace('ProfileSetup'),
+        },
+      ]
+    );
+  };
+
   // ============ INTRO STEP ============
   if (step === 'intro') {
     return (
@@ -124,7 +143,7 @@ export default function VerifyIdentityScreen({ navigation }) {
 
             <View style={styles.introBottom}>
               <Button title="Verify with Card" onPress={() => setStep('card')} type="primary" size="medium" fullWidth />
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.skipBtn}>
+              <TouchableOpacity onPress={handleSkipVerification} style={styles.skipBtn}>
                 <Text style={styles.skipText}>Skip for now</Text>
               </TouchableOpacity>
             </View>
