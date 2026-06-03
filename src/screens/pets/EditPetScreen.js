@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import moment from 'moment';
 import { useAppAlert } from '../../context/AlertContext';
 import Button from '../../components/Button';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -9,6 +10,15 @@ import PetWizardStep2Screen from './PetWizardStep2Screen';
 import PetWizardStep3Screen from './PetWizardStep3Screen';
 import PetWizardStep4Screen from './PetWizardStep4Screen';
 import { getPetById, updatePet } from '../../services/petService';
+
+// Backend stores adoptionDate as an ISO datetime; the wizard expects a
+// human-readable string ("5 Jun 2024"). Convert on load so the field doesn't
+// display the raw ISO timestamp.
+const formatAdoptionDate = (value) => {
+  if (!value) return '';
+  const m = moment(value);
+  return m.isValid() ? m.format('D MMM YYYY') : '';
+};
 
 const { width } = Dimensions.get('window');
 
@@ -74,7 +84,7 @@ export default function EditPetScreen({ navigation, route }) {
           houseTrained: pet.houseTrained || '',
           friendlyWithChildren: pet.friendlyWithChildren || '',
           friendlyWithPets: pet.friendlyWithPets || '',
-          adoptionDate: pet.adoptionDate || '',
+          adoptionDate: formatAdoptionDate(pet.adoptionDate),
           description: pet.description || pet.aboutPet || '',
           pottyBreak: pet.pottyBreak || '',
           energyLevel: pet.energyLevel || '',

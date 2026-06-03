@@ -10,8 +10,16 @@ import api from '../../config/api';
 
 export default function PetWizardStep2Screen({ formData, setFormData }) {
   const alert = useAppAlert();
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  // Seed picker state from formData on first render so EditPet (and re-renders
+  // of AddPet after going back/forward through steps) pre-select the saved date.
+  // moment() is lenient enough to parse ISO, "5 Jun 2024", and other variants.
+  const seedDate = () => {
+    if (!formData.adoptionDate) return null;
+    const m = moment(formData.adoptionDate);
+    return m.isValid() ? m : null;
+  };
+  const [startDate, setStartDate] = useState(seedDate);
+  const [endDate, setEndDate] = useState(seedDate);
   const [aiGenerating, setAiGenerating] = useState(false);
 
   const handleAIGenerate = async () => {
