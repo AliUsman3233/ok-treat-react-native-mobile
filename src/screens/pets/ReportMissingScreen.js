@@ -31,33 +31,18 @@ export default function ReportMissingScreen({ navigation, route }) {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Pick up location from LocationPicker (via route params on focus)
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      const picked = route.params?.pickedLocation;
-      if (picked) {
-        setLocation({
-          address: picked.address || picked.addressLine1 || '',
-          latitude: picked.latitude || null,
-          longitude: picked.longitude || null,
-        });
-        // Clear so re-focus doesn't overwrite later edits
-        navigation.setParams({ pickedLocation: null });
-      }
-    });
-    return unsubscribe;
-  }, [navigation, route.params]);
-
   const openLocationPicker = () => {
+    // Callback only updates THIS screen's state — don't call navigate here.
+    // LocationPicker's own goBack() will bring the user back to this still-
+    // mounted screen. Earlier the callback did navigate('ReportMissing', ...)
+    // which popped LocationPicker; then LocationPicker's goBack() popped this
+    // screen too, dumping the user back on the Pet Profile.
     navigation.navigate('LocationPicker', {
       onLocationSelect: (loc) => {
-        navigation.navigate('ReportMissing', {
-          pet,
-          pickedLocation: {
-            address: loc.address || loc.addressLine1 || 'Selected Location',
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-          },
+        setLocation({
+          address: loc.address || loc.addressLine1 || 'Selected Location',
+          latitude: loc.latitude ?? null,
+          longitude: loc.longitude ?? null,
         });
       },
     });
@@ -105,12 +90,16 @@ export default function ReportMissingScreen({ navigation, route }) {
         contactPhone: contactPhone.trim(),
         notes: notes?.trim() || null,
       });
+      // Show the success alert FIRST; navigate back only after the user
+      // dismisses it. Previously alert() + goBack() ran synchronously,
+      // unmounting the screen before the alert had a chance to render.
       alert(
         `${pet.name} reported missing`,
         'Anyone scanning the QR tag will see an emergency banner with your contact info.',
-        'success'
+        'success',
+        'OK',
+        () => navigation.goBack()
       );
-      navigation.goBack();
     } catch (e) {
       alert('Failed', e?.message || 'Could not report missing. Try again.', 'error');
     } finally {
