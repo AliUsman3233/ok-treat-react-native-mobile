@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { ImageHereIcon, AttachmentIcon, DocumentUploadIcon, HappyIcon } from '../../assets';
@@ -55,10 +56,15 @@ export default function ChatConversationScreen({ route, navigation }) {
 
   const receiverId = otherUserId || chatId;
 
-  useEffect(() => {
-    fetchMessages();
-    markAsRead();
-  }, []);
+  // Refetch on focus so reopening the chat (e.g. after leaving to ContactSitter
+  // / BookingDetail / a different conversation) reloads the persisted thread
+  // from the DB instead of showing whatever was in memory last time.
+  useFocusEffect(
+    useCallback(() => {
+      fetchMessages();
+      markAsRead();
+    }, [receiverId])
+  );
 
   // Listen for real-time incoming messages from the conversation partner
   useEffect(() => {
@@ -92,8 +98,15 @@ export default function ChatConversationScreen({ route, navigation }) {
   const fetchMessages = async () => {
     try {
       const response = await api.get('/messages', { params: { otherUserId: receiverId } });
-      const data = response.data?.data || response.data?.messages || response.data || [];
-      const formatted = Array.isArray(data) ? data.map(msg => ({
+      // Backend returns { success, data: { messages: [...], total } }.
+      // axios sets response.data to the body, so the array lives at
+      // response.data.data.messages. The old fallback chain matched
+      // response.data.data (an object, not array) first and left the thread empty.
+      const list =
+        response.data?.data?.messages ||
+        response.data?.messages ||
+        (Array.isArray(response.data) ? response.data : []);
+      const formatted = (Array.isArray(list) ? list : []).map(msg => ({
         id: msg.id || msg._id,
         text: msg.content || msg.text || '',
         sender: (msg.senderId === currentUserId || msg.sender === currentUserId) ? 'me' : 'other',
@@ -103,7 +116,7 @@ export default function ChatConversationScreen({ route, navigation }) {
         date: msg.createdAt
           ? new Date(msg.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
           : undefined,
-      })) : [];
+      }));
       setMessages(formatted);
     } catch (err) {
       console.error('Error fetching messages:', err);

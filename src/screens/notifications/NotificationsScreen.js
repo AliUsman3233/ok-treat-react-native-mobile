@@ -55,8 +55,12 @@ export default function NotificationsScreen({ navigation }) {
     try {
       setError(null);
       const response = await api.get('/notifications');
-      const data = response.data?.data || response.data?.notifications || response.data || [];
-      const list = Array.isArray(data) ? data : [];
+      // Backend returns { success, data: { notifications: [...], total } }.
+      // Same shape gotcha as bookings/chats — the array is one level deeper.
+      const list =
+        response.data?.data?.notifications ||
+        response.data?.notifications ||
+        (Array.isArray(response.data) ? response.data : []);
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 

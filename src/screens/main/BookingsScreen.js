@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, ShieldCheckIcon, CoinIcon } from '../../assets';
 import { getUserBookings } from '../../services/bookingService';
@@ -61,12 +62,17 @@ export default function BookingsScreen({ navigation, route }) {
 
   const fetchBookings = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       const response = await getUserBookings();
-      const data = response?.bookings || response?.data || response || [];
-      const bookingsArray = Array.isArray(data) ? data : [];
-      setBookings(bookingsArray);
+      // Backend returns { success, data: { bookings: [...], total } }.
+      // getUserBookings returns response.data (the whole body), so the array
+      // we want is response.data.bookings. The old fallback chain matched
+      // response.data (an object, not array) first and left the list empty.
+      const list =
+        response?.data?.bookings ||
+        response?.bookings ||
+        (Array.isArray(response) ? response : []);
+      setBookings(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Failed to fetch bookings:', err);
       setError(err?.message || 'Failed to load bookings');
@@ -75,9 +81,13 @@ export default function BookingsScreen({ navigation, route }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [fetchBookings]);
+  // Refresh when the screen comes into focus so new bookings created
+  // elsewhere (Contact Sitter, OpenRequests) appear without a manual reload.
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookings();
+    }, [fetchBookings])
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -169,7 +169,14 @@ export default function ChatListScreen({ navigation }) {
     try {
       setError(null);
       const response = await api.get('/messages/conversations');
-      const conversations = response.data?.data || response.data?.conversations || response.data || [];
+      // Backend returns { success, data: { conversations: [...] } }. axios
+      // sets response.data to the body, so the array lives at
+      // response.data.data.conversations. The old fallback chain matched
+      // response.data.data (an object) first and left the inbox empty.
+      const conversations =
+        response.data?.data?.conversations ||
+        response.data?.conversations ||
+        (Array.isArray(response.data) ? response.data : []);
       const formatted = Array.isArray(conversations) ? conversations.map(conv => ({
         id: conv.id || conv._id || conv.otherUserId,
         otherUserId: conv.otherUserId || conv.otherUser?.id || conv.otherUser?._id,
