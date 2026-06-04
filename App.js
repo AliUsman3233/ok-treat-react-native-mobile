@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as Notifications from 'expo-notifications';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -119,6 +119,20 @@ export default function App() {
                 onReady={() => {
                   // Set navigation reference for axios interceptor
                   setNavigationRef(navigationRef.current);
+                }}
+                onUnhandledAction={(action) => {
+                  // Fires when a NAVIGATE / REPLACE / PUSH target isn't found
+                  // in any active navigator. Default RN behavior prints a red
+                  // dev warning + silent no-op in prod, leaving the user
+                  // staring at the same screen with no feedback. Show a
+                  // graceful native alert instead so the issue is visible.
+                  const name = action?.payload?.name || 'screen';
+                  const msg = `Couldn't open "${name}". This screen may have moved or doesn't exist yet.`;
+                  if (__DEV__) {
+                    // eslint-disable-next-line no-console
+                    console.warn('[Nav] Unhandled action:', JSON.stringify(action));
+                  }
+                  Alert.alert('Unable to open', msg);
                 }}
               >
                 <AlertProvider>

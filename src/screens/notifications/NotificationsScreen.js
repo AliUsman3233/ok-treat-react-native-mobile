@@ -129,8 +129,9 @@ export default function NotificationsScreen({ navigation }) {
     switch (notifType) {
       // ── Bookings — pre-select the right tab so the user lands at the relevant list ──
       case 'BOOKING_REQUEST':
-        // Sitter side: jump to the requests inbox
-        navigation.navigate('SitterRequests');
+        // Sitter side: jump to the requests inbox. SitterRequests lives
+        // inside SitterTabNavigator, so go through the parent tab route.
+        navigation.navigate('SitterTabs', { screen: 'SitterRequests' });
         return;
       case 'BOOKING_CONFIRMED':
       case 'BOOKING_DECLINED':

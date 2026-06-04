@@ -410,6 +410,14 @@ export default function MainNavigator() {
       <RootStack.Screen name="HelpSupport" component={SupportScreen} />
       <RootStack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
       <RootStack.Screen name="ShopCoins" component={ShopCoinsScreen} />
+      {/* PaymentMethods (AlohaPay) is also registered inside MoreStack —
+          mirror at the root so deep-link callers like notification taps,
+          which originate outside the More tab, can reach it directly. */}
+      <RootStack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+      {/* SitterMapView is also registered inside BookingsStack — mirror
+          at the root so SearchResults (a root-level screen) can reach it
+          without a nested-navigate dance. */}
+      <RootStack.Screen name="SitterMapView" component={SitterMapViewScreen} />
       <RootStack.Screen name="Scans" component={ScansScreen} />
       <RootStack.Screen name="ScanMapDetail" component={ScanMapDetailScreen} />
       <RootStack.Screen name="Settings" component={SettingsScreen} />
