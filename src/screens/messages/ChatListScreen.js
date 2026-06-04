@@ -115,15 +115,22 @@ const SwipeableChatCard = ({ chat, onPress, onDelete }) => {
           disabled={isSwiping}
         >
           <View style={styles.avatarContainer}>
-            {/* <View style={styles.avatarPlaceholder}> */}
-            {/* <View style={styles.iconContainer}> */}
-            <Image
-              source={require('../../assets/images/Pet_default_image.png')}
-              style={styles.profileImage}
-              resizeMode="cover"
-            />
-            {/* </View>            */}
-            {/* </View> */}
+            {chat.avatar ? (
+              // key={url} forces a remount when the URL changes — RN <Image>
+              // caches by URI and would otherwise keep showing the old photo.
+              <Image
+                key={chat.avatar}
+                source={{ uri: chat.avatar }}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require('../../assets/images/Pet_default_image.png')}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
+            )}
           </View>
           <View style={styles.chatInfo}>
             <View style={styles.chatHeader}>
@@ -172,7 +179,7 @@ export default function ChatListScreen({ navigation }) {
           ? new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           : conv.time || '',
         unread: conv.unreadCount || 0,
-        avatar: conv.otherUser?.avatar || conv.otherUser?.profileImage || null,
+        avatar: conv.otherUser?.avatarUrl || conv.otherUser?.avatar || conv.otherUser?.profileImage || null,
       })) : [];
       setChats(formatted);
     } catch (err) {

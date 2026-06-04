@@ -34,6 +34,7 @@ export default function SitterRequestsScreen({ navigation }) {
         const mapped = {
           id: item.id || item._id,
           bookingId: item.id || item._id,
+          clientUserId: item.user?.id || null,
           name: item.user?.fullName || 'User',
           message: item.notes || item.serviceType?.replace(/_/g, ' ') || 'New request',
           time: item.createdAt
@@ -160,7 +161,11 @@ export default function SitterRequestsScreen({ navigation }) {
       <TouchableOpacity
         key={item.id}
         style={styles.card}
-        onPress={() => navigation.navigate('ChatConversation', { chatId: item.id, chatName: item.name })}
+        onPress={() => navigation.navigate('ChatConversation', {
+          otherUserId: item.clientUserId,
+          chatName: item.name,
+        })}
+        disabled={!item.clientUserId}
       >
         <Image source={typeof item.avatar === 'string' ? { uri: item.avatar } : item.avatar} style={styles.avatar} />
         <View style={styles.cardContent}>
@@ -198,7 +203,11 @@ export default function SitterRequestsScreen({ navigation }) {
     <TouchableOpacity
       key={item.id}
       style={styles.card}
-      onPress={() => navigation.navigate('ChatConversation', { chatId: item.id, chatName: item.name })}
+      onPress={() => navigation.navigate('ChatConversation', {
+        otherUserId: item.clientUserId,
+        chatName: item.name,
+      })}
+      disabled={!item.clientUserId}
     >
       <Image source={typeof item.avatar === 'string' ? { uri: item.avatar } : item.avatar} style={styles.avatar} />
       <View style={styles.cardContent}>
