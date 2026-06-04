@@ -60,6 +60,13 @@ const CATEGORIES = [
     note: 'Password change alerts cannot be turned off — they\'re needed for account security.',
   },
   {
+    key: 'nearbyAlerts',
+    title: 'Nearby Missing Pets',
+    description: 'Get notified when a pet is reported missing within ~25 km of you. Sitters only.',
+    icon: 'location-outline',
+    color: '#E11D48',
+  },
+  {
     key: 'promotional',
     title: 'Promotional & Tips',
     description: 'Referral rewards, special offers, tips and announcements',

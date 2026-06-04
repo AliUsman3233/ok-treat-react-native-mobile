@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking, Dimensions, Share, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { BackArrowIcon, LocationArrowCircleIcon, WhatsappIcon, PhoneCallIcon, DogIcon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 
@@ -54,20 +55,67 @@ export default function PetDetailScreen({ route, navigation }) {
     navigation.goBack();
   };
 
-  const handleShareLocation = () => {
-    // Implement share location functionality
-    console.log('Share location');
+  // Get the finder's current GPS and build a "I found your pet" message.
+  // Used by both Share Location (OS share sheet) and WhatsApp.
+  const buildFinderMessage = async () => {
+    let mapsUrl = '';
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      let perm = status;
+      if (perm !== 'granted') {
+        const req = await Location.requestForegroundPermissionsAsync();
+        perm = req.status;
+      }
+      if (perm === 'granted') {
+        const loc = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000)),
+        ]);
+        const { latitude, longitude } = loc.coords;
+        mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      }
+    } catch (e) {
+      // Permission denied or timeout — continue without location
+    }
+    const petName = pet?.name || 'your pet';
+    const lines = [
+      `Hi! I found ${petName} (matched via OkTreat QR tag).`,
+      mapsUrl ? `My current location: ${mapsUrl}` : 'I have your pet — please get in touch.',
+    ];
+    return lines.join('\n\n');
+  };
+
+  const handleShareLocation = async () => {
+    try {
+      const message = await buildFinderMessage();
+      await Share.share({ message });
+    } catch (e) {
+      // User dismissed the sheet — fine
+    }
   };
 
   const handleWhatsapp = async () => {
-    const phone = (pet.user?.phone || pet.owner?.phone || '').replace(/[^0-9]/g, '');
-    if (phone) {
-      try {
-        await Linking.openURL(`whatsapp://send?phone=${phone}`);
-      } catch (error) {
-        console.error('Failed to open WhatsApp:', error);
-      }
+    const rawPhone = pet?.user?.phone || pet?.owner?.phone || '';
+    const phone = rawPhone.replace(/[^0-9]/g, '');
+    if (!phone) {
+      Alert.alert('No phone on file', 'This pet\'s owner hasn\'t shared a phone number.');
+      return;
     }
+    const message = await buildFinderMessage();
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    const supported = await Linking.canOpenURL(url).catch(() => false);
+    if (!supported) {
+      // Fallback to wa.me (browser-based — works without WhatsApp installed)
+      const fallback = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      Linking.openURL(fallback).catch(() => {
+        Alert.alert('WhatsApp unavailable', 'Could not open WhatsApp. Try calling instead.');
+      });
+      return;
+    }
+    Linking.openURL(url).catch((error) => {
+      console.error('Failed to open WhatsApp:', error?.message);
+      Alert.alert('WhatsApp unavailable', 'Could not open WhatsApp. Try calling instead.');
+    });
   };
 
   const handleEmergencyCall = async () => {

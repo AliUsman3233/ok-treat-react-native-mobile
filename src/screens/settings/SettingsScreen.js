@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import { logout } from '../../store/slices/authSlice';
+import { clearPushTokenOnServer } from '../../services/notificationService';
 
 export default function SettingsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -16,7 +17,14 @@ export default function SettingsScreen({ navigation }) {
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => dispatch(logout()) },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await clearPushTokenOnServer().catch(() => {});
+          dispatch(logout());
+        },
+      },
     ]);
   };
 

@@ -12,6 +12,7 @@ import { Lexend_300Light } from '@expo-google-fonts/lexend';
 import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
+import { registerForPushNotifications } from './src/services/notificationService';
 import { AlertProvider } from './src/context/AlertContext';
 import { PaymentConfigProvider, usePaymentConfig } from './src/context/PaymentConfigContext';
 import { WalletProvider } from './src/context/WalletContext';
@@ -43,25 +44,9 @@ export default function App() {
       setShowSessionExpired(true);
     });
 
-    // Register for push notifications
-    const registerForPushNotifications = async () => {
-      try {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync();
-          finalStatus = status;
-        }
-        if (finalStatus !== 'granted') return;
-
-        const token = (await Notifications.getExpoPushTokenAsync()).data;
-        console.log('Push token:', token);
-        // TODO: Send token to backend to store for this user
-      } catch (error) {
-        console.log('Push notification setup error:', error);
-      }
-    };
-
+    // Register for push notifications + sync token to backend.
+    // No-ops if the user isn't logged in yet (auth-token call is gated).
+    // Login screens call this again post-auth so a new login picks up the token.
     registerForPushNotifications();
 
     // Hide browser's default password reveal button on web

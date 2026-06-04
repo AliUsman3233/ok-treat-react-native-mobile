@@ -14,6 +14,7 @@ import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../store/slices/authSlice';
+import { registerForPushNotifications } from '../../services/notificationService';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, EnvelopeIcon, PhoneCallIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
@@ -89,6 +90,7 @@ export default function OTPEntryScreen({ route, navigation }) {
       await AsyncStorage.setItem('user', JSON.stringify(data.data.user));
 
       dispatch(setCredentials({ user: data.data.user, token: data.data.token }));
+      registerForPushNotifications().catch(() => {});
     } catch (error) {
       alert('Verification Failed', error.message || 'Invalid code. Please try again.', 'error');
     } finally {

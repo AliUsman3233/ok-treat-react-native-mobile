@@ -55,6 +55,12 @@
           "locationAlwaysAndWhenInUsePermission": "Allow OkTreat to use your location to find nearby sitters."
         }
       ],
+      [
+        "expo-notifications",
+        {
+          "color": "#32A6D8"
+        }
+      ],
       "@react-native-google-signin/google-signin"
     ]
   }

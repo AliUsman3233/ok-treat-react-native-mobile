@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Linking } from 'react-native';
 import { BackArrowIcon, MoneySendIcon, Calendar2Icon, Setting2Icon } from '../../assets';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import api from '../../config/api';
@@ -195,6 +195,18 @@ export default function NotificationsScreen({ navigation }) {
           navigation.navigate('MainTabs', { screen: 'Pets', params: { screen: 'PetList' } });
         }
         return;
+
+      // Sitter-facing radius alert. Owner pets aren't ours, so we open
+      // Google Maps centered on the last-seen location instead of
+      // bouncing into a pet detail we wouldn't have permission to see.
+      case 'NEARBY_MISSING_PET': {
+        const { latitude, longitude } = data;
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+          const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          Linking.openURL(url).catch(() => {});
+        }
+        return;
+      }
 
       // ── Account / system ──
       case 'SITTER_APPROVED':

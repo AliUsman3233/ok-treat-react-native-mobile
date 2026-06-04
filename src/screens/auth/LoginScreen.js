@@ -18,6 +18,7 @@ import Input from '../../components/Input';
 import { GoogleIcon, AppleIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 import { signInWithGoogle } from '../../services/googleAuthService';
+import { registerForPushNotifications } from '../../services/notificationService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authToken', result.data.token);
         await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
         dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
+        registerForPushNotifications().catch(() => {});
       }
     } catch (error) {
       if (error.message !== 'Sign-in cancelled') {
@@ -105,6 +107,10 @@ export default function LoginScreen({ navigation }) {
         user: data.data.user,
         token: data.data.token,
       }));
+
+      // Fire-and-forget: re-sync the push token now that auth is ready
+      // (the App.js call earlier no-ops because there's no auth token yet).
+      registerForPushNotifications().catch(() => {});
 
       // No need to manually navigate - RootNavigator handles it when isAuthenticated changes
 
