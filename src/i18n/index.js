@@ -61,31 +61,42 @@ function deviceLanguageGuess() {
   }
 }
 
+// Initialize i18next synchronously at module load. Doing this here (rather
+// than in an async useEffect from App.js) guarantees i18n.isInitialized is
+// true BEFORE any screen mounts and calls useTranslation() — otherwise the
+// hook returns a t() that resolves to raw keys until the async init lands.
+i18n.use(initReactI18next).init({
+  resources,
+  lng: deviceLanguageGuess() || 'en-us',
+  fallbackLng: 'en-us',
+  interpolation: {
+    escapeValue: false, // React already escapes
+  },
+  react: {
+    useSuspense: false,
+  },
+  debug: false,
+});
+
 /**
- * Initialize i18next. Call once at app startup, passing the saved language
- * from AsyncStorage (or null on first launch — we'll fall back to device
- * locale → en-us).
+ * Apply a saved language (from AsyncStorage) once the app has read it.
+ * Safe to call multiple times. The base init above already set a sensible
+ * default from the device locale.
  */
 export async function initI18n(savedLanguage) {
   const lng = savedLanguage || deviceLanguageGuess() || 'en-us';
-  if (i18n.isInitialized) {
-    // Hot-reload case — just switch language.
-    await i18n.changeLanguage(lng);
-    return i18n;
+  if (i18n.language !== lng) {
+    try {
+      await i18n.changeLanguage(lng);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      if (__DEV__) console.warn('[i18n] changeLanguage failed:', e?.message);
+    }
   }
-  await i18n.use(initReactI18next).init({
-    resources,
-    lng,
-    fallbackLng: 'en-us',
-    compatibilityJSON: 'v4',
-    interpolation: {
-      escapeValue: false, // React already escapes
-    },
-    returnEmptyString: false, // missing key → fall back to en-us
-    react: {
-      useSuspense: false,
-    },
-  });
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[i18n] ready. lng=' + i18n.language + ', sample t(settings.title)=' + i18n.t('settings.title'));
+  }
   return i18n;
 }
 
