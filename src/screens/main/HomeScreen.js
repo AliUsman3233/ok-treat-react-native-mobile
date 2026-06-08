@@ -17,6 +17,7 @@ import {
 } from '../../assets';
 import { getSitterStatus } from '../../services/sitterService';
 import { getData, saveData, STORAGE_KEYS } from '../../utils/storage';
+import api from '../../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,6 +31,7 @@ export default function HomeScreen({ navigation }) {
   const [showRejectedModal, setShowRejectedModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     dispatch(fetchSitters());
@@ -49,7 +51,16 @@ export default function HomeScreen({ navigation }) {
           setIsApprovedSitter(false);
         }
       };
+      const fetchUnread = async () => {
+        try {
+          const res = await api.get('/notifications/unread-count');
+          setUnreadCount(res.data?.data?.unreadCount || 0);
+        } catch {
+          // Network blip — leave the badge as-is
+        }
+      };
       checkSitter();
+      fetchUnread();
     }, [])
   );
 
@@ -138,6 +149,22 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.welcomeText}>Welcome Back</Text>
             <Text style={styles.emailText}>{user?.email || 'No email'}</Text>
           </View>
+          {/* Notification bell — top-right header button. Standard
+              pattern testers expect for accessing alerts/notifications. */}
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => navigation.navigate('Notifications')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="notifications-outline" size={26} color="#32A6D8" />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Explore Section */}
@@ -321,8 +348,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#F38FB4',
   },
   headerTextContainer: {
-    width: 232,
+    flex: 1,
     gap: 2,
+  },
+  bellButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F9FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#D93025',
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: 'Poppins',
+    fontWeight: '700',
+    lineHeight: 12,
   },
   welcomeText: {
     color: '#F38FB4',
