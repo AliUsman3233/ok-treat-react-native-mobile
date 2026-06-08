@@ -1,9 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { 
-  saveLanguage, 
-  getLanguage, 
-  setOnboardingCompleted, 
-  isOnboardingCompleted 
+import i18n from '../../i18n';
+import {
+  saveLanguage,
+  getLanguage,
+  setOnboardingCompleted,
+  isOnboardingCompleted
 } from '../../utils/storage';
 
 /**
@@ -31,6 +32,14 @@ export const setLanguage = createAsyncThunk(
   'app/setLanguage',
   async (language) => {
     await saveLanguage(language);
+    // Apply immediately so every t() call re-renders with the new copy.
+    // i18n.changeLanguage is a no-op if already on this language.
+    try {
+      await i18n.changeLanguage(language);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('i18n.changeLanguage failed:', e?.message);
+    }
     return language;
   }
 );

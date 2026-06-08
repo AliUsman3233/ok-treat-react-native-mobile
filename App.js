@@ -13,6 +13,8 @@ import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
 import { registerForPushNotifications } from './src/services/notificationService';
+import { initI18n } from './src/i18n';
+import { getLanguage } from './src/utils/storage';
 import { AlertProvider } from './src/context/AlertContext';
 import { PaymentConfigProvider, usePaymentConfig } from './src/context/PaymentConfigContext';
 import { WalletProvider } from './src/context/WalletContext';
@@ -29,6 +31,7 @@ Notifications.setNotificationHandler({
 export default function App() {
   const navigationRef = useRef();
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [i18nReady, setI18nReady] = useState(false);
 
   // Load custom Google Fonts used on the onboarding screen.
   // Other screens use system-fallback font names ('Poppins', 'Avenir LT Std')
@@ -37,6 +40,20 @@ export default function App() {
     Kodchasan_500Medium,
     Lexend_300Light,
   });
+
+  // Load saved language → init i18next. Done once at startup so every
+  // useTranslation() call resolves synchronously after this point.
+  useEffect(() => {
+    (async () => {
+      const saved = await getLanguage().catch(() => null);
+      await initI18n(saved).catch((e) => {
+        // Init failure is non-fatal — i18n falls back to keys, the app
+        // still renders with English defaults from the JSON.
+        console.warn('i18n init failed:', e?.message);
+      });
+      setI18nReady(true);
+    })();
+  }, []);
 
   useEffect(() => {
     // Set token expired modal handler (only once)
@@ -83,9 +100,10 @@ export default function App() {
     await handleTokenExpiredAction();
   };
 
-  // Render a tiny spinner until fonts are ready. Without this the first paint
-  // of OnboardingScreen would briefly show system-fallback text.
-  if (!fontsLoaded) {
+  // Render a tiny spinner until fonts AND i18n are ready. Without this the
+  // first paint of OnboardingScreen would briefly show system-fallback text
+  // or untranslated keys.
+  if (!fontsLoaded || !i18nReady) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F7F7F7', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#32A6D8" />

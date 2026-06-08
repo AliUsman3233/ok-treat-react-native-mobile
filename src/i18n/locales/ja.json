@@ -1,0 +1,11 @@
+{
+  "common": {},
+  "home": {},
+  "language": {
+    "title": "言語を選択",
+    "proceed": "次へ"
+  },
+  "settings": {
+    "language": "言語"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "save": "Save",
+    "continue": "Continue",
+    "proceed": "Proceed",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "loading": "Loading...",
+    "retry": "Try Again",
+    "error": "Error",
+    "success": "Success"
+  },
+  "home": {
+    "welcome": "Welcome Back",
+    "noEmail": "No email",
+    "addPet": "Add a Pet",
+    "scanQr": "Scan a QR",
+    "bookings": "Bookings",
+    "myRequests": "My Requests",
+    "notifications": "Notifications",
+    "inbox": "Inbox",
+    "becomeASitter": "Become a Sitter"
+  },
+  "language": {
+    "title": "Select Your Language",
+    "subtitle": "You can change this any time in Settings.",
+    "proceed": "Proceed"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "about": "About",
+    "accountSetting": "Account Setting",
+    "notification": "Notification",
+    "language": "Language",
+    "privacyChoices": "Privacy Choices",
+    "logout": "Logout",
+    "privacyPolicy": "Privacy Policy",
+    "logoutConfirmTitle": "Logout",
+    "logoutConfirmBody": "Are you sure you want to logout?"
+  }
+}

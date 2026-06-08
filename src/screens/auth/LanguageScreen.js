@@ -1,29 +1,33 @@
 ﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Button from '../../components/Button';
 import BackArrowIcon from '../../assets/icons/back_arrow.svg';
 import TickIcon from '../../assets/icons/tick_icon.svg';
 import { setLanguage } from '../../store/slices/appSlice';
+import { SUPPORTED_LANGUAGES } from '../../i18n';
 
 const { width, height } = Dimensions.get('window');
 
-export default function LanguageScreen({ navigation }) {
+export default function LanguageScreen({ navigation, route }) {
   const dispatch = useDispatch();
-  const [selectedLanguage, setSelectedLanguage] = useState('en-us');
-
-  const languages = [
-    { code: 'en-us', name: 'English (US)' },
-    { code: 'en-uk', name: 'English (UK)' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'zh', name: 'Mandarin' }
-  ];
+  const { t } = useTranslation();
+  const currentLanguage = useSelector((s) => s.app?.language) || 'en-us';
+  // route.params.fromSettings === true → behave as a re-selection screen
+  // (no Onboarding redirect, just goBack on Proceed). Default flow is the
+  // first-launch onboarding path.
+  const fromSettings = !!route?.params?.fromSettings;
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
 
   const handleContinue = async () => {
-    // Save language to Redux and AsyncStorage
     await dispatch(setLanguage(selectedLanguage));
-    navigation.navigate('Onboarding');
+    if (fromSettings) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Onboarding');
+    }
   };
 
   return (
@@ -38,13 +42,13 @@ export default function LanguageScreen({ navigation }) {
             fill="#090E12"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Your Language</Text>
+        <Text style={styles.headerTitle}>{t('language.title')}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
       {/* Language List */}
       <View style={styles.languageList}>
-        {languages.map((language) => (
+        {SUPPORTED_LANGUAGES.map((language) => (
           <TouchableOpacity
             key={language.code}
             style={[
@@ -70,7 +74,7 @@ export default function LanguageScreen({ navigation }) {
       {/* Continue Button */}
       <View style={styles.footer}>
         <Button
-          title="Proceed"
+          title={t('language.proceed')}
           onPress={handleContinue}
           type="primary"
           size="medium"

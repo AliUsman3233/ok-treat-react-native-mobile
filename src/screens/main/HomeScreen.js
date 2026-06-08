@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { fetchSitters } from '../../store/slices/sitterSlice';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
@@ -23,6 +24,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { user } = useSelector(state => state.auth);
 
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -146,8 +148,8 @@ export default function HomeScreen({ navigation }) {
             )}
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.welcomeText}>Welcome Back</Text>
-            <Text style={styles.emailText}>{user?.email || 'No email'}</Text>
+            <Text style={styles.welcomeText}>{t('home.welcome')}</Text>
+            <Text style={styles.emailText}>{user?.email || t('home.noEmail')}</Text>
           </View>
           {/* Notification bell — top-right header button. Standard
               pattern testers expect for accessing alerts/notifications. */}

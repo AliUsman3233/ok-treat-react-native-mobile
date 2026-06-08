@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from '@expo/vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import { logout } from '../../store/slices/authSlice';
@@ -9,16 +10,17 @@ import { clearPushTokenOnServer } from '../../services/notificationService';
 
 export default function SettingsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.logoutConfirmTitle'), t('settings.logoutConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Logout',
+        text: t('settings.logout'),
         style: 'destructive',
         onPress: async () => {
           await clearPushTokenOnServer().catch(() => {});
@@ -32,19 +34,22 @@ export default function SettingsScreen({ navigation }) {
     if (item.action) {
       item.action();
     } else if (item.screen) {
-      navigation.navigate(item.screen);
+      navigation.navigate(item.screen, item.params);
     }
   };
 
   const generalSettings = [
-    { title: 'Account Setting', screen: 'EditProfileDetails' },
-    { title: 'Notification', screen: 'Notifications' },
-    { title: 'Privacy Choices', screen: 'PrivacyPolicy' },
-    { title: 'Logout', action: handleLogout },
+    { title: t('settings.accountSetting'), screen: 'EditProfileDetails' },
+    { title: t('settings.notification'), screen: 'Notifications' },
+    // Re-opens the language picker. fromSettings=true so Proceed goBack()s
+    // instead of redirecting to Onboarding.
+    { title: t('settings.language'), screen: 'Language', params: { fromSettings: true } },
+    { title: t('settings.privacyChoices'), screen: 'PrivacyPolicy' },
+    { title: t('settings.logout'), action: handleLogout },
   ];
 
   const aboutSettings = [
-    { title: 'Privacy Policy', screen: 'PrivacyPolicy' },
+    { title: t('settings.privacyPolicy'), screen: 'PrivacyPolicy' },
   ];
 
   const renderMenuItem = (item, index) => (
@@ -67,7 +72,7 @@ export default function SettingsScreen({ navigation }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerTitle}>{t('settings.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -79,7 +84,7 @@ export default function SettingsScreen({ navigation }) {
         >
           {/* General Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>General</Text>
+            <Text style={styles.sectionTitle}>{t('settings.general')}</Text>
             <View style={styles.menuContainer}>
               {generalSettings.map(renderMenuItem)}
             </View>
@@ -87,7 +92,7 @@ export default function SettingsScreen({ navigation }) {
 
           {/* About Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>{t('settings.about')}</Text>
             <View style={styles.menuContainer}>
               {aboutSettings.map(renderMenuItem)}
             </View>
