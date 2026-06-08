@@ -78,6 +78,32 @@ i18n.use(initReactI18next).init({
   debug: false,
 });
 
+// Defensive: explicitly register each resource bundle. In some Metro/JSON
+// import edge cases the inline `resources` above doesn't get persisted into
+// the resourceStore (we saw t() return raw keys on a real device). Calling
+// addResourceBundle a second time is a no-op if the data already exists,
+// so this is safe to always run.
+try {
+  Object.entries(resources).forEach(([lng, bundles]) => {
+    Object.entries(bundles).forEach(([ns, data]) => {
+      i18n.addResourceBundle(lng, ns, data, true, true);
+    });
+  });
+} catch (e) {
+  // eslint-disable-next-line no-console
+  if (__DEV__) console.warn('[i18n] addResourceBundle failed:', e?.message);
+}
+
+if (__DEV__) {
+  // eslint-disable-next-line no-console
+  console.log(
+    '[i18n] post-init. en-us settings key exists?',
+    !!i18n.getResource('en-us', 'translation', 'settings'),
+    'sample =',
+    i18n.t('settings.title')
+  );
+}
+
 /**
  * Apply a saved language (from AsyncStorage) once the app has read it.
  * Safe to call multiple times. The base init above already set a sensible
