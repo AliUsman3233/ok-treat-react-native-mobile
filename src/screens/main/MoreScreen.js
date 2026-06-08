@@ -145,21 +145,27 @@ export default function MoreScreen({ navigation }) {
       screen: 'HelpSupport',
       component: HeadphonesIcon
     },
+    // Dev-only diagnostic screens. The __DEV__ guard ensures these never
+    // ship to production builds. The `isDev` flag drives a visible "DEV"
+    // pill in the menu so testers don't mistake them for real features.
     ...(__DEV__ ? [
       {
         title: 'Test Cloudinary Upload',
         screen: 'CloudinaryTest',
-        component: CreditCardIcon
+        component: CreditCardIcon,
+        isDev: true,
       },
       {
         title: 'Test Server Connection',
         screen: 'ConnectionTest',
-        component: SettingsIcon
+        component: SettingsIcon,
+        isDev: true,
       },
       {
         title: 'Test Network',
         screen: 'NetworkTest',
-        component: SettingsIcon
+        component: SettingsIcon,
+        isDev: true,
       },
     ] : []),
   ];
@@ -246,6 +252,11 @@ export default function MoreScreen({ navigation }) {
                       <IconComponent width={24} height={24} fill="#32A6D8" />
                     </View>
                     <Text style={styles.menuTitle}>{item.title}</Text>
+                    {item.isDev && (
+                      <View style={styles.devPill}>
+                        <Text style={styles.devPillText}>DEV</Text>
+                      </View>
+                    )}
                   </View>
                   {/* <Icon name="chevron-forward" size={24} color="#FFC2EB" /> */}
                 </TouchableOpacity>
@@ -396,5 +407,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
     fontWeight: '500',
     lineHeight: 18.6,
+  },
+  devPill: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 4,
+  },
+  devPillText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: 'Poppins',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
