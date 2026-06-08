@@ -69,6 +69,10 @@ i18n.use(initReactI18next).init({
   resources,
   lng: deviceLanguageGuess() || 'en-us',
   fallbackLng: 'en-us',
+  ns: ['translation'],
+  defaultNS: 'translation',
+  keySeparator: '.',
+  nsSeparator: ':',
   interpolation: {
     escapeValue: false, // React already escapes
   },
@@ -97,10 +101,18 @@ try {
 if (__DEV__) {
   // eslint-disable-next-line no-console
   console.log(
-    '[i18n] post-init. en-us settings key exists?',
+    '[i18n] post-init. exists?',
     !!i18n.getResource('en-us', 'translation', 'settings'),
-    'sample =',
-    i18n.t('settings.title')
+    '| t(settings.title)=',
+    i18n.t('settings.title'),
+    '| t(translation:settings.title)=',
+    i18n.t('translation:settings.title'),
+    '| getResource(settings.title)=',
+    i18n.getResource('en-us', 'translation', 'settings.title'),
+    '| keySep=',
+    i18n.options?.keySeparator,
+    'nsSep=',
+    i18n.options?.nsSeparator
   );
 }
 
