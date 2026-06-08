@@ -73,6 +73,14 @@ i18n.use(initReactI18next).init({
   defaultNS: 'translation',
   keySeparator: '.',
   nsSeparator: ':',
+  // Critical: without lowerCaseLng + load='languageOnly', i18next normalizes
+  // 'en-us' → 'en-US' OR strips region → 'en', neither of which matches the
+  // keys in our `resources` object. Symptom: getResource() with the exact
+  // key works but t() returns the raw key.
+  lowerCaseLng: true,
+  load: 'currentOnly',
+  supportedLngs: ['en-us', 'en-uk', 'ja', 'zh'],
+  nonExplicitSupportedLngs: false,
   interpolation: {
     escapeValue: false, // React already escapes
   },
@@ -100,20 +108,7 @@ try {
 
 if (__DEV__) {
   // eslint-disable-next-line no-console
-  console.log(
-    '[i18n] post-init. exists?',
-    !!i18n.getResource('en-us', 'translation', 'settings'),
-    '| t(settings.title)=',
-    i18n.t('settings.title'),
-    '| t(translation:settings.title)=',
-    i18n.t('translation:settings.title'),
-    '| getResource(settings.title)=',
-    i18n.getResource('en-us', 'translation', 'settings.title'),
-    '| keySep=',
-    i18n.options?.keySeparator,
-    'nsSep=',
-    i18n.options?.nsSeparator
-  );
+  console.log('[i18n] ready. lng=' + i18n.language);
 }
 
 /**
@@ -133,7 +128,7 @@ export async function initI18n(savedLanguage) {
   }
   if (__DEV__) {
     // eslint-disable-next-line no-console
-    console.log('[i18n] ready. lng=' + i18n.language + ', sample t(settings.title)=' + i18n.t('settings.title'));
+    console.log('[i18n] applied language: ' + i18n.language);
   }
   return i18n;
 }
