@@ -6,10 +6,12 @@ import moment from 'moment';
 import { Dropdown } from '../../components';
 import DateRangePicker from '../../components/DateRangePicker';
 import { CalendarIcon, AngleDownIcon } from '../../assets';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import api from '../../config/api';
 
 export default function PetWizardStep2Screen({ formData, setFormData }) {
   const alert = useAppAlert();
+  const keyboardHeight = useKeyboardHeight();
   // Seed picker state from formData on first render so EditPet (and re-renders
   // of AddPet after going back/forward through steps) pre-select the saved date.
   // moment() is lenient enough to parse ISO, "5 Jun 2024", and other variants.
@@ -65,7 +67,7 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
     <>
       <ScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
         showsVerticalScrollIndicator={true}
         bounces={true}
         keyboardShouldPersistTaps="handled"

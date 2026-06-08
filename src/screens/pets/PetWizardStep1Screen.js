@@ -7,12 +7,14 @@ import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 import Icon from '@expo/vector-icons/Ionicons';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 
 const { width } = Dimensions.get('window');
 
 export default function PetWizardStep1Screen({ formData, setFormData }) {
   const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const handleImageSelected = async (imageUri) => {
     try {
@@ -31,7 +33,7 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
   return (
     <ScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"

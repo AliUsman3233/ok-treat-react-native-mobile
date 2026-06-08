@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity } from 'react-native';
 import Icon from '@expo/vector-icons/Ionicons';
 import { Dropdown } from '../../components';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 
 const { width } = Dimensions.get('window');
 
 export default function PetWizardStep3Screen({ formData, setFormData }) {
+  const keyboardHeight = useKeyboardHeight();
   const toggleMedication = (medication) => {
     const currentMedications = formData.medications || [];
     if (currentMedications.includes(medication)) {
@@ -27,7 +29,7 @@ export default function PetWizardStep3Screen({ formData, setFormData }) {
   return (
     <ScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"

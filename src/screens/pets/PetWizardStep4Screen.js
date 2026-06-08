@@ -7,12 +7,14 @@ import { Dropdown } from '../../components';
 import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 
 const { width } = Dimensions.get('window');
 
 export default function PetWizardStep4Screen({ formData, setFormData, navigation, route }) {
   const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   // Determine which screen to return to based on whether we're in add or edit mode
   const isEditMode = route?.params?.petId || formData?.id;
@@ -63,7 +65,7 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
   return (
     <ScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
