@@ -73,24 +73,55 @@ export default function MyPetProfileScreen({ route, navigation }) {
   };
 
   const handleMarkSafe = () => {
-    // Use RN's native Alert.alert for confirmation — the app's useAppAlert()
-    // only supports a single button. Passing a buttons array there crashes
-    // ProfileVerifiedModal which tries to render the array as a Text label.
+    if (!pet?.id) {
+      Alert.alert('Pet not loaded', 'Try going back and reopening this pet.');
+      return;
+    }
+    const petName = pet?.name || 'this pet';
+    // RN's native Alert.alert handles the confirmation. The app's useAppAlert()
+    // only supports a single button — passing buttons here would crash the
+    // shared modal, so we deliberately use the native dialog instead.
     Alert.alert(
       'Mark as safe?',
-      `Confirm that ${pet?.name} has been found. The emergency banner on the QR tag page will be replaced with a "Recently safe!" notice for 24 hours.`,
+      `Confirm that ${petName} has been found. The emergency banner on the QR tag page will be replaced with a "Recently safe!" notice for 24 hours.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Mark as safe',
           style: 'default',
           onPress: async () => {
+            // Snapshot the previous state so we can roll back optimistically.
+            const previous = pet;
             try {
-              await markPetSafe(pet.id);
-              await fetchPetData();
-              alert(`${pet?.name} is safe!`, 'No longer marked missing.', 'success');
+              // Optimistic UI flip — the banner + button swap to the safe
+              // state immediately, even before the network call returns.
+              setPet((p) => (p ? { ...p, isMissing: false } : p));
+
+              await markPetSafe(previous.id);
+
+              // Refresh in the background to pick up server-side fields
+              // (resolvedAt, etc.). Don't await — even if it fails, the
+              // optimistic flip already shows the right state.
+              fetchPetData().catch(() => {});
+
+              // Wrap the success alert in try/catch as paranoia — if the
+              // modal layer somehow throws (e.g., during rapid taps), it
+              // must not undo the successful mark-safe action.
+              try {
+                alert(`${petName} is safe!`, 'No longer marked missing.', 'success');
+              } catch (modalErr) {
+                console.warn('Success modal failed to render:', modalErr?.message);
+              }
             } catch (e) {
-              alert('Failed', e?.message || 'Could not update status. Try again.', 'error');
+              // API failed — roll back optimistic update.
+              setPet(previous);
+              const reason = e?.message || e?.response?.data?.message
+                || 'Could not update status. Check your connection and try again.';
+              try {
+                alert('Could not mark as safe', reason, 'error');
+              } catch (modalErr) {
+                Alert.alert('Could not mark as safe', reason);
+              }
             }
           },
         },
