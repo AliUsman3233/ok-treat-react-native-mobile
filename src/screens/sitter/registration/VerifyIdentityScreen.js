@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Dimensions, ScrollView, KeyboardAvoidingView, Platform, Alert, Keyboard } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setCredentials } from '../../../store/slices/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +24,28 @@ export default function VerifyIdentityScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
+  // Keyboard tracking — Android's pan mode doesn't reliably detect focus inside
+  // Stripe's native CardField, so we manually adjust layout when the keyboard
+  // appears. Same pattern as components/StripeCardSheet.js.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (step !== 'card') return undefined;
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e) => {
+      setKeyboardHeight(e?.endCoordinates?.height || 0);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    };
+    const onHide = () => setKeyboardHeight(0);
+    const subShow = Keyboard.addListener(showEvt, onShow);
+    const subHide = Keyboard.addListener(hideEvt, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, [step]);
 
   // Try to prevent screen capture (works if expo-screen-capture is available)
   let usePreventScreenCapture;
@@ -187,7 +209,8 @@ export default function VerifyIdentityScreen({ navigation }) {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.cardPage}
+          ref={scrollRef}
+          contentContainerStyle={[styles.cardPage, { paddingBottom: 32 + keyboardHeight }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -235,8 +258,10 @@ export default function VerifyIdentityScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* Bottom */}
-        <View style={styles.bottom}>
+        {/* Bottom — extra paddingBottom keeps the Verify button visible above
+            the Android soft keyboard (pan mode doesn't reliably move it on its
+            own when the focused field is a native Stripe CardField). */}
+        <View style={[styles.bottom, { paddingBottom: 32 + keyboardHeight }]}>
           <TouchableOpacity
             style={[styles.submitBtn, (!cardComplete || isVerifying) && { opacity: 0.4 }]}
             onPress={handleCardSubmit}
