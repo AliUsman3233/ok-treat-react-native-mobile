@@ -57,8 +57,13 @@ export default function PetDetailScreen({ route, navigation }) {
 
   // Get the finder's current GPS and build a "I found your pet" message.
   // Used by both Share Location (OS share sheet) and WhatsApp.
+  // Returns { message, hadLocation } so callers can warn the user when
+  // GPS is missing and the message reads less useful as a result.
   const buildFinderMessage = async () => {
     let mapsUrl = '';
+    let hadLocation = false;
+    let permissionDenied = false;
+    let timedOut = false;
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
       let perm = status;
@@ -67,28 +72,54 @@ export default function PetDetailScreen({ route, navigation }) {
         perm = req.status;
       }
       if (perm === 'granted') {
-        const loc = await Promise.race([
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000)),
-        ]);
-        const { latitude, longitude } = loc.coords;
-        mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        try {
+          const loc = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000)),
+          ]);
+          const { latitude, longitude } = loc.coords;
+          mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          hadLocation = true;
+        } catch (e) {
+          timedOut = true;
+        }
+      } else {
+        permissionDenied = true;
       }
     } catch (e) {
-      // Permission denied or timeout — continue without location
+      // Unexpected — fall through with no location
     }
     const petName = pet?.name || 'your pet';
     const lines = [
       `Hi! I found ${petName} (matched via OkTreat QR tag).`,
       mapsUrl ? `My current location: ${mapsUrl}` : 'I have your pet — please get in touch.',
     ];
-    return lines.join('\n\n');
+    return { message: lines.join('\n\n'), hadLocation, permissionDenied, timedOut };
   };
 
   const handleShareLocation = async () => {
     try {
-      const message = await buildFinderMessage();
-      await Share.share({ message });
+      const result = await buildFinderMessage();
+      if (!result.hadLocation) {
+        // Warn the finder before sharing — they need to know the owner
+        // won't see GPS coordinates so they don't assume the job is done.
+        const reason = result.permissionDenied
+          ? 'Location permission was denied, so your GPS coordinates won\'t be included.'
+          : 'We couldn\'t get your GPS location in time, so coordinates won\'t be included.';
+        Alert.alert(
+          'Sharing without location',
+          `${reason} You can still share a message, or use Call / WhatsApp to reach the owner directly.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Share Anyway',
+              onPress: () => Share.share({ message: result.message }).catch(() => {}),
+            },
+          ],
+        );
+        return;
+      }
+      await Share.share({ message: result.message });
     } catch (e) {
       // User dismissed the sheet — fine
     }
@@ -103,34 +134,52 @@ export default function PetDetailScreen({ route, navigation }) {
       || '';
     const phone = rawPhone.replace(/[^0-9]/g, '');
     if (!phone) {
-      Alert.alert('No phone on file', 'This pet\'s owner hasn\'t shared a phone number.');
+      Alert.alert(
+        'WhatsApp unavailable',
+        'The owner hasn\'t shared a phone number, so we can\'t reach them on WhatsApp. Try the Emergency Call button or send them an email instead.',
+      );
       return;
     }
-    const message = await buildFinderMessage();
-    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    const result = await buildFinderMessage();
+    const url = `whatsapp://send?phone=${phone}&text=${encodeURIComponent(result.message)}`;
     const supported = await Linking.canOpenURL(url).catch(() => false);
     if (!supported) {
-      // Fallback to wa.me (browser-based — works without WhatsApp installed)
-      const fallback = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      // Fallback to wa.me (browser — works even without WhatsApp installed)
+      const fallback = `https://wa.me/${phone}?text=${encodeURIComponent(result.message)}`;
       Linking.openURL(fallback).catch(() => {
-        Alert.alert('WhatsApp unavailable', 'Could not open WhatsApp. Try calling instead.');
+        Alert.alert(
+          'WhatsApp couldn\'t open',
+          'We couldn\'t launch WhatsApp on this device. Try the Emergency Call button instead — the owner\'s phone is on file.',
+        );
       });
       return;
     }
     Linking.openURL(url).catch((error) => {
       console.error('Failed to open WhatsApp:', error?.message);
-      Alert.alert('WhatsApp unavailable', 'Could not open WhatsApp. Try calling instead.');
+      Alert.alert(
+        'WhatsApp couldn\'t open',
+        'We couldn\'t launch WhatsApp on this device. Try the Emergency Call button instead — the owner\'s phone is on file.',
+      );
     });
   };
 
   const handleEmergencyCall = async () => {
-    const phone = pet?.missingReport?.contactPhone || pet.user?.phone || pet.owner?.phone;
-    if (phone) {
-      try {
-        await Linking.openURL(`tel:${phone}`);
-      } catch (error) {
-        console.error('Failed to open phone dialer:', error);
-      }
+    const phone = pet?.missingReport?.contactPhone || pet?.user?.phone || pet?.owner?.phone;
+    if (!phone) {
+      Alert.alert(
+        'Call unavailable',
+        'The owner hasn\'t shared a phone number for this pet. Try emailing them at the address shown above, or use Share Location to send them a message via another app.',
+      );
+      return;
+    }
+    try {
+      await Linking.openURL(`tel:${phone}`);
+    } catch (error) {
+      console.error('Failed to open phone dialer:', error);
+      Alert.alert(
+        'Couldn\'t open dialer',
+        'Your device blocked the phone dialer. The owner\'s number is: ' + phone,
+      );
     }
   };
 
@@ -213,19 +262,25 @@ export default function PetDetailScreen({ route, navigation }) {
             {/* Owner Details Card */}
             <View style={styles.ownerCard}>
               <Text style={styles.ownerLabel}>Owner Details</Text>
-              <Text style={styles.ownerName}>{pet.user?.fullName || pet.owner?.name || 'Owner name not available'}</Text>
-              <Text style={styles.ownerEmail}>{pet.user?.email || pet.owner?.email || 'Email not available'}</Text>
-              <Text style={styles.ownerAddress}>{pet.user?.address || pet.owner?.address || 'Address not available'}</Text>
+              <Text style={styles.ownerName}>
+                {pet.user?.fullName || pet.owner?.name || 'Owner name not shared'}
+              </Text>
+              <Text style={styles.ownerEmail}>
+                {pet.user?.email || pet.owner?.email || 'Email not shared by owner'}
+              </Text>
+              <Text style={styles.ownerAddress}>
+                {pet.user?.address || pet.owner?.address || 'Address not shared by owner'}
+              </Text>
             </View>
 
-            {/* Health Information Card — only shown when there's data to display */}
-            {healthRows.length > 0 && (
-              <View style={styles.healthCard}>
-                <Text style={styles.healthTitle}>Health Information</Text>
-                <Text style={styles.healthSubtitle}>
-                  Important info if you found this pet
-                </Text>
-                {healthRows.map((row) => (
+            {/* Health Information Card */}
+            <View style={styles.healthCard}>
+              <Text style={styles.healthTitle}>Health Information</Text>
+              <Text style={styles.healthSubtitle}>
+                Important info if you found this pet
+              </Text>
+              {healthRows.length > 0 ? (
+                healthRows.map((row) => (
                   <View key={row.label} style={styles.healthRow}>
                     <Text style={[styles.healthLabel, row.highlight && styles.healthLabelHi]}>
                       {row.label}
@@ -234,9 +289,15 @@ export default function PetDetailScreen({ route, navigation }) {
                       {row.value}
                     </Text>
                   </View>
-                ))}
-              </View>
-            )}
+                ))
+              ) : (
+                <Text style={styles.healthEmpty}>
+                  The owner hasn't shared any health details for this pet yet.
+                  If the pet seems unwell, please contact the owner directly using
+                  the buttons below.
+                </Text>
+              )}
+            </View>
 
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
@@ -501,6 +562,14 @@ const styles = StyleSheet.create({
   healthValueHi: {
     color: '#1F2937',
     fontWeight: '600',
+  },
+  healthEmpty: {
+    color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    paddingVertical: 6,
   },
   actionsContainer: {
     gap: 12,
