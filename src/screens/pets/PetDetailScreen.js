@@ -95,7 +95,12 @@ export default function PetDetailScreen({ route, navigation }) {
   };
 
   const handleWhatsapp = async () => {
-    const rawPhone = pet?.user?.phone || pet?.owner?.phone || '';
+    // Prefer the missing-pet contact phone (owner chose this for the
+    // current lost-pet flow) over the static profile phone.
+    const rawPhone = pet?.missingReport?.contactPhone
+      || pet?.user?.phone
+      || pet?.owner?.phone
+      || '';
     const phone = rawPhone.replace(/[^0-9]/g, '');
     if (!phone) {
       Alert.alert('No phone on file', 'This pet\'s owner hasn\'t shared a phone number.');
@@ -119,7 +124,7 @@ export default function PetDetailScreen({ route, navigation }) {
   };
 
   const handleEmergencyCall = async () => {
-    const phone = pet.user?.phone || pet.owner?.phone;
+    const phone = pet?.missingReport?.contactPhone || pet.user?.phone || pet.owner?.phone;
     if (phone) {
       try {
         await Linking.openURL(`tel:${phone}`);
@@ -128,6 +133,34 @@ export default function PetDetailScreen({ route, navigation }) {
       }
     }
   };
+
+  // Normalize medications — schema stores as JSON (array OR plain string)
+  const medicationsList = (() => {
+    const m = pet?.medications;
+    if (!m) return [];
+    if (Array.isArray(m)) return m.filter(Boolean);
+    if (typeof m === 'string' && m.trim()) return [m.trim()];
+    return [];
+  })();
+
+  // Build a list of health rows that have data — empty fields are skipped
+  // so finders aren't staring at "Microchipped: —" rows.
+  const healthRows = [
+    medicationsList.length > 0 && {
+      label: 'Medications',
+      value: medicationsList.join(', '),
+      highlight: true,
+    },
+    pet?.additionalInstructions && {
+      label: 'Special Needs / Allergies',
+      value: pet.additionalInstructions,
+      highlight: true,
+    },
+    pet?.feedingSchedule && { label: 'Feeding', value: pet.feedingSchedule },
+    pet?.microchipped && { label: 'Microchipped', value: pet.microchipped },
+    pet?.spayedNeutered && { label: 'Spayed / Neutered', value: pet.spayedNeutered },
+    pet?.veterinaryInfo && { label: 'Veterinary Info', value: pet.veterinaryInfo },
+  ].filter(Boolean);
 
   return (
     <ScreenWrapper noBottomTabs>
@@ -184,6 +217,26 @@ export default function PetDetailScreen({ route, navigation }) {
               <Text style={styles.ownerEmail}>{pet.user?.email || pet.owner?.email || 'Email not available'}</Text>
               <Text style={styles.ownerAddress}>{pet.user?.address || pet.owner?.address || 'Address not available'}</Text>
             </View>
+
+            {/* Health Information Card — only shown when there's data to display */}
+            {healthRows.length > 0 && (
+              <View style={styles.healthCard}>
+                <Text style={styles.healthTitle}>Health Information</Text>
+                <Text style={styles.healthSubtitle}>
+                  Important info if you found this pet
+                </Text>
+                {healthRows.map((row) => (
+                  <View key={row.label} style={styles.healthRow}>
+                    <Text style={[styles.healthLabel, row.highlight && styles.healthLabelHi]}>
+                      {row.label}
+                    </Text>
+                    <Text style={[styles.healthValue, row.highlight && styles.healthValueHi]}>
+                      {row.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
@@ -394,6 +447,60 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 16.8,
     textAlign: 'center',
+  },
+  healthCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 1,
+  },
+  healthTitle: {
+    color: '#0D0D12',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  healthSubtitle: {
+    color: '#818898',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    marginBottom: 12,
+  },
+  healthRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  healthLabel: {
+    color: '#6B7280',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 3,
+  },
+  healthLabelHi: {
+    color: '#B0211A',
+  },
+  healthValue: {
+    color: '#1F2937',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    lineHeight: 18,
+  },
+  healthValueHi: {
+    color: '#1F2937',
+    fontWeight: '600',
   },
   actionsContainer: {
     gap: 12,
