@@ -61,7 +61,8 @@
           "color": "#32A6D8"
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-localization"
     ]
   }
 }
