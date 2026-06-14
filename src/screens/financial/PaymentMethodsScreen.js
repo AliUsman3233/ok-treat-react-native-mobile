@@ -212,35 +212,11 @@ export default function PaymentMethodsScreen({ navigation }) {
             />
           </View>
 
-          {/* Toggle Options */}
-          <View style={styles.toggleSection}>
-            {/* Earnings Overview */}
-            <View style={styles.toggleCard}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleTitle}>Earnings Overview</Text>
-                <Text style={styles.toggleSubtitle}>You have not made any withdrawals yet.</Text>
-              </View>
-            
-            </View>
-
-            {/* Withdrawal History */}
-            <View style={styles.toggleCard}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleTitle}>Withdrawal History (External)</Text>
-                <Text style={styles.toggleSubtitle}>No external withdrawals have been made yet.</Text>
-              </View>
-            
-            </View>
-
-            {/* Documents */}
-            <View style={styles.toggleCard}>
-              <View style={styles.toggleInfo}>
-                <Text style={styles.toggleTitle}>Documents</Text>
-                <Text style={styles.toggleSubtitle}>No documents are currently available.</Text>
-              </View>
-             
-            </View>
-          </View>
+          {/* Removed: Earnings Overview / Withdrawal History / Documents
+              static info cards. They looked like interactive cards but had
+              no action attached, which made the screen read as broken.
+              Their data is already represented by the tabs below; the
+              cards added clutter without adding info. */}
 
           {/* Tabs */}
           <View style={styles.tabsContainer}>
@@ -332,7 +308,15 @@ export default function PaymentMethodsScreen({ navigation }) {
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>No transactions in this tab yet.</Text>
+            <Text style={styles.emptyText}>
+              {selectedTab === 'Earning'
+                ? 'No earning activity yet. Coin purchases and refunds will show up here.'
+                : selectedTab === 'Pending Earnings'
+                ? "Sitters earn coins on completed bookings, held 30 days before becoming cashable. You'll see pending earnings here once you complete a booking as a sitter."
+                : selectedTab === 'Payments'
+                ? "No payments yet. When you book a service, the coins spent will appear here."
+                : 'No transactions in this tab yet.'}
+            </Text>
           )}
         </ScrollView>
 
