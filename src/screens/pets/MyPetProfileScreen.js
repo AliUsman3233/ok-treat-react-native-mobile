@@ -38,6 +38,10 @@ export default function MyPetProfileScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [showAboutHint, setShowAboutHint] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
+  // Measured height of the missing-pet banner so the ScrollView's first
+  // child renders below it instead of underneath. Banner is absolutely
+  // positioned and stays pinned below the header as the user scrolls.
+  const [bannerHeight, setBannerHeight] = useState(0);
 
   useEffect(() => {
     fetchPetData();
@@ -296,9 +300,15 @@ export default function MyPetProfileScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Missing Pet Banner */}
+        {/* Missing Pet Banner — absolutely positioned right under the header
+            so it stays visible no matter how far the user scrolls. The
+            ScrollView's content padding-top is set from bannerHeight below
+            so the first chunk of content doesn't render underneath. */}
         {pet?.isMissing && (
-          <View style={styles.missingBanner}>
+          <View
+            style={styles.missingBanner}
+            onLayout={(e) => setBannerHeight(e.nativeEvent.layout.height)}
+          >
             <Icon name="warning" size={20} color="#FFFFFF" />
             <View style={{ flex: 1 }}>
               <Text style={styles.missingBannerTitle}>
@@ -316,7 +326,12 @@ export default function MyPetProfileScreen({ route, navigation }) {
           <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              // Push the first content below the sticky banner. +8 gives a
+              // little breathing room between the banner and the cover image.
+              pet?.isMissing && bannerHeight > 0 && { paddingTop: bannerHeight + 8 },
+            ]}
             keyboardShouldPersistTaps="handled"
           >
             {/* Cover Image & Pet Image */}
@@ -887,11 +902,18 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   missingBanner: {
+    // Sticky banner pinned below the header. zIndex: 5 keeps it above the
+    // scrollable content. It does not occupy normal-flow space; the
+    // ScrollView accounts for it via paddingTop = bannerHeight.
+    position: 'absolute',
+    top: HEADER_HEIGHT,
+    left: 0,
+    right: 0,
+    zIndex: 5,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 24,
-    marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#D93025',
