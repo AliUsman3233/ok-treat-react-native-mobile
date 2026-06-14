@@ -83,6 +83,16 @@ export default function SitterProfileScreen({ navigation }) {
       color: '#32A6D8',
       action: 'rate'
     },
+    // Tester complaint #12: stuck in Sitter mode with no way back. The
+    // mode toggle lives on the user-side MoreScreen; once in SitterTabs
+    // we need an explicit "go back to owner UI" affordance.
+    {
+      title: 'Switch to Owner Mode',
+      component: UserProfileIcon,
+      screen: null,
+      color: '#32A6D8',
+      action: 'switch_to_owner',
+    },
     {
       title: 'Log out',
       component: LogoutProfileIcon,
@@ -97,6 +107,10 @@ export default function SitterProfileScreen({ navigation }) {
       handleLogout();
     } else if (item.action === 'rate') {
       console.log('Rate us');
+    } else if (item.action === 'switch_to_owner') {
+      // Pop back to the pet-owner UI. Auth stays intact; the user can
+      // flip back on via Settings → "Switch to Sitter Mode" anytime.
+      navigation.navigate('MainTabs', { screen: 'Home' });
     } else if (item.screen) {
       navigation.navigate(item.screen);
     }
