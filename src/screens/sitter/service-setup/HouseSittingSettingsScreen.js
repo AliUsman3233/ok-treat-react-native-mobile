@@ -5,6 +5,7 @@ import ScreenWrapper from '../../../components/ScreenWrapper';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import Dropdown from '../../../components/Dropdown';
+import PetTypeMultiSelect from '../../../components/PetTypeMultiSelect';
 import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
@@ -58,7 +59,9 @@ export default function HouseSittingSettingsScreen({ navigation }) {
     // Dropdown states
     const [contactTime, setContactTime] = useState('Select time');
     const [maxPets, setMaxPets] = useState(DEFAULT_MAX_PETS);
-    const [petTypes, setPetTypes] = useState('Small dog (0-15)');
+    // petTypes now holds an array of selected pet types (multi-select).
+    // Legacy rows that saved a single string are tolerated on load below.
+    const [petTypes, setPetTypes] = useState([]);
     const [homeExpectations, setHomeExpectations] = useState('No smoking inside');
     const [hostAvailability, setHostAvailability] = useState('Pets that are not crate trained');
 
@@ -103,7 +106,12 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                 setPottyBreaks(settings.pottyBreaks || '0-2 hours');
                 setContactTime(settings.contactTime || 'Select time');
                 setMaxPets(settings.maxPets || '2');
-                setPetTypes(settings.petTypes || 'Small dog (0-15)');
+                // Tolerate legacy string values (pre multi-select migration)
+                setPetTypes(
+                    Array.isArray(settings.petTypes)
+                        ? settings.petTypes
+                        : settings.petTypes ? [settings.petTypes] : []
+                );
                 setHomeType(settings.homeType || 'House');
                 setYardType(settings.yardType || 'Fenced yard');
                 setHomeExpectations(settings.homeExpectations || 'No smoking inside');
@@ -378,14 +386,7 @@ export default function HouseSittingSettingsScreen({ navigation }) {
 
                         <View style={styles.fieldGroup}>
                             <Text style={styles.fieldLabel}>What type of pets can you sit?</Text>
-                            <Dropdown
-                                placeholder="Select pet type"
-                                value={petTypes}
-                                onSelect={setPetTypes}
-                                options={['Small dog (0-15 lbs)', 'Medium dog (16-40 lbs)', 'Large dog (41-100 lbs)', 'Giant dog (101+ lbs)', 'Cat', 'Bird', 'Rabbit', 'Reptile', 'Small animal', 'Other']}
-                                rightIcon={<AngleDownIcon width={8.33} height={5} fill='#3B1153' />}
-                                containerStyle={styles.dropdownContainer}
-                            />
+                            <PetTypeMultiSelect value={petTypes} onChange={setPetTypes} />
                         </View>
                     </View>
 

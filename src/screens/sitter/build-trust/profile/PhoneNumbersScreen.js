@@ -278,14 +278,17 @@ export default function PhoneNumbersScreen({ navigation }) {
             </Text>
 
             <Text style={styles.fieldLabel}>Primary</Text>
+            <Text style={styles.phoneHint}>
+              Country code (e.g. 1 for US, 92 for Pakistan), then your phone number.
+            </Text>
 
             <View style={styles.phoneInputContainer}>
               <PhoneCallIcon width={15} height={15} fill="#FFC2EB" />
               <View style={styles.phoneDisplayContainer}>
-                <Text style={styles.phoneBracket}>(</Text>
+                <Text style={styles.phoneBracket}>+</Text>
                 <TextInput
                   style={styles.phoneInputSection}
-                  placeholder="xxxx"
+                  placeholder="code"
                   placeholderTextColor="#898D8F"
                   value={primaryPart1}
                   onChangeText={handlePrimaryPart1Change}
@@ -293,7 +296,7 @@ export default function PhoneNumbersScreen({ navigation }) {
                   maxLength={4}
                   ref={primaryRef1}
                 />
-                <Text style={styles.phoneBracket}>)</Text>
+                <Text style={styles.phoneSeparator}> </Text>
                 <TextInput
                   style={styles.phoneInputSectionMid}
                   placeholder="xxx"
@@ -360,13 +363,16 @@ export default function PhoneNumbersScreen({ navigation }) {
             </View>
 
             <Text style={styles.fieldLabel}>Contact number (emergency)</Text>
+            <Text style={styles.phoneHint}>
+              Country code first, then the number.
+            </Text>
             <View style={styles.phoneInputContainer}>
               <PhoneCallIcon width={15} height={15} fill="#FFC2EB" />
               <View style={styles.phoneDisplayContainer}>
-                <Text style={styles.phoneBracket}>(</Text>
+                <Text style={styles.phoneBracket}>+</Text>
                 <TextInput
                   style={styles.phoneInputSection}
-                  placeholder="xxxx"
+                  placeholder="code"
                   placeholderTextColor="#898D8F"
                   value={emergencyPart1}
                   onChangeText={handleEmergencyPart1Change}
@@ -374,7 +380,7 @@ export default function PhoneNumbersScreen({ navigation }) {
                   maxLength={4}
                   ref={emergencyRef1}
                 />
-                <Text style={styles.phoneBracket}>)</Text>
+                <Text style={styles.phoneSeparator}> </Text>
                 <TextInput
                   style={styles.phoneInputSectionMid}
                   placeholder="xxx"
@@ -556,6 +562,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
+  },
+  phoneHint: {
+    color: '#A0AEC0',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontStyle: 'italic',
+    marginBottom: 8,
+    lineHeight: 15,
   },
   phoneInputSection: {
     width: 28,

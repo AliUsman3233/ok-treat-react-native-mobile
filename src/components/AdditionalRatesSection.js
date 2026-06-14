@@ -22,7 +22,41 @@ export default function AdditionalRatesSection({
 }) {
     return (
         <View style={styles.toggleCard}>
-            <TouchableOpacity 
+            {/* Pet Size Categories — required, must be visible by default.
+                Was previously hidden inside the collapsed "Additional Rates"
+                section, which caused testers to hit "select at least one
+                pet size" with no idea where the selector lived. */}
+            <View style={styles.petSizesBlock}>
+                <Text style={styles.petSizesLabel}>Pet sizes you can accept</Text>
+                <Text style={styles.petSizesHint}>Select all weight ranges (in pounds) you can sit.</Text>
+                <View style={styles.sizeOptions}>
+                    {['1-15', '16-40', '41-100', '101+'].map((size, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={[
+                                styles.sizeBox,
+                                selectedPetSizes.includes(size) && styles.sizeBoxSelected
+                            ]}
+                            onPress={() => onTogglePetSize(size)}
+                        >
+                            <Icon
+                                name="paw"
+                                size={24}
+                                color={selectedPetSizes.includes(size) ? '#FFC2EB' : '#D0D0D0'}
+                            />
+                            <Text style={styles.sizeText}>
+                                <Text style={[
+                                    styles.sizeNumber,
+                                    selectedPetSizes.includes(size) && styles.sizeNumberSelected
+                                ]}>{size}{'\n'}</Text>
+                                <Text style={styles.sizeLabel}>pounds</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
+            <TouchableOpacity
                 style={styles.showMoreButton}
                 onPress={onToggleShow}
             >
@@ -177,32 +211,6 @@ export default function AdditionalRatesSection({
                         </View>
                     </View>
 
-                    {/* Pet Size Categories */}
-                    <View style={styles.sizeOptions}>
-                        {['1-15', '16-40', '41-100', '101+'].map((size, index) => (
-                            <TouchableOpacity 
-                                key={index} 
-                                style={[
-                                    styles.sizeBox,
-                                    selectedPetSizes.includes(size) && styles.sizeBoxSelected
-                                ]}
-                                onPress={() => onTogglePetSize(size)}
-                            >
-                                <Icon 
-                                    name="paw" 
-                                    size={24} 
-                                    color={selectedPetSizes.includes(size) ? '#FFC2EB' : '#D0D0D0'} 
-                                />
-                                <Text style={styles.sizeText}>
-                                    <Text style={[
-                                        styles.sizeNumber,
-                                        selectedPetSizes.includes(size) && styles.sizeNumberSelected
-                                    ]}>{size}{'\n'}</Text>
-                                    <Text style={styles.sizeLabel}>pounds</Text>
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
                 </View>
             )}
         </View>
@@ -335,6 +343,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         marginTop: 12,
+    },
+    petSizesBlock: {
+        marginBottom: 16,
+    },
+    petSizesLabel: {
+        color: '#090E12',
+        fontSize: 12,
+        fontFamily: 'Avenir LT Std',
+        fontWeight: '600',
+        lineHeight: 20,
+        marginBottom: 2,
+    },
+    petSizesHint: {
+        color: '#A0AEC0',
+        fontSize: 11,
+        fontFamily: 'Avenir LT Std',
+        fontStyle: 'italic',
+        marginBottom: 4,
+        lineHeight: 15,
     },
     sizeBox: {
         flex: 1,

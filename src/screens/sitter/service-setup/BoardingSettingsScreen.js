@@ -6,6 +6,7 @@ import ScreenWrapper from '../../../components/ScreenWrapper';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import Dropdown from '../../../components/Dropdown';
+import PetTypeMultiSelect from '../../../components/PetTypeMultiSelect';
 import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, CoinBackgroundIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
@@ -60,7 +61,9 @@ export default function BoardingSettingsScreen({ navigation }) {
     // Dropdown states
     const [contactTime, setContactTime] = useState('Select time');
     const [maxPets, setMaxPets] = useState(DEFAULT_MAX_PETS);
-    const [petTypes, setPetTypes] = useState('Small dog (0-15)');
+    // petTypes now holds an array of selected pet types (multi-select).
+    // Legacy rows that saved a single string are tolerated on load below.
+    const [petTypes, setPetTypes] = useState([]);
     const [homeExpectations, setHomeExpectations] = useState('No smoking inside');
     const [hostAvailability, setHostAvailability] = useState('Unneutered male dogs');
 
@@ -110,7 +113,12 @@ export default function BoardingSettingsScreen({ navigation }) {
                 setPottyBreaks(settings.pottyBreaks || '0-2 hours');
                 setContactTime(settings.contactTime || 'Select time');
                 setMaxPets(settings.maxPets || '2');
-                setPetTypes(settings.petTypes || 'Small dog (0-15)');
+                // Tolerate legacy string values (pre multi-select migration)
+                setPetTypes(
+                    Array.isArray(settings.petTypes)
+                        ? settings.petTypes
+                        : settings.petTypes ? [settings.petTypes] : []
+                );
                 setHomeType(settings.homeType || 'House');
                 setYardType(settings.yardType || 'Fenced yard');
                 setHomeExpectations(settings.homeExpectations || 'No smoking inside');
@@ -278,7 +286,41 @@ export default function BoardingSettingsScreen({ navigation }) {
                                 </TouchableOpacity>
                             </View>
                             
-                            <TouchableOpacity 
+                            {/* Pet Size Categories — required. Previously buried inside
+                                the collapsed Additional Rates section, which caused testers
+                                to hit "select at least one pet size" with no idea where the
+                                selector lived. Now a top-level required field. */}
+                            <View style={{ marginTop: 16 }}>
+                                <Text style={styles.fieldLabel}>Pet sizes you can accept</Text>
+                                <Text style={styles.fieldHint}>Select all weight ranges (in pounds) you can sit.</Text>
+                                <View style={styles.sizeOptions}>
+                                    {['1-15', '16-40', '41-100', '101+'].map((size, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[
+                                                styles.sizeBox,
+                                                selectedPetSizes.includes(size) && styles.sizeBoxSelected
+                                            ]}
+                                            onPress={() => togglePetSize(size)}
+                                        >
+                                            <Icon
+                                                name="paw"
+                                                size={24}
+                                                color={selectedPetSizes.includes(size) ? '#FFC2EB' : '#D0D0D0'}
+                                            />
+                                            <Text style={styles.sizeText}>
+                                                <Text style={[
+                                                    styles.sizeNumber,
+                                                    selectedPetSizes.includes(size) && styles.sizeNumberSelected
+                                                ]}>{size}{'\n'}</Text>
+                                                <Text style={styles.sizeLabel}>pounds</Text>
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <TouchableOpacity
                                 style={styles.showMoreButton}
                                 onPress={() => setShowAdditionalRates(!showAdditionalRates)}
                             >
@@ -433,32 +475,6 @@ export default function BoardingSettingsScreen({ navigation }) {
                                         </View>
                                     </View>
 
-                                    {/* Pet Size Categories */}
-                                    <View style={styles.sizeOptions}>
-                                        {['1-15', '16-40', '41-100', '101+'].map((size, index) => (
-                                            <TouchableOpacity 
-                                                key={index} 
-                                                style={[
-                                                    styles.sizeBox,
-                                                    selectedPetSizes.includes(size) && styles.sizeBoxSelected
-                                                ]}
-                                                onPress={() => togglePetSize(size)}
-                                            >
-                                                <Icon 
-                                                    name="paw" 
-                                                    size={24} 
-                                                    color={selectedPetSizes.includes(size) ? '#FFC2EB' : '#D0D0D0'} 
-                                                />
-                                                <Text style={styles.sizeText}>
-                                                    <Text style={[
-                                                        styles.sizeNumber,
-                                                        selectedPetSizes.includes(size) && styles.sizeNumberSelected
-                                                    ]}>{size}{'\n'}</Text>
-                                                    <Text style={styles.sizeLabel}>pounds</Text>
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
                                 </View>
                             )}
                         </View>
@@ -559,14 +575,7 @@ export default function BoardingSettingsScreen({ navigation }) {
 
                         <View style={styles.fieldGroup}>
                             <Text style={styles.fieldLabel}>What type of pets can you sit in your home?</Text>
-                            <Dropdown
-                                placeholder="Select pet type"
-                                value={petTypes}
-                                onSelect={setPetTypes}
-                                options={['Small dog (0-15 lbs)', 'Medium dog (16-40 lbs)', 'Large dog (41-100 lbs)', 'Giant dog (101+ lbs)', 'Cat', 'Bird', 'Rabbit', 'Reptile', 'Small animal', 'Other']}
-                                rightIcon={<AngleDownIcon width={8.33} height={5} fill='#3B1153' />}
-                                containerStyle={styles.dropdownContainer}
-                            />
+                            <PetTypeMultiSelect value={petTypes} onChange={setPetTypes} />
                         </View>
                     </View>
 
@@ -782,6 +791,14 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         lineHeight: 20,
         marginBottom: 2,
+    },
+    fieldHint: {
+        color: '#A0AEC0',
+        fontSize: 11,
+        fontFamily: 'Avenir LT Std',
+        fontStyle: 'italic',
+        marginBottom: 4,
+        lineHeight: 15,
     },
     rateInputWrapper: {
         position: 'relative',
