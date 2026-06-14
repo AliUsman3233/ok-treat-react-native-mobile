@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CoinIcon } from '../../assets';
 import { Button } from '../../components';
@@ -33,6 +33,13 @@ export default function ShopCoinsScreen({ navigation }) {
 
   const [showCardSheet, setShowCardSheet] = useState(false);
   const [confirming, setConfirming] = useState(false);
+
+  // Track whether the screen is still mounted. Without this, a slow
+  // post-payment polling loop can call setState after the user navigates
+  // away from Shop Coins — which throws and on some devices kills the
+  // whole RN bridge. Tester reported a hard crash here.
+  const isMountedRef = useRef(true);
+  useEffect(() => () => { isMountedRef.current = false; }, []);
 
   const handleBack = () => navigation.goBack();
 
@@ -99,6 +106,17 @@ export default function ShopCoinsScreen({ navigation }) {
   // After Stripe confirms the charge, the backend webhook credits the user.
   // The webhook is async, so we poll the balance for a few seconds until it
   // increases. The card sheet stays closed at this point.
+  //
+  // Defensive layout (tester reported a hard crash here on Android):
+  //   1. mounted-guard on every setState so a back-nav during the 12s poll
+  //      can't throw "setState on unmounted component" and kill the bridge
+  //   2. wallet.refresh() in try/catch — context update during a teardown
+  //      window has been seen to crash the native screen container
+  //   3. success alert deferred behind setTimeout(300) so the Stripe Modal
+  //      has time to fully animate out before our ProfileVerifiedModal
+  //      mounts. Two RN Modals in flight at once is a known Android crash.
+  //   4. Final outer try/catch — if anything still throws, surface a
+  //      simple message and don't tear down the screen.
   const handlePaymentConfirmed = async () => {
     setShowCardSheet(false);
     setConfirming(true);
@@ -108,41 +126,59 @@ export default function ShopCoinsScreen({ navigation }) {
     const before = balance;
 
     let credited = false;
-    for (let attempt = 0; attempt < 8 && !credited; attempt++) {
-      // Webhook usually lands within 1–3 seconds; we poll up to ~12s.
-      await new Promise((r) => setTimeout(r, 1500));
-      try {
-        const response = await api.get('/coins/balance');
-        const data = response.data?.data || {};
-        const newBalance = Number(data.coinBalance || 0);
-        setBalance(newBalance);
-        if (newBalance >= before + expectedDelta) {
-          credited = true;
+    try {
+      for (let attempt = 0; attempt < 8 && !credited; attempt++) {
+        // Webhook usually lands within 1–3 seconds; we poll up to ~12s.
+        await new Promise((r) => setTimeout(r, 1500));
+        if (!isMountedRef.current) return; // user navigated away — bail
+        try {
+          const response = await api.get('/coins/balance');
+          const data = response.data?.data || {};
+          const newBalance = Number(data.coinBalance || 0);
+          if (!Number.isNaN(newBalance) && isMountedRef.current) {
+            setBalance(newBalance);
+            if (newBalance >= before + expectedDelta) credited = true;
+          }
+        } catch (e) {
+          // Transient — keep polling.
         }
-      } catch (e) {
-        // Ignore transient errors and keep polling.
       }
-    }
 
-    setConfirming(false);
-    // Propagate the new balance to every screen that uses WalletContext —
-    // some screens won't re-mount on navigation so the global refresh is
-    // what keeps the rest of the app in sync.
-    wallet.refresh();
-    if (credited) {
-      alert(
-        'Success',
-        `${expectedDelta} coins added to your account.`,
-        'success',
-      );
-    } else {
-      // Payment succeeded but webhook hasn't credited yet. Common reasons:
-      // webhook secret misconfig, network blip. Tell the user it's pending.
-      alert(
-        'Payment received',
-        'Your payment was charged. Coins will appear in your balance shortly.',
-        'success',
-      );
+      if (!isMountedRef.current) return;
+      setConfirming(false);
+
+      // Propagate to other screens via WalletContext. Crash here would be
+      // rare but has been seen during teardown — wrap defensively.
+      try { wallet.refresh?.(); } catch (e) {
+        console.warn('wallet.refresh failed:', e?.message);
+      }
+
+      // Defer the modal so Stripe's modal can finish dismissing first.
+      // Two simultaneous Modals on Android occasionally hard-crash the
+      // native UIManager.
+      const showSuccess = () => {
+        if (!isMountedRef.current) return;
+        try {
+          if (credited) {
+            alert('Success', `${expectedDelta} coins added to your account.`, 'success');
+          } else {
+            alert(
+              'Payment received',
+              'Your payment was charged. Coins will appear in your balance shortly.',
+              'success',
+            );
+          }
+        } catch (e) {
+          // Custom alert layer threw — log and move on. The payment still
+          // went through; the user can refresh to see the updated balance.
+          console.warn('Success alert failed to render:', e?.message);
+        }
+      };
+      setTimeout(showSuccess, 300);
+    } catch (outer) {
+      // Catch-all so a transient native hiccup can't take down the screen.
+      console.error('handlePaymentConfirmed crashed:', outer?.message || outer);
+      if (isMountedRef.current) setConfirming(false);
     }
   };
 
