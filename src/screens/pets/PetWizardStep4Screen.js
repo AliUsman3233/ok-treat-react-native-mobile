@@ -24,6 +24,27 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
     navigation.navigate('PetQRScan', { returnScreen, currentQrCode: formData?.qrCode || null });
   };
 
+  // Lost-tag flow: owner unlinks the current tag, then can scan a fresh one.
+  // Deliberately two steps (de-link first, link new after) so accidental
+  // taps on a single icon can't silently replace a linked tag.
+  const handleUnlinkQR = () => {
+    const code = formData?.qrCode || '';
+    const petName = formData?.name || 'this pet';
+    if (!code) return;
+    Alert.alert(
+      'Unlink this QR tag?',
+      `Unlink ${code} from ${petName}? You can link a new tag any time. The change is saved when you tap Save.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unlink',
+          style: 'destructive',
+          onPress: () => setFormData({ ...formData, qrCode: '' }),
+        },
+      ]
+    );
+  };
+
   const handleImageSelected = async (imageUri) => {
     try {
       setUploading(true);
@@ -135,12 +156,23 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
               value={formData?.qrCode || ''}
               editable={false}
             />
-            <TouchableOpacity
-              style={styles.scanIconButton}
-              onPress={handleScanQR}
-            >
-              <ScanAltIcon width={24} height={24} color="#32A6D8" />
-            </TouchableOpacity>
+            {formData?.qrCode ? (
+              <TouchableOpacity
+                style={styles.scanIconButton}
+                onPress={handleUnlinkQR}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="close-circle" size={24} color="#D93025" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.scanIconButton}
+                onPress={handleScanQR}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <ScanAltIcon width={24} height={24} color="#32A6D8" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

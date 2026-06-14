@@ -163,6 +163,11 @@ export default function OTPEntryScreen({ route, navigation }) {
           We sent a {CODE_LENGTH}-digit code to{'\n'}
           <Text style={styles.destination}>{destination || ''}</Text>
         </Text>
+        {otpMethod === 'email' && (
+          <Text style={styles.spamNote}>
+            If you don't see it within a minute, please check your spam or junk folder.
+          </Text>
+        )}
 
         {devCode && (
           <View style={styles.devBanner}>
@@ -282,6 +287,16 @@ const styles = StyleSheet.create({
   destination: {
     color: '#32A6D8',
     fontWeight: '600',
+  },
+  spamNote: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    textAlign: 'center',
+    lineHeight: 17,
+    marginTop: -22,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    fontStyle: 'italic',
   },
   otpRow: {
     flexDirection: 'row',

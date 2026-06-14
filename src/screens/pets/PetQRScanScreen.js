@@ -304,7 +304,15 @@ export default function PetQRScanScreen({ navigation, route }) {
     processingRef.current = false;
   };
 
-  const handleCannotScan = () => navigation.navigate('PetQRManualEntry');
+  // Forward link-flow context (returnScreen, currentQrCode) so the manual
+  // entry screen knows whether it's looking up someone else's pet (lookup
+  // mode) or linking a tag during Add/Edit Pet (link mode). Without this
+  // the manual entry treats NOT_LINKED as an error even when the user is
+  // trying to claim a fresh tag.
+  const handleCannotScan = () => {
+    const returnScreen = navigation.getState()?.routes?.find(r => r.name === 'PetQRScan')?.params?.returnScreen;
+    navigation.replace('PetQRManualEntry', { returnScreen, currentQrCode });
+  };
   const handleBack = () => navigation.goBack();
 
   // Permission states

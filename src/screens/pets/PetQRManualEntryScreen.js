@@ -10,10 +10,20 @@ import { extractQRCode } from '../../utils/qrCode';
 
 const { width, height } = Dimensions.get('window');
 
-export default function PetQRManualEntryScreen({ navigation }) {
+export default function PetQRManualEntryScreen({ navigation, route }) {
   const alert = useAppAlert();
   const [tagId, setTagId] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Two modes:
+  //   - Lookup (no returnScreen): finder scanning a tag from Home, expects to
+  //     see the linked pet. NOT_LINKED is an error here.
+  //   - Link (returnScreen set): owner claiming a new tag during Add/Edit
+  //     Pet. NOT_LINKED + NOT_FOUND are SUCCESS — those codes are free to
+  //     claim, so we return the code to the wizard. Only DEACTIVATED and an
+  //     already-claimed code block the link.
+  const { returnScreen, currentQrCode } = route?.params || {};
+  const isLinkMode = !!returnScreen;
 
   const handleBack = () => {
     navigation.goBack();
@@ -27,13 +37,28 @@ export default function PetQRManualEntryScreen({ navigation }) {
       return;
     }
 
+    // In link mode, re-entering the code already linked to this pet is a no-op accept
+    if (isLinkMode && currentQrCode && code === currentQrCode) {
+      navigation.navigate({ name: returnScreen, params: { qrCode: code }, merge: true });
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await getPetByQRCode(code);
       if (response.data?.pet) {
-        // Record the scan in background
-        createScan({ qrCode: code }).catch((err) => console.warn('Manual scan record failed:', err?.message));
-        navigation.replace('PetDetail', { petData: response.data.pet, qrCode: code });
+        if (isLinkMode) {
+          // Code is already linked to a different pet — block
+          alert('Already Linked', 'This QR tag is already linked to another pet. Please use a different code.', 'pending');
+        } else {
+          // Lookup mode — record scan and show pet
+          createScan({ qrCode: code }).catch((err) => console.warn('Manual scan record failed:', err?.message));
+          navigation.replace('PetDetail', { petData: response.data.pet, qrCode: code });
+        }
+      } else if (isLinkMode) {
+        // Defensive — shouldn't happen with a 200 response, but if pet is
+        // missing for any reason in link mode, accept the code.
+        navigation.navigate({ name: returnScreen, params: { qrCode: code }, merge: true });
       } else {
         alert('No Pet Found', 'No pet is linked with this tag ID. Please check and try again.', 'pending');
       }
@@ -41,8 +66,20 @@ export default function PetQRManualEntryScreen({ navigation }) {
       const reason = err?.reason;
       if (reason === 'DEACTIVATED') {
         alert('Tag Deactivated', 'This QR tag has been deactivated and is no longer valid.', 'pending');
-      } else if (reason === 'NOT_LINKED') {
-        alert('Tag Not Linked', 'This QR tag is not linked to any pet yet.', 'pending');
+      } else if (reason === 'NOT_LINKED' || reason === 'NOT_FOUND') {
+        if (isLinkMode) {
+          // Free to claim — return the code to the wizard
+          navigation.navigate({ name: returnScreen, params: { qrCode: code }, merge: true });
+        } else {
+          // Lookup mode — keep the original error so finders aren't misled
+          alert(
+            reason === 'NOT_LINKED' ? 'This tag isn\'t claimed yet' : 'Tag not found',
+            reason === 'NOT_LINKED'
+              ? 'The code is valid but no pet is currently linked to it. If this is your tag, please re-scan it or contact support to claim it.'
+              : "We couldn't find this code in our system. Please check and try again.",
+            'pending'
+          );
+        }
       } else if (reason === 'INVALID_FORMAT') {
         alert('Invalid QR Code', "This doesn't appear to be a valid OkTreat QR code.", 'pending');
       } else {
