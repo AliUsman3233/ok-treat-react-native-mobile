@@ -103,6 +103,9 @@ export default function VerificationScreen({ navigation }) {
               <Text style={styles.emailHighlight}>{user?.email || 'your email'}</Text>
               {'\n\n'}Please check your inbox and verify your email address to continue.
             </Text>
+            <Text style={styles.spamNote}>
+              If you don't see it within a minute, please check your spam or junk folder.
+            </Text>
 
             <Button
               title={resending ? 'Sending...' : 'Resend Verification Email'}
@@ -197,6 +200,16 @@ const styles = StyleSheet.create({
   emailHighlight: {
     color: '#32A6D8',
     fontWeight: '600',
+  },
+  spamNote: {
+    textAlign: 'center',
+    color: '#A0AEC0',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontStyle: 'italic',
+    lineHeight: 17,
+    paddingHorizontal: 24,
+    marginTop: 8,
   },
   loadingText: {
     marginTop: 12,

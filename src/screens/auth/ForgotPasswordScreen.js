@@ -246,7 +246,10 @@ export default function ForgotPasswordScreen({ navigation }) {
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
-          Enter the code sent to {email} and create your new password.
+          Enter the code sent to {email || 'your email'} and create your new password.
+        </Text>
+        <Text style={styles.spamNote}>
+          If you don't see it within a minute, please check your spam or junk folder.
         </Text>
 
         {/* Verification Code Input */}
@@ -451,6 +454,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
     lineHeight: 22,
+    marginBottom: 8,
+  },
+  spamNote: {
+    width: 283,
+    textAlign: 'center',
+    color: '#A0AEC0',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontStyle: 'italic',
+    lineHeight: 17,
     marginBottom: 24,
   },
   requirementsContainer: {
