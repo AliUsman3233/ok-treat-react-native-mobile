@@ -13,7 +13,8 @@ import {
   CreditCardIcon,
   SettingsIcon,
   StoreIcon,
-  HeadphonesIcon
+  HeadphonesIcon,
+  OrderApproveIcon,
 } from '../../assets';
 
 export default function MoreScreen({ navigation }) {
@@ -104,6 +105,14 @@ export default function MoreScreen({ navigation }) {
       title: 'Your Pet',
       screen: 'PetList',
       component: PawIcon
+    },
+    // Tester comment 5 (round 5): wanted My Bookings accessible from the
+    // More tab in addition to the Home grid card. Grouped here with the
+    // other "things I own/manage" rows.
+    {
+      title: 'My Bookings',
+      screen: 'Bookings',
+      component: OrderApproveIcon,
     },
     {
       title: 'My Requests',
