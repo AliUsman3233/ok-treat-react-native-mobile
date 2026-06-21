@@ -428,21 +428,25 @@ const styles = StyleSheet.create({
     lineHeight: 18.2,
   },
   myPetsButton: {
-    width: width*0.7,
-    height: 40,
+    // Was height:40 with lineHeight:24.8 text inside → the inner space
+    // (40 − 16px vert padding) was 24px, less than the line height, so
+    // the label clipped and looked off-center. Bumped to 48 + removed
+    // the rigid lineHeight + killed Android's extra font padding so the
+    // glyph sits on the geometric center of the pill.
+    width: width * 0.7,
+    height: 48,
     backgroundColor: '#FFC2EB',
     borderRadius: 52,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   myPetsButtonText: {
     color: '#32A6D8',
     fontSize: 16,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
-    lineHeight: 24.8,
     textAlign: 'center',
+    includeFontPadding: false,
   },
 });
