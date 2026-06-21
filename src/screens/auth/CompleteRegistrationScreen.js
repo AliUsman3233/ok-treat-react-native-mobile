@@ -23,6 +23,7 @@ import {
   AngleDownIcon
 } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,6 +47,7 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const [countryCode, setCountryCode] = useState('+1');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [loading, setLoading] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const handleContinue = () => {
     // Validate required fields
@@ -92,7 +94,7 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
       {/* Scrollable Form Content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

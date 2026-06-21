@@ -16,6 +16,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { BackArrowIcon, GoogleIcon, AppleIcon } from '../../assets';
 import { signInWithGoogle } from '../../services/googleAuthService';
+import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export default function RegisterScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
+  const keyboardHeight = useKeyboardHeight();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -82,9 +84,9 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <ScreenWrapper style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
