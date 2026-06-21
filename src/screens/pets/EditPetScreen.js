@@ -121,28 +121,50 @@ export default function EditPetScreen({ navigation, route }) {
     return currentStep === totalSteps ? 'Save Changes' : 'Next';
   };
 
+  // Same per-step required-field rules as AddPet, so editing can't blank
+  // out fields that are required for a complete pet profile.
+  const has = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+  const hasAge = () => has(formData.ageYears) || has(formData.ageMonths);
+  const STEP_RULES = {
+    1: [
+      ['petType', 'Please select a pet type',                 () => has(formData.petType)],
+      ['name',    'Please enter the pet\'s name',             () => has(formData.name)],
+      ['weight',  'Please enter the pet\'s weight',           () => has(formData.weight)],
+      ['breed',   'Please enter the pet\'s breed',            () => has(formData.breed)],
+      ['age',     'Please enter the pet\'s age',              hasAge],
+      ['sex',     'Please select the pet\'s sex',             () => has(formData.sex)],
+      ['photo',   'Please upload a photo of the pet',         () => has(formData.photo)],
+    ],
+    2: [
+      ['microchipped',         'Please answer: is the pet microchipped?',       () => has(formData.microchipped)],
+      ['spayedNeutered',       'Please answer: is the pet spayed/neutered?',    () => has(formData.spayedNeutered)],
+      ['houseTrained',         'Please answer: is the pet house-trained?',      () => has(formData.houseTrained)],
+      ['friendlyWithChildren', 'Please answer: is the pet friendly with kids?', () => has(formData.friendlyWithChildren)],
+      ['friendlyWithPets',     'Please answer: is the pet friendly with pets?', () => has(formData.friendlyWithPets)],
+      ['adoptionDate',         'Please pick the adoption date',                 () => has(formData.adoptionDate)],
+    ],
+    3: [
+      ['pottyBreak',      'Please select potty break frequency',        () => has(formData.pottyBreak)],
+      ['energyLevel',     'Please select the energy level',             () => has(formData.energyLevel)],
+      ['feedingSchedule', 'Please select the feeding schedule',         () => has(formData.feedingSchedule)],
+      ['canBeLeftAlone',  'Please answer: can the pet be left alone?',  () => has(formData.canBeLeftAlone)],
+    ],
+    4: [
+      ['veterinaryInfo', 'Please enter veterinary info', () => has(formData.veterinaryInfo)],
+    ],
+  };
+
   const validateStep = (step) => {
-    switch (step) {
-      case 1:
-        return !!(formData.petType && formData.name && formData.name.trim());
-      case 2:
-      case 3:
-      case 4:
-        return true;
-      default:
-        return false;
-    }
+    const rules = STEP_RULES[step];
+    if (!rules) return false;
+    return rules.every(([, , check]) => check());
   };
 
   const getValidationMessage = (step) => {
-    switch (step) {
-      case 1:
-        if (!formData.petType) return 'Please select a pet type';
-        if (!formData.name || !formData.name.trim()) return 'Please enter pet name';
-        return '';
-      default:
-        return '';
-    }
+    const rules = STEP_RULES[step];
+    if (!rules) return '';
+    const missing = rules.find(([, , check]) => !check());
+    return missing ? missing[1] : '';
   };
 
   const isCurrentStepValid = validateStep(currentStep);
