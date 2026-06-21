@@ -243,6 +243,12 @@ const appStyles = StyleSheet.create({
     color: '#32A6D8',
     fontSize: 16,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '700',
+    fontWeight: '600',
+    textAlign: 'center',
+    // Android adds ~4px of padding above/below the glyph metrics by default,
+    // which makes a single-line label look slightly off-center inside a
+    // fixed-height pill. Disabling it lets the label sit on the geometric
+    // center.
+    includeFontPadding: false,
   },
 });
