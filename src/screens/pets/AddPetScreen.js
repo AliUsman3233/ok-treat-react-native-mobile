@@ -231,7 +231,7 @@ export default function AddPetScreen({ navigation, route }) {
         {/* Footer - Absolute positioned at bottom */}
         <View style={styles.footer}>
           {!isCurrentStepValid && validationMessage && (
-            <Text style={styles.validationMessage}>{validationMessage}</Text>
+            <Text style={styles.validationMessage} numberOfLines={2}>{validationMessage}</Text>
           )}
           <Button 
             title={getButtonText()} 
@@ -277,7 +277,11 @@ export default function AddPetScreen({ navigation, route }) {
 }
 
 const HEADER_HEIGHT = 60;
-const FOOTER_HEIGHT = 90;
+// Footer holds the validation message (when a required field is missing
+// on the current step) PLUS the Next/Save button. 90px wasn't enough to
+// fit both — the button was being clipped off the bottom. 130px lets a
+// 2-line message + button + safe padding all fit.
+const FOOTER_HEIGHT = 130;
 
 const styles = StyleSheet.create({
   container: {

@@ -263,7 +263,7 @@ export default function EditPetScreen({ navigation, route }) {
         {/* Footer */}
         <View style={styles.footer}>
           {!isCurrentStepValid && validationMessage && (
-            <Text style={styles.validationMessage}>{validationMessage}</Text>
+            <Text style={styles.validationMessage} numberOfLines={2}>{validationMessage}</Text>
           )}
           <Button
             title={getButtonText()}
@@ -309,7 +309,9 @@ export default function EditPetScreen({ navigation, route }) {
 }
 
 const HEADER_HEIGHT = 60;
-const FOOTER_HEIGHT = 90;
+// Bumped from 90 → 130 so the validation message + button fit together
+// without the Next button being clipped off the bottom.
+const FOOTER_HEIGHT = 130;
 
 const styles = StyleSheet.create({
   container: {
