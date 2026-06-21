@@ -32,14 +32,26 @@ export const registerForPushNotifications = async () => {
     }
     if (finalStatus !== 'granted') return null;
 
-    // Android default channel for high-priority pushes
+    // Android channel for high-priority pushes. `sound` references the
+    // bundled raw resource at android/app/src/main/res/raw/notification.mp3
+    // (filename without extension).
+    //
+    // NOTE: Android does NOT allow modifying a channel's sound after the
+    // channel exists on a device. We use a versioned channel ID so adding
+    // / changing the sound takes effect on the next app launch without
+    // requiring users to uninstall + reinstall. Bump the version suffix
+    // whenever the channel's audio changes.
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+      await Notifications.setNotificationChannelAsync('oktreat-default-v2', {
+        name: 'OkTreat Notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#32A6D8',
+        sound: 'notification',
       }).catch(() => {});
+      // Delete the legacy 'default' channel so users don't see two
+      // notification categories in system settings.
+      await Notifications.deleteNotificationChannelAsync('default').catch(() => {});
     }
 
     const tokenResp = await Notifications.getExpoPushTokenAsync();

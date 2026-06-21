@@ -6,6 +6,7 @@ import { loadAppSettings } from '../store/slices/appSlice';
 import { connectSocket, disconnectSocket } from '../config/socket';
 import { addNotification } from '../store/slices/notificationSlice';
 import { getSocket } from '../config/socket';
+import { playNotificationSound } from '../utils/notificationSound';
 
 import SplashScreen from '../screens/auth/SplashScreen';
 import AuthNavigator from './AuthNavigator';
@@ -42,8 +43,12 @@ export default function RootNavigator() {
       connectSocket().then((sock) => {
         if (sock) {
           // Global listener: push incoming notifications into Redux
+          // and play the OkTreat foreground chime. Background pushes
+          // get their sound from the Android notification channel /
+          // Expo push payload instead.
           const handleNewNotification = (notification) => {
             dispatch(addNotification(notification));
+            playNotificationSound();
           };
           sock.off('newNotification', handleNewNotification); // avoid duplicates
           sock.on('newNotification', handleNewNotification);
