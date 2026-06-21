@@ -148,8 +148,10 @@ export default function HomeScreen({ navigation }) {
             )}
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.welcomeText}>{t('home.welcome')}</Text>
-            <Text style={styles.emailText}>{user?.email || t('home.noEmail')}</Text>
+            <Text style={styles.welcomeText} numberOfLines={1}>{t('home.welcome')}</Text>
+            <Text style={styles.emailText} numberOfLines={1} ellipsizeMode="tail">
+              {user?.email || t('home.noEmail')}
+            </Text>
           </View>
           {/* Notification bell — top-right header button. Standard
               pattern testers expect for accessing alerts/notifications. */}
