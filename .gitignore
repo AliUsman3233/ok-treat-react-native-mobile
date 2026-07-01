@@ -47,3 +47,7 @@ Thumbs.db
 
 # backup files
 *.backup
+
+# Dev/build logs — never commit
+metro.log
+android/release-build.log
