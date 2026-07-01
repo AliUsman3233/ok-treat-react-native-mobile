@@ -63,7 +63,9 @@ export default function HouseSittingSettingsScreen({ navigation }) {
     // Legacy rows that saved a single string are tolerated on load below.
     const [petTypes, setPetTypes] = useState([]);
     const [homeExpectations, setHomeExpectations] = useState('No smoking inside');
-    const [hostAvailability, setHostAvailability] = useState('Pets that are not crate trained');
+    // hostAvailability holds an array of selected options (multi-select).
+    // Legacy rows that saved a single string are tolerated on load below.
+    const [hostAvailability, setHostAvailability] = useState([]);
 
     // Calculate additional rates based on base rate when toggle is ON
     React.useEffect(() => {
@@ -115,7 +117,12 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                 setHomeType(settings.homeType || 'House');
                 setYardType(settings.yardType || 'Fenced yard');
                 setHomeExpectations(settings.homeExpectations || 'No smoking inside');
-                setHostAvailability(settings.hostAvailability || 'Pets that are not crate trained');
+                // Tolerate legacy single-string values (pre multi-select migration)
+                setHostAvailability(
+                    Array.isArray(settings.hostAvailability)
+                        ? settings.hostAvailability
+                        : settings.hostAvailability ? [settings.hostAvailability] : []
+                );
                 setCancellationPolicy(settings.cancellationPolicy || 'Same Day');
             } else {
                 setIsExistingData(false);
@@ -444,13 +451,10 @@ export default function HouseSittingSettingsScreen({ navigation }) {
 
                         <View style={styles.fieldGroup}>
                             <Text style={styles.fieldLabel}>Are you available to host any of these?</Text>
-                            <Dropdown
-                                placeholder="Select availability"
+                            <PetTypeMultiSelect
                                 value={hostAvailability}
-                                onSelect={setHostAvailability}
+                                onChange={setHostAvailability}
                                 options={['Pets that are not crate trained', 'Unneutered male dogs', 'Female dogs in heat', 'Puppies', 'Senior pets', 'Special needs pets']}
-                                rightIcon={<AngleDownIcon width={8.33} height={5} fill='#3B1153' />}
-                                containerStyle={styles.dropdownContainer}
                             />
                         </View>
                     </View>
