@@ -17,6 +17,8 @@ import { BackArrowIcon } from '../../assets';
 import { useAppAlert } from '../../context/AlertContext';
 import { reportPetMissing } from '../../services/petService';
 import { useSelector } from 'react-redux';
+import PhoneInput from '../../components/PhoneInput';
+import { defaultCountryInfo, parsePhone, toE164, isValidPhone } from '../../utils/phone';
 
 export default function ReportMissingScreen({ navigation, route }) {
   const alert = useAppAlert();
@@ -27,7 +29,13 @@ export default function ReportMissingScreen({ navigation, route }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState('date');
   const [location, setLocation] = useState({ address: '', latitude: null, longitude: null });
-  const [contactPhone, setContactPhone] = useState(currentUser?.phone || '');
+  // Parse whatever's on the current user (could be legacy hyphenated
+  // or fresh E.164) into dial + national so the picker + national field
+  // both prefill cleanly.
+  const initialParsed = parsePhone(currentUser?.phone || '');
+  const initialDial = initialParsed.national ? initialParsed.dialCode : defaultCountryInfo().dial;
+  const [contactDial, setContactDial] = useState(initialDial);
+  const [contactNational, setContactNational] = useState(initialParsed.national);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,10 +76,11 @@ export default function ReportMissingScreen({ navigation, route }) {
   };
 
   const handleSubmit = async () => {
-    if (!contactPhone?.trim()) {
-      alert('Missing contact', 'Add a phone number people can reach you on.', 'error');
+    if (!isValidPhone(contactDial, contactNational)) {
+      alert('Missing contact', 'Add a valid phone number people can reach you on.', 'error');
       return;
     }
+    const contactPhone = toE164(contactDial, contactNational);
     if (!lastSeenAt) {
       alert('Missing date', 'Pick when your pet was last seen.', 'error');
       return;
@@ -87,7 +96,7 @@ export default function ReportMissingScreen({ navigation, route }) {
         lastSeenLat: location.latitude,
         lastSeenLng: location.longitude,
         lastSeenAddress: location.address || null,
-        contactPhone: contactPhone.trim(),
+        contactPhone,
         notes: notes?.trim() || null,
       });
       // Show the success alert FIRST; navigate back only after the user
@@ -192,19 +201,15 @@ export default function ReportMissingScreen({ navigation, route }) {
             <Icon name="chevron-forward" size={18} color="#818898" />
           </TouchableOpacity>
 
-          {/* Contact phone */}
+          {/* Contact phone — canonical PhoneInput with country picker */}
           <Text style={styles.label}>Contact phone number</Text>
-          <View style={styles.inputWrap}>
-            <Icon name="call-outline" size={18} color="#32A6D8" />
-            <TextInput
-              style={styles.input}
-              value={contactPhone}
-              onChangeText={setContactPhone}
-              placeholder="+92 300 0000000"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="phone-pad"
-            />
-          </View>
+          <PhoneInput
+            value={contactNational}
+            onChangePhone={setContactNational}
+            countryCode={contactDial}
+            onChangeCountryCode={setContactDial}
+            placeholder="Phone number"
+          />
           <Text style={styles.hint}>Shown publicly on the QR tag page so finders can call you.</Text>
 
           {/* Notes */}

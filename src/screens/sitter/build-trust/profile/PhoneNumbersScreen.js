@@ -1,44 +1,41 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '../../../../context/AlertContext';
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../../components/ScreenWrapper';
 import { Button } from '../../../../components';
+import PhoneInput from '../../../../components/PhoneInput';
 import UnsavedChangesModal from '../../../../components/UnsavedChangesModal';
-import { BackArrowIcon, PhoneCallIcon, UserCircleIcon } from '../../../../assets';
+import { BackArrowIcon, UserCircleIcon } from '../../../../assets';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
+import { defaultCountryInfo, parsePhone, toE164, isValidPhone } from '../../../../utils/phone';
+
+// Sitter Build-Trust "Phone Numbers" step. Owns Primary + Emergency
+// contact phones plus the emergency contact's name + notes. Uses the
+// shared PhoneInput component so international numbers (Pakistan, UK,
+// etc.) work the same way as everywhere else in the app.
+//
+// Storage format: E.164 ("+923001234567"). Legacy rows saved as
+// hyphenated 4-segment strings still parse on load thanks to
+// utils/phone.parsePhone which handles both.
 
 export default function PhoneNumbersScreen({ navigation }) {
   const alert = useAppAlert();
-  // Primary phone
-  const [primaryPart1, setPrimaryPart1] = useState('');
-  const [primaryPart2, setPrimaryPart2] = useState('');
-  const [primaryPart3, setPrimaryPart3] = useState('');
-  const [primaryPart4, setPrimaryPart4] = useState('');
-  
+  const initial = defaultCountryInfo().dial;
+
+  // Primary phone (single field split into dial code + national)
+  const [primaryDial, setPrimaryDial] = useState(initial);
+  const [primaryNational, setPrimaryNational] = useState('');
+
   // Emergency contact
   const [emergencyName, setEmergencyName] = useState('');
-  const [emergencyPart1, setEmergencyPart1] = useState('');
-  const [emergencyPart2, setEmergencyPart2] = useState('');
-  const [emergencyPart3, setEmergencyPart3] = useState('');
-  const [emergencyPart4, setEmergencyPart4] = useState('');
+  const [emergencyDial, setEmergencyDial] = useState(initial);
+  const [emergencyNational, setEmergencyNational] = useState('');
   const [emergencyNotes, setEmergencyNotes] = useState('');
+
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Refs for primary phone
-  const primaryRef1 = useRef(null);
-  const primaryRef2 = useRef(null);
-  const primaryRef3 = useRef(null);
-  const primaryRef4 = useRef(null);
-
-  // Refs for emergency phone
-  const emergencyRef1 = useRef(null);
-  const emergencyRef2 = useRef(null);
-  const emergencyRef3 = useRef(null);
-  const emergencyRef4 = useRef(null);
-
-  // Fetch existing data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchPhoneNumbers();
@@ -48,31 +45,18 @@ export default function PhoneNumbersScreen({ navigation }) {
   const fetchPhoneNumbers = async () => {
     try {
       const response = await getBuildTrustSection('PHONE_NUMBERS');
-      
       if (response.success && response.data.exists && response.data.settings) {
         const settings = response.data.settings;
-        
-        // Parse primary phone
         if (settings.primaryPhone) {
-          const parts = settings.primaryPhone.split('-');
-          if (parts.length === 4) {
-            setPrimaryPart1(parts[0] || '');
-            setPrimaryPart2(parts[1] || '');
-            setPrimaryPart3(parts[2] || '');
-            setPrimaryPart4(parts[3] || '');
-          }
+          const { dialCode, national } = parsePhone(settings.primaryPhone);
+          setPrimaryDial(dialCode);
+          setPrimaryNational(national);
         }
-        
-        // Parse emergency contact
         setEmergencyName(settings.emergencyName || '');
         if (settings.emergencyPhone) {
-          const parts = settings.emergencyPhone.split('-');
-          if (parts.length === 4) {
-            setEmergencyPart1(parts[0] || '');
-            setEmergencyPart2(parts[1] || '');
-            setEmergencyPart3(parts[2] || '');
-            setEmergencyPart4(parts[3] || '');
-          }
+          const { dialCode, national } = parsePhone(settings.emergencyPhone);
+          setEmergencyDial(dialCode);
+          setEmergencyNational(national);
         }
         setEmergencyNotes(settings.emergencyNotes || '');
       }
@@ -81,143 +65,32 @@ export default function PhoneNumbersScreen({ navigation }) {
     }
   };
 
-  // Primary phone handlers
-  const handlePrimaryPart1Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setPrimaryPart1(cleaned);
-      if (cleaned.length === 4) primaryRef2.current?.focus();
-    }
-  };
-
-  const handlePrimaryPart2Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) {
-      setPrimaryPart2(cleaned);
-      if (cleaned.length === 3) primaryRef3.current?.focus();
-    }
-  };
-
-  const handlePrimaryPart3Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setPrimaryPart3(cleaned);
-      if (cleaned.length === 4) primaryRef4.current?.focus();
-    }
-  };
-
-  const handlePrimaryPart4Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setPrimaryPart4(cleaned);
-    }
-  };
-
-  const handlePrimaryPart2KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && primaryPart2 === '') {
-      primaryRef1.current?.focus();
-    }
-  };
-
-  const handlePrimaryPart3KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && primaryPart3 === '') {
-      primaryRef2.current?.focus();
-    }
-  };
-
-  const handlePrimaryPart4KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && primaryPart4 === '') {
-      primaryRef3.current?.focus();
-    }
-  };
-
-  // Emergency phone handlers
-  const handleEmergencyPart1Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setEmergencyPart1(cleaned);
-      if (cleaned.length === 4) emergencyRef2.current?.focus();
-    }
-  };
-
-  const handleEmergencyPart2Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) {
-      setEmergencyPart2(cleaned);
-      if (cleaned.length === 3) emergencyRef3.current?.focus();
-    }
-  };
-
-  const handleEmergencyPart3Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setEmergencyPart3(cleaned);
-      if (cleaned.length === 4) emergencyRef4.current?.focus();
-    }
-  };
-
-  const handleEmergencyPart4Change = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 4) {
-      setEmergencyPart4(cleaned);
-    }
-  };
-
-  const handleEmergencyPart2KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && emergencyPart2 === '') {
-      emergencyRef1.current?.focus();
-    }
-  };
-
-  const handleEmergencyPart3KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && emergencyPart3 === '') {
-      emergencyRef2.current?.focus();
-    }
-  };
-
-  const handleEmergencyPart4KeyPress = (e) => {
-    if (e.nativeEvent.key === 'Backspace' && emergencyPart4 === '') {
-      emergencyRef3.current?.focus();
-    }
-  };
-
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      
-      // Validate primary phone
-      if (!primaryPart1 || !primaryPart2 || !primaryPart3 || !primaryPart4) {
-        alert('Required', 'Please enter your primary phone number', 'pending');
+
+      if (!isValidPhone(primaryDial, primaryNational)) {
+        alert('Required', 'Please enter a valid primary phone number', 'pending');
         return;
       }
-
-      // Validate emergency contact
-      if (!emergencyName) {
+      if (!emergencyName?.trim()) {
         alert('Required', 'Please enter emergency contact name', 'pending');
         return;
       }
-
-      if (!emergencyPart1 || !emergencyPart2 || !emergencyPart3 || !emergencyPart4) {
-        alert('Required', 'Please enter emergency contact phone number', 'pending');
+      if (!isValidPhone(emergencyDial, emergencyNational)) {
+        alert('Required', 'Please enter a valid emergency phone number', 'pending');
         return;
       }
-      
-      // Prepare settings data
-      const primaryPhone = `${primaryPart1}-${primaryPart2}-${primaryPart3}-${primaryPart4}`;
-      const emergencyPhone = `${emergencyPart1}-${emergencyPart2}-${emergencyPart3}-${emergencyPart4}`;
-      
+
       const settings = {
-        primaryPhone,
-        emergencyName,
-        emergencyPhone,
-        emergencyNotes
+        primaryPhone: toE164(primaryDial, primaryNational),
+        emergencyName: emergencyName.trim(),
+        emergencyPhone: toE164(emergencyDial, emergencyNational),
+        emergencyNotes,
       };
-      
-      // Save to backend
+
       const response = await upsertBuildTrustSection('PHONE_NUMBERS', settings, true);
-      
       if (response.success) {
-        // Navigate to next screen (Details)
         navigation.navigate('Details');
       } else {
         alert('Error', 'Failed to save phone numbers. Please try again.', 'error');
@@ -230,18 +103,9 @@ export default function PhoneNumbersScreen({ navigation }) {
     }
   };
 
-  const handleBackPress = () => {
-    setShowUnsavedModal(true);
-  };
-
-  const handleCancelLeave = () => {
-    setShowUnsavedModal(false);
-  };
-
-  const handleConfirmLeave = () => {
-    setShowUnsavedModal(false);
-    navigation.goBack();
-  };
+  const handleBackPress = () => setShowUnsavedModal(true);
+  const handleCancelLeave = () => setShowUnsavedModal(false);
+  const handleConfirmLeave = () => { setShowUnsavedModal(false); navigation.goBack(); };
 
   return (
     <ScreenWrapper noBottomTabs>
@@ -251,10 +115,7 @@ export default function PhoneNumbersScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
             <BackArrowIcon width={20} height={20} fill="#090E12" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -278,66 +139,13 @@ export default function PhoneNumbersScreen({ navigation }) {
             </Text>
 
             <Text style={styles.fieldLabel}>Primary</Text>
-            <Text style={styles.phoneHint}>
-              Country code (e.g. 1 for US, 92 for Pakistan), then your phone number.
-            </Text>
-
-            <View style={styles.phoneInputContainer}>
-              <PhoneCallIcon width={15} height={15} fill="#FFC2EB" />
-              <View style={styles.phoneDisplayContainer}>
-                <Text style={styles.phoneBracket}>+</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="code"
-                  placeholderTextColor="#898D8F"
-                  value={primaryPart1}
-                  onChangeText={handlePrimaryPart1Change}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={primaryRef1}
-                />
-                <Text style={styles.phoneSeparator}> </Text>
-                <TextInput
-                  style={styles.phoneInputSectionMid}
-                  placeholder="xxx"
-                  placeholderTextColor="#898D8F"
-                  value={primaryPart2}
-                  onChangeText={handlePrimaryPart2Change}
-                  onKeyPress={handlePrimaryPart2KeyPress}
-                  keyboardType="numeric"
-                  maxLength={3}
-                  ref={primaryRef2}
-                />
-                <Text style={styles.phoneSeparator}>-</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="xxxx"
-                  placeholderTextColor="#898D8F"
-                  value={primaryPart3}
-                  onChangeText={handlePrimaryPart3Change}
-                  onKeyPress={handlePrimaryPart3KeyPress}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={primaryRef3}
-                />
-                <Text style={styles.phoneSeparator}>-</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="xxxx"
-                  placeholderTextColor="#898D8F"
-                  value={primaryPart4}
-                  onChangeText={handlePrimaryPart4Change}
-                  onKeyPress={handlePrimaryPart4KeyPress}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={primaryRef4}
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.linkButton}>
-              <Text style={styles.linkText}>Add phone number</Text>
-            </TouchableOpacity>
+            <PhoneInput
+              value={primaryNational}
+              onChangePhone={setPrimaryNational}
+              countryCode={primaryDial}
+              onChangeCountryCode={setPrimaryDial}
+              placeholder="Phone number"
+            />
           </View>
 
           {/* Emergency Contact Section */}
@@ -363,61 +171,13 @@ export default function PhoneNumbersScreen({ navigation }) {
             </View>
 
             <Text style={styles.fieldLabel}>Contact number (emergency)</Text>
-            <Text style={styles.phoneHint}>
-              Country code first, then the number.
-            </Text>
-            <View style={styles.phoneInputContainer}>
-              <PhoneCallIcon width={15} height={15} fill="#FFC2EB" />
-              <View style={styles.phoneDisplayContainer}>
-                <Text style={styles.phoneBracket}>+</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="code"
-                  placeholderTextColor="#898D8F"
-                  value={emergencyPart1}
-                  onChangeText={handleEmergencyPart1Change}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={emergencyRef1}
-                />
-                <Text style={styles.phoneSeparator}> </Text>
-                <TextInput
-                  style={styles.phoneInputSectionMid}
-                  placeholder="xxx"
-                  placeholderTextColor="#898D8F"
-                  value={emergencyPart2}
-                  onChangeText={handleEmergencyPart2Change}
-                  onKeyPress={handleEmergencyPart2KeyPress}
-                  keyboardType="numeric"
-                  maxLength={3}
-                  ref={emergencyRef2}
-                />
-                <Text style={styles.phoneSeparator}>-</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="xxxx"
-                  placeholderTextColor="#898D8F"
-                  value={emergencyPart3}
-                  onChangeText={handleEmergencyPart3Change}
-                  onKeyPress={handleEmergencyPart3KeyPress}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={emergencyRef3}
-                />
-                <Text style={styles.phoneSeparator}>-</Text>
-                <TextInput
-                  style={styles.phoneInputSection}
-                  placeholder="xxxx"
-                  placeholderTextColor="#898D8F"
-                  value={emergencyPart4}
-                  onChangeText={handleEmergencyPart4Change}
-                  onKeyPress={handleEmergencyPart4KeyPress}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  ref={emergencyRef4}
-                />
-              </View>
-            </View>
+            <PhoneInput
+              value={emergencyNational}
+              onChangePhone={setEmergencyNational}
+              countryCode={emergencyDial}
+              onChangeCountryCode={setEmergencyDial}
+              placeholder="Phone number"
+            />
 
             <Text style={styles.fieldLabel}>
               Please tell us which members of your household we can contact and speak with during an emergency.
@@ -436,29 +196,19 @@ export default function PhoneNumbersScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Disclaimer */}
           <Text style={styles.disclaimer}>
             By providing your phone number, you agree to receive service-related texts. Reply HELP for help or STOP to unsubscribe. Message and data rates may apply.
           </Text>
         </ScrollView>
 
-        {/* Unsaved Changes Modal */}
         <UnsavedChangesModal
           visible={showUnsavedModal}
           onCancel={handleCancelLeave}
           onLeave={handleConfirmLeave}
         />
 
-        {/* Save Button */}
-        <View style={styles.bottomButtonContainer}>
-          <Button
-            title={isSaving ? "Saving..." : "Save & Continue"}
-            onPress={handleSave}
-            type="secondary"
-            size="large"
-            fullWidth
-            disabled={isSaving}
-          />
+        <View style={styles.buttonContainer}>
+          <Button title={isSaving ? 'Saving...' : 'Continue'} onPress={handleSave} disabled={isSaving} />
         </View>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -466,199 +216,100 @@ export default function PhoneNumbersScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
-    height: 52,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
   headerTitle: {
-    color: '#000000',
+    fontSize: 18,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    color: '#0D0D12',
+  },
+  headerPlaceholder: { width: 40 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
+  sectionHeader: { marginTop: 20, marginBottom: 12 },
+  sectionTitle: {
     fontSize: 16,
     fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 24.8,
-  },
-  headerPlaceholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-  sectionHeader: {
-    marginBottom: 4,
-    marginTop: 16,
-  },
-  sectionTitle: {
-    color: 'rgba(0, 0, 0, 0.90)',
-    fontSize: 12.72,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#0D0D12',
   },
   card: {
-    padding: 12,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 40,
-    elevation: 2,
-    borderRadius: 12,
-    gap: 8,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECEFF3',
   },
   helperText: {
     color: '#818898',
     fontSize: 12,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 18.6,
+    lineHeight: 18,
+    marginBottom: 12,
   },
   fieldLabel: {
-    color: '#676869',
+    color: '#0D0D12',
     fontSize: 13,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
-    lineHeight: 20.15,
+    marginBottom: 8,
     marginTop: 4,
   },
-  phoneInputContainer: {
-    height: 56,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  phoneDisplayContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  phoneBracket: {
-    color: '#898D8F',
-    fontSize: 14,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-  },
-  phoneHint: {
-    color: '#A0AEC0',
-    fontSize: 11,
-    fontFamily: 'Avenir LT Std',
-    fontStyle: 'italic',
-    marginBottom: 8,
-    lineHeight: 15,
-  },
-  phoneInputSection: {
-    width: 28,
-    color: '#090E12',
-    fontSize: 14,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    textAlign: 'center',
-    padding: 0,
-  },
-  phoneInputSectionMid: {
-    width: 38,
-    color: '#090E12',
-    fontSize: 14,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    textAlign: 'center',
-    padding: 0,
-  },
-  phoneSeparator: {
-    color: '#898D8F',
-    fontSize: 14,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-  },
-  linkButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 40,
-    alignSelf: 'center',
-  },
-  linkText: {
-    color: '#32A6D8',
-    fontSize: 12,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-    lineHeight: 18.6,
-  },
   inputContainer: {
-    height: 56,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    height: 55,
+    backgroundColor: '#fefefeff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: '#ECEFF3',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 10,
   },
   input: {
     flex: 1,
-    color: '#090E12',
     fontSize: 14,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20,
+    color: '#0D0D12',
     padding: 0,
   },
   textAreaContainer: {
-    height: 134,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    backgroundColor: '#fefefeff',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: '#ECEFF3',
+    padding: 12,
+    minHeight: 100,
   },
   textArea: {
-    flex: 1,
-    color: '#090E12',
     fontSize: 14,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20,
-    padding: 0,
+    color: '#0D0D12',
+    minHeight: 80,
   },
   disclaimer: {
-    color: '#676869',
-    fontSize: 13,
+    marginTop: 20,
+    color: '#A0AEC0',
+    fontSize: 11,
     fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 20.15,
-    marginTop: 8,
+    lineHeight: 16,
+    fontStyle: 'italic',
   },
-  bottomButtonContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+  buttonContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
   },
 });

@@ -24,6 +24,7 @@ import {
 } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
+import { defaultCountryInfo, toE164, isValidPhone } from '../../utils/phone';
 
 const { width, height } = Dimensions.get('window');
 
@@ -44,7 +45,8 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const [referralCode, setReferralCode] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
+  // Default country dial code from device locale (Pakistan phone → +92, not +1)
+  const [countryCode, setCountryCode] = useState(() => defaultCountryInfo().dial);
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [loading, setLoading] = useState(false);
   const keyboardHeight = useKeyboardHeight();
@@ -56,13 +58,13 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
       return;
     }
 
-    if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+    if (!isValidPhone(countryCode, phoneNumber)) {
       alert('Error', 'Please enter a valid phone number', 'error');
       return;
     }
 
-    // Combine country code + phone number for full international format
-    const fullPhone = `${countryCode}${phoneNumber}`;
+    // Backend stores phones as clean E.164 (+CCC_NNNNNN) — no spaces or hyphens.
+    const fullPhone = toE164(countryCode, phoneNumber);
 
     // Navigate to OTP Method selection screen (registration API will be called from there)
     navigation.navigate('OTPMethod', {

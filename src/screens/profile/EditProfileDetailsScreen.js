@@ -74,10 +74,9 @@ export default function EditProfileDetailsScreen({ navigation }) {
         
         console.log('✅ State updated - Address:', userData.address);
         
-        // Format phone number
+        // Display the phone as-is (E.164 → " + CC national" for readability)
         if (userData.phone) {
-          const cleaned = userData.phone.replace(/\D/g, '');
-          formatPhoneDisplay(cleaned);
+          formatPhoneDisplay(userData.phone);
         }
         
         // Update Redux state with fresh data
@@ -98,18 +97,21 @@ export default function EditProfileDetailsScreen({ navigation }) {
     }
   };
 
-  const formatPhoneDisplay = (cleaned) => {
-    let formatted = '';
-    if (cleaned.length > 0) {
-      formatted = '(' + cleaned.substring(0, 3);
-      if (cleaned.length >= 3) {
-        formatted += ') ' + cleaned.substring(3, 6);
-      }
-      if (cleaned.length >= 6) {
-        formatted += '-' + cleaned.substring(6, 10);
-      }
+  // Phone is stored as E.164 (+CCC…). Display it lightly spaced —
+  // "+92 3001234567" reads cleaner than the raw string but doesn't
+  // assume a fixed US layout that breaks for other countries.
+  const formatPhoneDisplay = (raw) => {
+    if (!raw) { setPhoneNumber(''); return; }
+    const digits = raw.replace(/[^0-9]/g, '');
+    if (!digits) { setPhoneNumber(''); return; }
+    if (raw.startsWith('+') && digits.length > 3) {
+      // Country code varies (1–3 digits). Take the shortest plausible
+      // (1 digit) prefix — display readability only, not a source of
+      // truth for the actual stored value.
+      setPhoneNumber('+' + digits.slice(0, 1) + ' ' + digits.slice(1));
+    } else {
+      setPhoneNumber(raw);
     }
-    setPhoneNumber(formatted);
   };
 
   const handleImageSelected = async (imageUri) => {
