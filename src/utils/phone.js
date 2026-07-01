@@ -65,17 +65,15 @@ const REGION_INFO = {
 const FALLBACK = { dial: '+1', flag: '🇺🇸' };
 
 /**
- * Best-guess default country info from the device locale. Called on
- * first mount of every phone-input caller so a Pakistan tester doesn't
- * start on +1 US.
+ * Default country for phone inputs. Product decision (2026-06-16): the
+ * default is ALWAYS US regardless of device locale. Users on non-US
+ * devices can still open the picker and select their country in one
+ * tap. Rationale: consistent screenshots / support / testing.
+ *
+ * Localization import is kept in case we want to flip back to a
+ * locale-derived default later.
  */
 export function defaultCountryInfo() {
-  try {
-    const locales = Localization.getLocales?.() || [];
-    const first = locales[0];
-    const region = (first?.regionCode || '').toUpperCase();
-    if (region && REGION_INFO[region]) return REGION_INFO[region];
-  } catch {}
   return FALLBACK;
 }
 
