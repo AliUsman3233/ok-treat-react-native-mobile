@@ -35,7 +35,12 @@ export default function DateRangePicker({
   };
 
   const handleApply = () => {
-    onDateChange(tempStartDate, tempEndDate);
+    // No visible mode toggle: a single-tap selection is a valid
+    // single-day booking (start === end). Two taps produce a range.
+    // Falls back to the same-day treatment if the user only picked one
+    // date and hit Apply.
+    const effectiveEnd = tempEndDate || tempStartDate;
+    onDateChange(tempStartDate, effectiveEnd);
     setIsVisible(false);
   };
 
@@ -197,10 +202,10 @@ export default function DateRangePicker({
               <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
                 <Text style={styles.skipButtonText}>Skip</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleApply} 
-                style={[styles.applyButton, (!tempStartDate || !tempEndDate) && styles.applyButtonDisabled]}
-                disabled={!tempStartDate || !tempEndDate}
+              <TouchableOpacity
+                onPress={handleApply}
+                style={[styles.applyButton, !tempStartDate && styles.applyButtonDisabled]}
+                disabled={!tempStartDate}
               >
                 <Text style={styles.applyButtonText}>Apply</Text>
               </TouchableOpacity>

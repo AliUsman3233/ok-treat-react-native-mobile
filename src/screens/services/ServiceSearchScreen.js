@@ -52,19 +52,23 @@ export default function ServiceSearchScreen({ navigation, route }) {
   };
 
   const formatDateRange = () => {
-    if (!startDate || !endDate) return 'Select date range';
-    
+    if (!startDate || !endDate) return 'Select date';
+
     const start = moment(startDate);
     const end = moment(endDate);
-    
-    // If same year, show year only once at the end
+
+    // Single-day selection: user tapped once → start === end
+    if (start.isSame(end, 'day')) {
+      return start.format('D MMM YYYY');
+    }
+
+    // Multi-day range — collapse year/month where safe for readability
     if (start.year() === end.year()) {
       if (start.month() === end.month()) {
         return `${start.format('D')}-${end.format('D MMM YYYY')}`;
       }
       return `${start.format('D MMM')}-${end.format('D MMM YYYY')}`;
     }
-    // Different years, show year for both dates
     return `${start.format('D MMM YYYY')}-${end.format('D MMM YYYY')}`;
   };
 
