@@ -6,6 +6,7 @@ import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import Dropdown from '../../../components/Dropdown';
 import PetTypeMultiSelect from '../../../components/PetTypeMultiSelect';
+import TimeField from '../../../components/TimeField';
 import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
@@ -47,6 +48,10 @@ export default function DropInVisitSettingsScreen({ navigation }) {
     
     const [availabilityImportant, setAvailabilityImportant] = useState('yes');
     const [selectedDays, setSelectedDays] = useState(['Su']);
+    // Daily availability window (HH:mm, 24-hour). Applied to every
+    // day in selectedDays. Owner-side search filters by this window.
+    const [dailyStartTime, setDailyStartTime] = useState('09:00');
+    const [dailyEndTime, setDailyEndTime] = useState('17:00');
     const [pottyBreaks, setPottyBreaks] = useState('0-2 hours');
     const [homeType, setHomeType] = useState('House');
     const [yardType, setYardType] = useState('Fenced yard');
@@ -105,6 +110,8 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                 setSelectedPetSizes(settings.selectedPetSizes || []);
                 setAvailabilityImportant(settings.availabilityImportant || 'yes');
                 setSelectedDays(settings.selectedDays || ['Su']);
+                setDailyStartTime(settings.dailyStartTime || '09:00');
+                setDailyEndTime(settings.dailyEndTime || '17:00');
                 setPottyBreaks(settings.pottyBreaks || '0-2 hours');
                 setContactTime(settings.contactTime || 'Select time');
                 setMaxPets(settings.maxPets || '2');
@@ -170,6 +177,8 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                 selectedPetSizes,
                 availabilityImportant,
                 selectedDays,
+                dailyStartTime,
+                dailyEndTime,
                 pottyBreaks,
                 contactTime,
                 maxPets,
@@ -340,6 +349,18 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.fieldLabel}>What hours are you available on those days?</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <TimeField value={dailyStartTime} onChange={setDailyStartTime} label="Start" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <TimeField value={dailyEndTime} onChange={setDailyEndTime} label="End" />
+                                </View>
                             </View>
                         </View>
 

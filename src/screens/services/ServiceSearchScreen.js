@@ -6,7 +6,16 @@ import { Button } from '../../components';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, CalendarIcon, LocationPinIcon, AngleDownIcon } from '../../assets';
 import DateRangePicker from '../../components/DateRangePicker';
+import DateTimeWindowPicker from '../../components/DateTimeWindowPicker';
+import { formatTime12h } from '../../components/TimeField';
 import moment from 'moment';
+
+// Boarding + House Sitting are day-based (overnight). Drop-In / Day Care /
+// Pet Walking need a single-day + time-window because they run for a few
+// hours within one day. Anything not listed here falls back to day-based
+// for safety.
+const HOUR_BASED_SERVICES = new Set(['DropIn', 'Drop-In Visit', 'DayCare', 'Day Care', 'PetWalking', 'Pet Walking']);
+const isHourBased = (t) => HOUR_BASED_SERVICES.has(t);
 
 export default function ServiceSearchScreen({ navigation, route }) {
   const alert = useAppAlert();
@@ -14,14 +23,51 @@ export default function ServiceSearchScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  // Hour-based services: single day + time window (HH:mm)
+  const [singleDate, setSingleDate] = useState(null);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState('Current Location');
   const [locationData, setLocationData] = useState(null); // Store full location object with coordinates
+  const hourBased = isHourBased(serviceType);
 
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleSearchNow = () => {
+    if (hourBased) {
+      if (!singleDate || !startTime || !endTime) {
+        alert('Missing Time', 'Please pick a date and a time window.', 'pending');
+        return;
+      }
+      // Combine the picked date with the HH:mm strings into full ISO
+      // timestamps. Backend sitter search matches these against the
+      // sitter's dailyStartTime / dailyEndTime.
+      const combine = (date, hhmm) => {
+        const [h, m] = hhmm.split(':').map((n) => parseInt(n, 10));
+        return moment(date).hour(h).minute(m).second(0).millisecond(0).toISOString();
+      };
+      const startISO = combine(singleDate, startTime);
+      const endISO = combine(singleDate, endTime);
+      navigation.navigate('SearchResults', {
+        serviceType,
+        searchParams: {
+          startDate: startISO,
+          endDate: endISO,
+          // Separate HH:mm fields for the sitter-window filter — timestamps
+          // alone would work but this makes the intent explicit for the
+          // backend and easier to log/debug.
+          startTime,
+          endTime,
+          location: selectedLocation,
+          latitude: locationData?.latitude,
+          longitude: locationData?.longitude,
+        },
+      });
+      return;
+    }
+
     if (!startDate) {
       alert('Missing Dates', 'Please select dates for your search', 'pending');
       return;
@@ -44,6 +90,13 @@ export default function ServiceSearchScreen({ navigation, route }) {
 
     // Search payload includes user location — don't log it in production.
     navigation.navigate('SearchResults', searchPayload);
+  };
+
+  // Label shown on the date/time button for hour-based services.
+  const formatDateTimeWindow = () => {
+    if (!singleDate || !startTime || !endTime) return 'Pick date & time';
+    const date = moment(singleDate).format('D MMM YYYY');
+    return `${date} · ${formatTime12h(startTime)} – ${formatTime12h(endTime)}`;
   };
 
   const handleDateChange = (start, end) => {
@@ -99,22 +152,44 @@ export default function ServiceSearchScreen({ navigation, route }) {
 
         {/* Form Section */}
         <View style={styles.formContainer}>
-          {/* Select Date Range */}
+          {/* Date / date-time picker — day-based services use a range
+              calendar, hour-based services use single-day + time window. */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Select Date Range</Text>
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onDateChange={handleDateChange}
-            >
-              <View style={styles.dateButton}>
-                <View style={styles.dateContent}>
-                  <CalendarIcon width={20} height={20} fill="#FFC2EB" />
-                  <Text style={styles.dateText}>{formatDateRange()}</Text>
+            <Text style={styles.label}>{hourBased ? 'When?' : 'Select Date Range'}</Text>
+            {hourBased ? (
+              <DateTimeWindowPicker
+                date={singleDate}
+                startTime={startTime}
+                endTime={endTime}
+                onChange={({ date, startTime: s, endTime: e }) => {
+                  setSingleDate(date);
+                  setStartTime(s);
+                  setEndTime(e);
+                }}
+              >
+                <View style={styles.dateButton}>
+                  <View style={styles.dateContent}>
+                    <CalendarIcon width={20} height={20} fill="#FFC2EB" />
+                    <Text style={styles.dateText}>{formatDateTimeWindow()}</Text>
+                  </View>
+                  <AngleDownIcon width={20} height={20} fill="#32A6D8" />
                 </View>
-                <AngleDownIcon width={20} height={20} fill="#32A6D8" />
-              </View>
-            </DateRangePicker>
+              </DateTimeWindowPicker>
+            ) : (
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateChange={handleDateChange}
+              >
+                <View style={styles.dateButton}>
+                  <View style={styles.dateContent}>
+                    <CalendarIcon width={20} height={20} fill="#FFC2EB" />
+                    <Text style={styles.dateText}>{formatDateRange()}</Text>
+                  </View>
+                  <AngleDownIcon width={20} height={20} fill="#32A6D8" />
+                </View>
+              </DateRangePicker>
+            )}
           </View>
 
           {/* Select Location */}

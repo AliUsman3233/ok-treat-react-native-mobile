@@ -59,7 +59,9 @@ export default function SearchResultsScreen({ navigation, route }) {
           searchParams.longitude,
           searchParams.startDate,
           searchParams.endDate,
-          30 // 30km radius
+          30, // 30km radius
+          searchParams.startTime, // "HH:mm" for hour-based services; undefined otherwise
+          searchParams.endTime,
         );
 
         // Calculate days since last update for each sitter

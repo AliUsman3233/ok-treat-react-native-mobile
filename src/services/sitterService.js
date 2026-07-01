@@ -103,8 +103,20 @@ export const getNearbySitters = async (latitude, longitude, radius = 30) => {
   }
 };
 
-// Search sitters by service type and availability
-export const searchSitters = async (serviceType, latitude, longitude, startDate, endDate, radius = 30) => {
+// Search sitters by service type and availability. For hour-based
+// services (Drop-In, Day Care, Pet Walking), pass startTime + endTime
+// as "HH:mm" strings and the backend also filters by the sitter's
+// dailyStartTime/dailyEndTime window.
+export const searchSitters = async (
+  serviceType,
+  latitude,
+  longitude,
+  startDate,
+  endDate,
+  radius = 30,
+  startTime,
+  endTime,
+) => {
   try {
     const token = await getAuthToken();
     const response = await axios.get(`${API_BASE_URL}/api/sitter/search`, {
@@ -114,7 +126,11 @@ export const searchSitters = async (serviceType, latitude, longitude, startDate,
         longitude,
         startDate,
         endDate,
-        radius
+        radius,
+        // Only sent when the caller has a time window (hour-based flows).
+        // Backend ignores these params when absent.
+        startTime,
+        endTime,
       },
       headers: {
         Authorization: `Bearer ${token}`
