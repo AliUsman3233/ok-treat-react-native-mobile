@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform, Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Platform, Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as Notifications from 'expo-notifications';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -27,6 +27,19 @@ Notifications.setNotificationHandler({
     shouldSetBadge: true,
   }),
 });
+
+// Freeze font size at the app's design values regardless of the user's OS
+// "text size" / "font scale" setting. Without this, users with accessibility
+// text bumped up see every label scale in the app, which breaks our tightly
+// tuned pill buttons, fixed footer heights, chip layouts, etc.
+//
+// Applied globally at module-load so every Text and TextInput inherits the
+// default. Individual components can still opt back in by explicitly
+// passing `allowFontScaling={true}`.
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.allowFontScaling = false;
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.allowFontScaling = false;
 
 export default function App() {
   const navigationRef = useRef();
