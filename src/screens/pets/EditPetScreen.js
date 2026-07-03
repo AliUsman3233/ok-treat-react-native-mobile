@@ -136,7 +136,9 @@ export default function EditPetScreen({ navigation, route }) {
   };
 
   // Same per-step required-field rules as AddPet, so editing can't blank
-  // out fields that are required for a complete pet profile.
+  // out fields that are required for a complete pet profile. Photo is
+  // optional on EDIT — many legacy pets were created without one and
+  // forcing re-upload on every edit is unfriendly.
   const has = (v) => v !== undefined && v !== null && String(v).trim() !== '';
   const hasAge = () => has(formData.ageYears) || has(formData.ageMonths);
   const STEP_RULES = {
@@ -147,7 +149,7 @@ export default function EditPetScreen({ navigation, route }) {
       ['breed',   'Please enter the pet\'s breed',            () => has(formData.breed)],
       ['age',     'Please enter the pet\'s age',              hasAge],
       ['sex',     'Please select the pet\'s sex',             () => has(formData.sex)],
-      ['photo',   'Please upload a photo of the pet',         () => has(formData.photo)],
+      // photo optional on edit — see note above
     ],
     2: [
       ['microchipped',         'Please answer: is the pet microchipped?',       () => has(formData.microchipped)],
