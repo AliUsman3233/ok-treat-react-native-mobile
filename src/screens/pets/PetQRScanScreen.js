@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Platform, Modal, ActivityIndicator, Linking } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -129,6 +129,15 @@ export default function PetQRScanScreen({ navigation, route }) {
   const locationPermRef = useRef(null); // Cache location permission status
   const { fromScreen, currentQrCode } = route.params || {};
 
+  // The "public scan" flow — user tapped Scan-a-QR from Home to look up
+  // someone else's pet. We gate this on location permission so the owner's
+  // scan-alert email includes where their pet was found. The link flow
+  // (from Add/Edit Pet) skips the gate because it doesn't fire the email.
+  const isPublicScan = fromScreen === 'Home';
+  // 'checking' | 'granted' | 'denied' — only meaningful when isPublicScan.
+  const [locationStatus, setLocationStatus] = useState(isPublicScan ? 'checking' : 'granted');
+  const [requestingLocation, setRequestingLocation] = useState(false);
+
   // Reset on focus
   useFocusEffect(
     useCallback(() => {
@@ -144,17 +153,40 @@ export default function PetQRScanScreen({ navigation, route }) {
     if (!isWeb && !permission?.granted) requestPermission();
   }, [permission, requestPermission]);
 
-  // Pre-request location permission on mount so the prompt doesn't appear mid-scan
+  // Pre-request location permission on mount so the prompt doesn't appear
+  // mid-scan. For the public scan flow we gate the camera behind this —
+  // no location, no scanner UI.
   useEffect(() => {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         locationPermRef.current = status;
+        if (isPublicScan) setLocationStatus(status === 'granted' ? 'granted' : 'denied');
       } catch (_) {
         locationPermRef.current = 'denied';
+        if (isPublicScan) setLocationStatus('denied');
       }
     })();
-  }, []);
+  }, [isPublicScan]);
+
+  const retryLocationPermission = async () => {
+    setRequestingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      locationPermRef.current = status;
+      setLocationStatus(status === 'granted' ? 'granted' : 'denied');
+    } catch (_) {
+      setLocationStatus('denied');
+    } finally {
+      setRequestingLocation(false);
+    }
+  };
+
+  const openLocationSettings = () => {
+    // OS-level settings — on Android+iOS this opens the app's permission
+    // page where the user can flip the location toggle on.
+    Linking.openSettings().catch(() => {});
+  };
 
   // Scan line animation
   useEffect(() => {
@@ -349,6 +381,44 @@ export default function PetQRScanScreen({ navigation, route }) {
           <TouchableOpacity style={styles.manualButton} onPress={handleCannotScan}>
             <Text style={styles.manualButtonText}>Enter code manually</Text>
           </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Location gate — public scan flow only. Blocks the camera until the
+  // user grants location so the owner's scan-alert email includes where
+  // their pet was found.
+  if (isPublicScan && locationStatus !== 'granted') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}><BackArrowIcon width={20} height={20} /></TouchableOpacity>
+          <Text style={styles.headerTitle}>Scan QR</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.centerContent}>
+          {locationStatus === 'checking' ? (
+            <>
+              <ActivityIndicator size="large" color="#32A6D8" />
+              <Text style={styles.permissionText}>Checking location…</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.permissionText}>Location required</Text>
+              <Text style={styles.permissionSubtext}>
+                Please enable location so the pet's owner knows where their tag was scanned. This helps reunite lost pets faster.
+              </Text>
+              <TouchableOpacity style={styles.retryPermBtn} onPress={retryLocationPermission} disabled={requestingLocation}>
+                <Text style={styles.retryPermBtnText}>
+                  {requestingLocation ? 'Requesting…' : 'Enable Location'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.manualButton} onPress={openLocationSettings}>
+                <Text style={styles.manualButtonText}>Open Settings</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     );
