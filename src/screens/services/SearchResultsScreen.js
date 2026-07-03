@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
@@ -162,17 +162,27 @@ export default function SearchResultsScreen({ navigation, route }) {
     setFilteredSitters(result);
   };
 
+  // Filter modal passes a callback that wants to receive the picked address
+  // string. We stash it in a ref (not nav params — a function in params
+  // would trip React Navigation's non-serializable warning) and consume it
+  // when LocationPicker returns via the selectedLocation param below.
+  const pendingLocationCallback = useRef(null);
+
   const handleLocationPress = (callback) => {
+    pendingLocationCallback.current = callback;
     setShowFilterModal(false);
-    navigation.navigate('LocationPicker', {
-      onLocationSelect: (location) => {
-        // Extract the address string from the location object
-        const addressString = location.address || location.addressLine1 || 'Selected Location';
-        callback(addressString);
-        setShowFilterModal(true);
-      },
-    });
+    navigation.navigate('LocationPicker', { returnScreen: 'SearchResults' });
   };
+
+  useEffect(() => {
+    const loc = route.params?.selectedLocation;
+    if (!loc || !pendingLocationCallback.current) return;
+    const addressString = loc.address || loc.addressLine1 || 'Selected Location';
+    pendingLocationCallback.current(addressString);
+    pendingLocationCallback.current = null;
+    setShowFilterModal(true);
+    navigation.setParams({ selectedLocation: undefined });
+  }, [route.params?.selectedLocation]);
 
   const handleSitterPress = (sitter) => {
     if (sitter.approvalStatus === 'APPROVED') {

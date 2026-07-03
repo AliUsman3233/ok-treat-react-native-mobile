@@ -192,12 +192,12 @@ export default function LocationPickerScreen({ navigation, route }) {
             longitude: markerPosition.longitude
           };
 
-          // Check if we have a callback or need to navigate back with params
-          if (route.params?.onLocationSelect) {
-            route.params.onLocationSelect(locationData);
-            navigation.goBack();
-            return;
-          } else if (route.params?.returnScreen) {
+          // Serializable return path only — callers pass a `returnScreen`
+          // route name and read back the picked location from their own
+          // route.params.selectedLocation. Function-in-params callbacks
+          // used to be supported here but they trip React Navigation's
+          // "non-serializable values in navigation state" warning.
+          if (route.params?.returnScreen) {
             navigation.navigate(route.params.returnScreen, { selectedLocation: locationData });
             return;
           }

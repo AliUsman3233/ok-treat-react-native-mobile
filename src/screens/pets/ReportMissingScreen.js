@@ -40,21 +40,24 @@ export default function ReportMissingScreen({ navigation, route }) {
   const [submitting, setSubmitting] = useState(false);
 
   const openLocationPicker = () => {
-    // Callback only updates THIS screen's state — don't call navigate here.
-    // LocationPicker's own goBack() will bring the user back to this still-
-    // mounted screen. Earlier the callback did navigate('ReportMissing', ...)
-    // which popped LocationPicker; then LocationPicker's goBack() popped this
-    // screen too, dumping the user back on the Pet Profile.
-    navigation.navigate('LocationPicker', {
-      onLocationSelect: (loc) => {
-        setLocation({
-          address: loc.address || loc.addressLine1 || 'Selected Location',
-          latitude: loc.latitude ?? null,
-          longitude: loc.longitude ?? null,
-        });
-      },
-    });
+    // LocationPicker sends the picked location back via `selectedLocation`
+    // on this screen's route params (the returnScreen branch inside
+    // LocationPickerScreen). We avoid passing a callback through nav params
+    // because functions are non-serializable and trip React Navigation's
+    // state warning.
+    navigation.navigate('LocationPicker', { returnScreen: 'ReportMissing' });
   };
+
+  useEffect(() => {
+    const loc = route.params?.selectedLocation;
+    if (!loc) return;
+    setLocation({
+      address: loc.address || loc.addressLine1 || 'Selected Location',
+      latitude: loc.latitude ?? null,
+      longitude: loc.longitude ?? null,
+    });
+    navigation.setParams({ selectedLocation: undefined });
+  }, [route.params?.selectedLocation]);
 
   const onDatePickerChange = (event, selected) => {
     if (Platform.OS === 'android') setShowDatePicker(false);

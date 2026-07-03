@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +38,18 @@ export default function ServiceSearchScreen({ navigation, route }) {
   const handleBack = () => {
     navigation.goBack();
   };
+
+  // LocationPicker returns the picked location via a params update on this
+  // screen (see returnScreen branch there). Callback-in-params triggers a
+  // React Navigation warning about non-serializable state — this pattern
+  // is the serializable equivalent.
+  useEffect(() => {
+    const loc = route.params?.selectedLocation;
+    if (!loc) return;
+    setLocationData(loc);
+    setSelectedLocation(loc.address || loc.addressLine1 || 'Selected Location');
+    navigation.setParams({ selectedLocation: undefined });
+  }, [route.params?.selectedLocation]);
 
   const handleSearchNow = () => {
     if (hourBased) {
@@ -130,14 +142,12 @@ export default function ServiceSearchScreen({ navigation, route }) {
   };
 
   const handleLocationPress = () => {
-    navigation.navigate('LocationPicker', {
-      onLocationSelect: (location) => {
-        // Store full location object with coordinates
-        setLocationData(location);
-        // Extract the address string for display
-        setSelectedLocation(location.address || location.addressLine1 || 'Selected Location');
-      },
-    });
+    // Use the returnScreen pattern instead of a callback prop — passing a
+    // function through nav params trips React Navigation's "non-serializable
+    // values" warning. LocationPicker calls
+    // navigation.navigate(returnScreen, { selectedLocation }) and the
+    // useEffect above picks it up.
+    navigation.navigate('LocationPicker', { returnScreen: 'ServiceSearch' });
   };
 
   return (
