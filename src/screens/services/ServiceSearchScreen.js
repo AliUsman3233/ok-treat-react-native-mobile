@@ -219,7 +219,7 @@ export default function ServiceSearchScreen({ navigation, route }) {
             onPress={handleSearchNow}
             size='medium'
             fullWidth
-            disabled={!startDate}
+            disabled={hourBased ? (!singleDate || !startTime || !endTime) : !startDate}
           />
         </View>
       </View>
