@@ -43,9 +43,14 @@ export default function AddPetScreen({ navigation, route }) {
     feedingSchedule: '',
     canBeLeftAlone: '',
     medications: [],
+    foodAllergies: [],
+    medicationAllergies: [],
     additionalInstructions: '',
     // Step 4
     veterinaryInfo: '',
+    vetName: '',
+    vetPhone: '',
+    vetAddress: '',
     insuranceProvider: '',
     qrCode: '',
     photos: [],
@@ -99,7 +104,9 @@ export default function AddPetScreen({ navigation, route }) {
       // medications + additionalInstructions stay optional — many pets have neither
     ],
     4: [
-      ['veterinaryInfo', 'Please enter veterinary info', () => has(formData.veterinaryInfo)],
+      // Vet name is the anchor field — most owners know at least the clinic name.
+      // Phone and address stay optional so a partial record still saves.
+      ['vetName', 'Please enter your vet\'s name or clinic', () => has(formData.vetName)],
       // insuranceProvider, qrCode, photos all optional — sitter/owner may
       // not have these and blocking save would be too strict
     ],

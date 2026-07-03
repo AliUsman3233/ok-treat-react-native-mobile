@@ -55,9 +55,14 @@ export default function EditPetScreen({ navigation, route }) {
     feedingSchedule: '',
     canBeLeftAlone: '',
     medications: [],
+    foodAllergies: [],
+    medicationAllergies: [],
     additionalInstructions: '',
     // Step 4
     veterinaryInfo: '',
+    vetName: '',
+    vetPhone: '',
+    vetAddress: '',
     insuranceProvider: '',
     qrCode: '',
     photos: [],
@@ -90,9 +95,18 @@ export default function EditPetScreen({ navigation, route }) {
           energyLevel: pet.energyLevel || '',
           feedingSchedule: pet.feedingSchedule || '',
           canBeLeftAlone: pet.canBeLeftAlone || '',
-          medications: pet.medications || [],
+          medications: Array.isArray(pet.medications) ? pet.medications : [],
+          foodAllergies: Array.isArray(pet.foodAllergies) ? pet.foodAllergies : [],
+          medicationAllergies: Array.isArray(pet.medicationAllergies) ? pet.medicationAllergies : [],
           additionalInstructions: pet.additionalInstructions || '',
+          // Legacy free-text vet field is preserved for reference but the
+          // three split fields are the source of truth going forward.
+          // If the split fields are empty but veterinaryInfo has data,
+          // fall back on it as the vetName so nothing looks lost in the UI.
           veterinaryInfo: pet.veterinaryInfo || '',
+          vetName: pet.vetName || (pet.veterinaryInfo && !pet.vetPhone && !pet.vetAddress ? pet.veterinaryInfo : ''),
+          vetPhone: pet.vetPhone || '',
+          vetAddress: pet.vetAddress || '',
           insuranceProvider: pet.insuranceProvider || '',
           qrCode: pet.qrCode || '',
           photos: pet.photos || [],
@@ -150,7 +164,7 @@ export default function EditPetScreen({ navigation, route }) {
       ['canBeLeftAlone',  'Please answer: can the pet be left alone?',  () => has(formData.canBeLeftAlone)],
     ],
     4: [
-      ['veterinaryInfo', 'Please enter veterinary info', () => has(formData.veterinaryInfo)],
+      ['vetName', 'Please enter your vet\'s name or clinic', () => has(formData.vetName)],
     ],
   };
 

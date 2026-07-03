@@ -4,6 +4,7 @@ import React from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import { PawFilledIcon, CameraFillIcon, ScanAltIcon } from '../../assets';
 import { Dropdown } from '../../components';
+import PhoneInput from '../../components/PhoneInput';
 import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
@@ -98,17 +99,38 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
 
       {/* Health & Care Card */}
       <View style={styles.formCard}>
-        {/* Veterinary Info */}
+        {/* Vet Name */}
         <View style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>Veterinary Info</Text>
+          <Text style={styles.fieldLabel}>Vet clinic / name</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="e.g. Riverside Animal Clinic"
+            placeholderTextColor="rgba(137, 141, 143, 0.60)"
+            value={formData?.vetName || ''}
+            onChangeText={(text) => setFormData({ ...formData, vetName: text })}
+          />
+        </View>
+
+        {/* Vet Phone */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>Vet phone</Text>
+          <PhoneInput
+            initialValue={formData?.vetPhone || ''}
+            onChangeE164={(e164) => setFormData({ ...formData, vetPhone: e164 })}
+          />
+        </View>
+
+        {/* Vet Address */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>Vet address</Text>
           <TextInput
             style={styles.textArea}
-            placeholder="Add your vet's name, address and phone number"
+            placeholder="Street, city, state, ZIP"
             placeholderTextColor="rgba(137, 141, 143, 0.60)"
-            value={formData?.veterinaryInfo || ''}
-            onChangeText={(text) => setFormData({ ...formData, veterinaryInfo: text })}
+            value={formData?.vetAddress || ''}
+            onChangeText={(text) => setFormData({ ...formData, vetAddress: text })}
             multiline
-            numberOfLines={5}
+            numberOfLines={3}
             textAlignVertical="top"
           />
         </View>
@@ -280,7 +302,7 @@ const styles = StyleSheet.create({
     lineHeight: 18.6,
   },
   textArea: {
-    height: 119,
+    height: 96,
     borderWidth: 1,
     borderColor: '#EBEBEB',
     borderRadius: 16,
@@ -291,6 +313,22 @@ const styles = StyleSheet.create({
     fontWeight: '350',
     color: '#090E12',
     lineHeight: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    outlineStyle: 'none',
+  },
+  textInput: {
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    color: '#090E12',
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

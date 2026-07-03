@@ -525,19 +525,19 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     Provide the sitter with the information they need to keep your pet safe and healthy.
                   </Text>
 
-                  {/* Veterinary Info */}
-                  {pet.veterinaryInfo && (
+                  {/* Food allergies */}
+                  {Array.isArray(pet.foodAllergies) && pet.foodAllergies.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Veterinary Info</Text>
-                      <Text style={styles.infoText}>{pet.veterinaryInfo}</Text>
+                      <Text style={styles.sectionTitle}>Food allergies</Text>
+                      <Text style={styles.infoText}>{pet.foodAllergies.join(', ')}</Text>
                     </View>
                   )}
 
-                  {/* Insurance */}
-                  {pet.insuranceProvider && (
+                  {/* Medication allergies */}
+                  {Array.isArray(pet.medicationAllergies) && pet.medicationAllergies.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Insurance Provider</Text>
-                      <Text style={styles.infoText}>{pet.insuranceProvider}</Text>
+                      <Text style={styles.sectionTitle}>Medication allergies</Text>
+                      <Text style={styles.infoText}>{pet.medicationAllergies.join(', ')}</Text>
                     </View>
                   )}
 
@@ -546,6 +546,29 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>Medications</Text>
                       <Text style={styles.infoText}>{pet.medications.join(', ')}</Text>
+                    </View>
+                  )}
+
+                  {/* Veterinary Info — prefer the split fields when present */}
+                  {(pet.vetName || pet.vetPhone || pet.vetAddress) ? (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Veterinary Info</Text>
+                      {!!pet.vetName && <Text style={styles.infoText}>{pet.vetName}</Text>}
+                      {!!pet.vetPhone && <Text style={styles.infoText}>{pet.vetPhone}</Text>}
+                      {!!pet.vetAddress && <Text style={styles.infoText}>{pet.vetAddress}</Text>}
+                    </View>
+                  ) : pet.veterinaryInfo ? (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Veterinary Info</Text>
+                      <Text style={styles.infoText}>{pet.veterinaryInfo}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Insurance */}
+                  {pet.insuranceProvider && (
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Insurance Provider</Text>
+                      <Text style={styles.infoText}>{pet.insuranceProvider}</Text>
                     </View>
                   )}
 

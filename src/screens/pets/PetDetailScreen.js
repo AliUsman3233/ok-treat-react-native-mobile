@@ -183,32 +183,52 @@ export default function PetDetailScreen({ route, navigation }) {
     }
   };
 
-  // Normalize medications — schema stores as JSON (array OR plain string)
-  const medicationsList = (() => {
-    const m = pet?.medications;
+  // Normalize any JSON field that could be array-or-string legacy data.
+  const asList = (m) => {
     if (!m) return [];
     if (Array.isArray(m)) return m.filter(Boolean);
     if (typeof m === 'string' && m.trim()) return [m.trim()];
     return [];
+  };
+  const medicationsList = asList(pet?.medications);
+  const foodAllergiesList = asList(pet?.foodAllergies);
+  const medAllergiesList = asList(pet?.medicationAllergies);
+
+  // Combined vet contact line — hides parts that are empty. Fallback to
+  // legacy veterinaryInfo blob if none of the split fields are set.
+  const vetLine = (() => {
+    const parts = [pet?.vetName, pet?.vetPhone, pet?.vetAddress].filter(Boolean);
+    if (parts.length) return parts.join(' · ');
+    return pet?.veterinaryInfo || '';
   })();
 
   // Build a list of health rows that have data — empty fields are skipped
   // so finders aren't staring at "Microchipped: —" rows.
   const healthRows = [
+    foodAllergiesList.length > 0 && {
+      label: 'Food allergies',
+      value: foodAllergiesList.join(', '),
+      highlight: true,
+    },
+    medAllergiesList.length > 0 && {
+      label: 'Medication allergies',
+      value: medAllergiesList.join(', '),
+      highlight: true,
+    },
     medicationsList.length > 0 && {
       label: 'Medications',
       value: medicationsList.join(', '),
       highlight: true,
     },
     pet?.additionalInstructions && {
-      label: 'Special Needs / Allergies',
+      label: 'Special needs',
       value: pet.additionalInstructions,
       highlight: true,
     },
     pet?.feedingSchedule && { label: 'Feeding', value: pet.feedingSchedule },
     pet?.microchipped && { label: 'Microchipped', value: pet.microchipped },
     pet?.spayedNeutered && { label: 'Spayed / Neutered', value: pet.spayedNeutered },
-    pet?.veterinaryInfo && { label: 'Veterinary Info', value: pet.veterinaryInfo },
+    vetLine && { label: 'Veterinary contact', value: vetLine },
   ].filter(Boolean);
 
   return (
