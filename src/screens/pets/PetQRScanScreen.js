@@ -134,7 +134,11 @@ export default function PetQRScanScreen({ navigation, route }) {
   // scan-alert email includes where their pet was found. The link flow
   // (from Add/Edit Pet) skips the gate because it doesn't fire the email.
   const isPublicScan = fromScreen === 'Home';
-  // 'checking' | 'granted' | 'denied' — only meaningful when isPublicScan.
+  // 'checking' | 'granted' | 'denied' | 'services_off'
+  //   denied       — app permission is missing or explicitly denied
+  //   services_off — app permission is OK but device Location Services are off
+  // These two need different CTAs (permission prompt vs open device settings)
+  // so we keep them distinct instead of collapsing to a single "no location".
   const [locationStatus, setLocationStatus] = useState(isPublicScan ? 'checking' : 'granted');
   const [requestingLocation, setRequestingLocation] = useState(false);
 
@@ -153,30 +157,42 @@ export default function PetQRScanScreen({ navigation, route }) {
     if (!isWeb && !permission?.granted) requestPermission();
   }, [permission, requestPermission]);
 
-  // Pre-request location permission on mount so the prompt doesn't appear
-  // mid-scan. For the public scan flow we gate the camera behind this —
-  // no location, no scanner UI.
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        locationPermRef.current = status;
-        if (isPublicScan) setLocationStatus(status === 'granted' ? 'granted' : 'denied');
-      } catch (_) {
-        locationPermRef.current = 'denied';
-        if (isPublicScan) setLocationStatus('denied');
-      }
-    })();
-  }, [isPublicScan]);
+  // Verify both app permission AND device Location Services are on.
+  // requestForegroundPermissionsAsync alone returns 'granted' even when the
+  // device-wide Location Services toggle is off — that would let the scanner
+  // through and the recorded scan would have empty coords.
+  const evaluateLocationStatus = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      locationPermRef.current = status;
+      if (status !== 'granted') return 'denied';
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) return 'services_off';
+      return 'granted';
+    } catch (_) {
+      return 'denied';
+    }
+  };
+
+  // Re-evaluate every time the screen regains focus so a user who toggled
+  // Location off in system settings mid-session doesn't slip past the gate.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isPublicScan) return;
+      let cancelled = false;
+      (async () => {
+        const next = await evaluateLocationStatus();
+        if (!cancelled) setLocationStatus(next);
+      })();
+      return () => { cancelled = true; };
+    }, [isPublicScan])
+  );
 
   const retryLocationPermission = async () => {
     setRequestingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      locationPermRef.current = status;
-      setLocationStatus(status === 'granted' ? 'granted' : 'denied');
-    } catch (_) {
-      setLocationStatus('denied');
+      const next = await evaluateLocationStatus();
+      setLocationStatus(next);
     } finally {
       setRequestingLocation(false);
     }
@@ -203,7 +219,14 @@ export default function PetQRScanScreen({ navigation, route }) {
   }, [scanning, scanLineAnim]);
 
   // Fire-and-forget location + scan record (never blocks navigation)
-  // Only called AFTER we confirm the QR code is valid
+  // Only called AFTER we confirm the QR code is valid.
+  //
+  // Public-scan flow: we already gated the camera behind an app-permission
+  // + device-services check, so both should be true here. Still verify at
+  // scan time — a user can toggle Location Services off in the notification
+  // shade while the camera is up. If either check fails, we skip the scan
+  // record entirely (empty-coord rows are what the user asked us not to
+  // create) and bounce back to the gate on next focus.
   const recordScanInBackground = (qrCode) => {
     (async () => {
       const recordScan = (extra) =>
@@ -211,8 +234,9 @@ export default function PetQRScanScreen({ navigation, route }) {
           console.warn('Scan record failed:', err?.message)
         );
       try {
-        if (locationPermRef.current !== 'granted') {
-          recordScan({});
+        const servicesEnabled = await Location.hasServicesEnabledAsync().catch(() => false);
+        if (locationPermRef.current !== 'granted' || !servicesEnabled) {
+          console.warn('Skipping scan record — location unavailable at scan time');
           return;
         }
         const loc = await Promise.race([
@@ -228,6 +252,10 @@ export default function PetQRScanScreen({ navigation, route }) {
         }
         recordScan({ latitude: loc.coords.latitude, longitude: loc.coords.longitude, ...addressData });
       } catch (e) {
+        // Permission and services are on but the fix didn't come back in
+        // time (indoor, basement, etc.). Still record so the owner knows
+        // a scan happened — the email will just note location wasn't
+        // available for this one.
         console.warn('Scan location lookup failed:', e?.message);
         recordScan({});
       }
@@ -402,6 +430,21 @@ export default function PetQRScanScreen({ navigation, route }) {
             <>
               <ActivityIndicator size="large" color="#32A6D8" />
               <Text style={styles.permissionText}>Checking location…</Text>
+            </>
+          ) : locationStatus === 'services_off' ? (
+            <>
+              <Text style={styles.permissionText}>Turn on Location Services</Text>
+              <Text style={styles.permissionSubtext}>
+                Your device's Location Services are off. Turn them on in Settings so the pet's owner knows where their tag was scanned.
+              </Text>
+              <TouchableOpacity style={styles.retryPermBtn} onPress={openLocationSettings}>
+                <Text style={styles.retryPermBtnText}>Open Settings</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.manualButton} onPress={retryLocationPermission} disabled={requestingLocation}>
+                <Text style={styles.manualButtonText}>
+                  {requestingLocation ? 'Checking…' : 'I turned it on'}
+                </Text>
+              </TouchableOpacity>
             </>
           ) : (
             <>
