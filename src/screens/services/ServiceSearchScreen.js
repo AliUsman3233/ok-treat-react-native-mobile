@@ -14,7 +14,11 @@ import moment from 'moment';
 // Pet Walking need a single-day + time-window because they run for a few
 // hours within one day. Anything not listed here falls back to day-based
 // for safety.
-const HOUR_BASED_SERVICES = new Set(['DropIn', 'Drop-In Visit', 'DayCare', 'Day Care', 'PetWalking', 'Pet Walking']);
+//
+// ServicesScreen navigates with the enum-style serviceType (DROP_IN_VISITS
+// etc). SearchResultsScreen forwards the same value on to the API. Keep
+// this in sync with the ServiceType enum on the backend.
+const HOUR_BASED_SERVICES = new Set(['DROP_IN_VISITS', 'DAY_CARE', 'PET_WALKING']);
 const isHourBased = (t) => HOUR_BASED_SERVICES.has(t);
 
 export default function ServiceSearchScreen({ navigation, route }) {
