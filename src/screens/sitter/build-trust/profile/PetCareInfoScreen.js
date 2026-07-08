@@ -8,7 +8,8 @@ import UnsavedChangesModal from '../../../../components/UnsavedChangesModal';
 import { BackArrowIcon } from '../../../../assets';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 
-const PET_TYPE_OPTIONS = ['Dogs', 'Cats', 'Birds', 'Rabbits', 'Reptiles', 'Fish', 'Small animals'];
+// Product only supports Dog and Cat (matches the Add Pet flow).
+const PET_TYPE_OPTIONS = ['Dogs', 'Cats'];
 const PET_SIZE_OPTIONS = ['Small (1-15 lbs)', 'Medium (16-40 lbs)', 'Large (41-100 lbs)', 'Giant (101+ lbs)'];
 const WALK_FREQUENCY_OPTIONS = ['1-2 times/day', '3-4 times/day', '5+ times/day'];
 const FEEDING_OPTIONS = ['Dry food', 'Wet food', 'Raw diet', 'Special diet', 'Medication with food'];

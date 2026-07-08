@@ -11,11 +11,16 @@ import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
+import { getServiceUnit } from '../../../utils/serviceUnits';
+
+const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('DROP_IN_VISITS');
 
 
 const { width } = Dimensions.get('window');
 
-const DEFAULT_BASE_RATE = '1440';
+// Hour-based service: 60 coins/hour (1 min = 1 coin → 1 hr = 60 coins,
+// i.e. the 1440/day day-rate divided across 24h). Sitter can still edit.
+const DEFAULT_BASE_RATE = '60';
 const HOLIDAY_RATE_MULTIPLIER = 1.12;
 const ADDITIONAL_DOG_RATE_MULTIPLIER = 0.72;
 const PUPPY_RATE_MULTIPLIER = 0.72;
@@ -72,16 +77,23 @@ export default function DropInVisitSettingsScreen({ navigation }) {
     // Legacy rows that saved a single string are tolerated on load below.
     const [hostAvailability, setHostAvailability] = useState([]);
 
-    // Calculate additional rates based on base rate when toggle is ON
+    // Auto-fill additional rate defaults only for fields the sitter
+    // hasn't touched. Once a rate is entered, subsequent changes to
+    // baseRate no longer overwrite it — the sitter has final say
+    // (product decision, 2026-07-07).
     React.useEffect(() => {
-        if (additionalRates && baseRate) {
-            const base = parseFloat(baseRate) || 0;
-            setHolidayRate(Math.round(base * HOLIDAY_RATE_MULTIPLIER).toString());
-            setAdditionalDogRate(Math.round(base * ADDITIONAL_DOG_RATE_MULTIPLIER).toString());
-            setPuppyRate(Math.round(base * PUPPY_RATE_MULTIPLIER).toString());
-            setLongStayRate(Math.round(base * LONG_STAY_RATE_MULTIPLIER).toString());
-        }
-    }, [additionalRates, baseRate]);
+        if (!additionalRates || !baseRate) return;
+        const base = parseFloat(baseRate) || 0;
+        const fillIfEmpty = (setter, current, multiplier) => {
+            if (!current || !current.toString().trim()) {
+                setter(Math.round(base * multiplier).toString());
+            }
+        };
+        fillIfEmpty(setHolidayRate, holidayRate, HOLIDAY_RATE_MULTIPLIER);
+        fillIfEmpty(setAdditionalDogRate, additionalDogRate, ADDITIONAL_DOG_RATE_MULTIPLIER);
+        fillIfEmpty(setPuppyRate, puppyRate, PUPPY_RATE_MULTIPLIER);
+        fillIfEmpty(setLongStayRate, longStayRate, LONG_STAY_RATE_MULTIPLIER);
+    }, [additionalRates, baseRate, holidayRate, additionalDogRate, puppyRate, longStayRate]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -268,7 +280,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                                     leftIcon={<CoinIcon width={18.35} height={18.35} />}
                                     containerStyle={styles.rateInputContainer}
                                 />
-                                <Text style={styles.rateUnitText}>/ per day</Text>
+                                <Text style={styles.rateUnitText}>/ per {RATE_UNIT}</Text>
                             </View>
                         </View>
 
@@ -304,6 +316,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                             extendedCareMax={extendedCareMax}
                             selectedPetSizes={selectedPetSizes}
                             onTogglePetSize={togglePetSize}
+                            pricedBy={PRICED_BY}
                         />
                     </View>
 
@@ -475,7 +488,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                             <PetTypeMultiSelect
                                 value={hostAvailability}
                                 onChange={setHostAvailability}
-                                options={['Pets that are not crate trained', 'Unneutered male dogs', 'Female dogs in heat', 'Puppies', 'Senior pets', 'Special needs pets']}
+                                options={['Pets that are not crate trained', 'Unneutered males', 'Females in heat', 'Puppies / kittens', 'Senior pets', 'Special needs pets']}
                             />
                         </View>
                     </View>

@@ -1,7 +1,11 @@
 // Chip-style multi-select for "What type of pets can you sit?". Used on
 // every service-setup screen (Boarding, House Sitting, Drop-in Visits,
-// Day Care, Pet Walking). Lets sitters pick multiple sizes/species
-// instead of being forced into a single option.
+// Day Care, Pet Walking).
+//
+// The product only supports Dog and Cat (matches the Add Pet flow), so
+// the species list is exactly those two. Pet *size* is captured
+// separately by the pounds selector on each setup screen — don't
+// re-introduce size-labeled or other-species options here.
 //
 // Backend stores the result as a JSON array under settings.petTypes.
 // For legacy rows that stored a single string, parse into [string] on
@@ -10,18 +14,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const DEFAULT_OPTIONS = [
-  'Small dog (0-15 lbs)',
-  'Medium dog (16-40 lbs)',
-  'Large dog (41-100 lbs)',
-  'Giant dog (101+ lbs)',
-  'Cat',
-  'Bird',
-  'Rabbit',
-  'Reptile',
-  'Small animal',
-  'Other',
-];
+const DEFAULT_OPTIONS = ['Dog', 'Cat'];
 
 export default function PetTypeMultiSelect({ value, onChange, options = DEFAULT_OPTIONS }) {
   const selected = Array.isArray(value) ? value : value ? [value] : [];

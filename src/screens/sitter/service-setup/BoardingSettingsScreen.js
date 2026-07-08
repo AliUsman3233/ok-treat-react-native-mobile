@@ -10,6 +10,9 @@ import PetTypeMultiSelect from '../../../components/PetTypeMultiSelect';
 import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, CoinBackgroundIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
+import { getServiceUnit } from '../../../utils/serviceUnits';
+
+const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('BOARDING');
 
 
 const { width } = Dimensions.get('window');
@@ -69,16 +72,21 @@ export default function BoardingSettingsScreen({ navigation }) {
     // Legacy rows that saved a single string are tolerated on load below.
     const [hostAvailability, setHostAvailability] = useState([]);
 
-    // Calculate additional rates based on base rate when toggle is ON
+    // Auto-fill additional rate defaults only for fields the sitter
+    // hasn't touched — same behavior as the other setup screens.
     React.useEffect(() => {
-        if (additionalRates && baseRate) {
-            const base = parseFloat(baseRate) || 0;
-            setHolidayRate(Math.round(base * HOLIDAY_RATE_MULTIPLIER).toString());
-            setAdditionalDogRate(Math.round(base * ADDITIONAL_DOG_RATE_MULTIPLIER).toString());
-            setPuppyRate(Math.round(base * PUPPY_RATE_MULTIPLIER).toString());
-            setLongStayRate(Math.round(base * LONG_STAY_RATE_MULTIPLIER).toString());
-        }
-    }, [additionalRates, baseRate]);
+        if (!additionalRates || !baseRate) return;
+        const base = parseFloat(baseRate) || 0;
+        const fillIfEmpty = (setter, current, multiplier) => {
+            if (!current || !current.toString().trim()) {
+                setter(Math.round(base * multiplier).toString());
+            }
+        };
+        fillIfEmpty(setHolidayRate, holidayRate, HOLIDAY_RATE_MULTIPLIER);
+        fillIfEmpty(setAdditionalDogRate, additionalDogRate, ADDITIONAL_DOG_RATE_MULTIPLIER);
+        fillIfEmpty(setPuppyRate, puppyRate, PUPPY_RATE_MULTIPLIER);
+        fillIfEmpty(setLongStayRate, longStayRate, LONG_STAY_RATE_MULTIPLIER);
+    }, [additionalRates, baseRate, holidayRate, additionalDogRate, puppyRate, longStayRate]);
 
     // Fetch saved data when screen comes into focus
     useFocusEffect(
@@ -274,7 +282,7 @@ export default function BoardingSettingsScreen({ navigation }) {
                                     leftIcon={<CoinIcon width={18.35} height={18.35} />}
                                     containerStyle={styles.rateInputContainer}
                                 />
-                                <Text style={styles.rateUnitText}>/ per day</Text>
+                                <Text style={styles.rateUnitText}>/ per {RATE_UNIT}</Text>
                             </View>
                         </View>
 
@@ -375,7 +383,7 @@ export default function BoardingSettingsScreen({ navigation }) {
 
                                         {/* Additional Dog Rate */}
                                         <View style={styles.rateRow}>
-                                            <Text style={styles.rateLabel}>Additional Dog Rate</Text>
+                                            <Text style={styles.rateLabel}>Additional Pet Rate</Text>
                                             {additionalRates ? (
                                                 <View style={styles.rateRight}>
                                                     <View style={styles.coinIconSmall}>
@@ -405,7 +413,7 @@ export default function BoardingSettingsScreen({ navigation }) {
 
                                         {/* Puppy Rate */}
                                         <View style={styles.rateRow}>
-                                            <Text style={styles.rateLabel}>Puppy Rate</Text>
+                                            <Text style={styles.rateLabel}>Puppy / Kitten Rate</Text>
                                             {additionalRates ? (
                                                 <View style={styles.rateRight}>
                                                     <View style={styles.coinIconSmall}>
@@ -643,7 +651,7 @@ export default function BoardingSettingsScreen({ navigation }) {
                             <PetTypeMultiSelect
                                 value={hostAvailability}
                                 onChange={setHostAvailability}
-                                options={['Pets that are not crate trained', 'Unneutered male dogs', 'Female dogs in heat', 'Puppies', 'Senior pets', 'Special needs pets']}
+                                options={['Pets that are not crate trained', 'Unneutered males', 'Females in heat', 'Puppies / kittens', 'Senior pets', 'Special needs pets']}
                             />
                         </View>
                     </View>

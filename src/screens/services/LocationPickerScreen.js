@@ -545,14 +545,20 @@ export default function LocationPickerScreen({ navigation, route }) {
                 </View>
                 <Text style={styles.updateText}>Last update: {selectedSitter.lastUpdate}</Text>
               </View>
-              <View style={styles.priceSection}>
-                <View style={styles.coinContainer}>
-                  <CoinBackgroundIcon width={19} height={19} style={styles.coinBackground} />
-                  <CoinIcon width={13} height={13} style={styles.coinIconStyle} />
+              {/* This nearby-sitters preview has no chosen service, and the
+                  /sitter/nearby endpoint returns price: null — so we only
+                  render the rate when one actually exists, and don't assert
+                  a per-night/per-day/per-hour unit the picker can't know. */}
+              {selectedSitter.price != null && (
+                <View style={styles.priceSection}>
+                  <View style={styles.coinContainer}>
+                    <CoinBackgroundIcon width={19} height={19} style={styles.coinBackground} />
+                    <CoinIcon width={13} height={13} style={styles.coinIconStyle} />
+                  </View>
+                  <Text style={styles.priceText}>{selectedSitter.price}</Text>
+                  <Text style={styles.priceLabel}>rate</Text>
                 </View>
-                <Text style={styles.priceText}>{selectedSitter.price}</Text>
-                <Text style={styles.priceLabel}>per night</Text>
-              </View>
+              )}
             </View>
 
             <TouchableOpacity

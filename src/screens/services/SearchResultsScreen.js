@@ -8,9 +8,14 @@ import SearchFilterModal from '../../components/SearchFilterModal';
 import { searchSitters } from '../../services/sitterService';
 import { getUserPets } from '../../services/petService';
 import { rankSitters } from '../../services/sitterMatching';
+import { getServiceUnit } from '../../utils/serviceUnits';
 
 export default function SearchResultsScreen({ navigation, route }) {
   const { serviceType = 'Boarding', searchParams = {} } = route?.params || {};
+  // Price-label unit follows the service (per hour vs per day) — never
+  // hardcode "night". serviceType arrives as a display string ("House
+  // Sitting"); normalise to the enum the way the search call does.
+  const priceUnit = getServiceUnit(serviceType.toUpperCase().replace(/ /g, '_')).unit;
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [sitters, setSitters] = useState([]);
   const [filteredSitters, setFilteredSitters] = useState(null);
@@ -210,6 +215,13 @@ export default function SearchResultsScreen({ navigation, route }) {
     const borderColor = item.approvalStatus === 'REJECTED' ? '#FF0000'
                        : item.approvalStatus === 'PENDING' ? '#FF9800'
                        : '#EBEBEB';
+    // Only approved sitters are bookable. Non-approved ones stay visible
+    // but are visually dimmed + tagged so it's clear before tapping; the
+    // tap itself is gated in handleSitterPress (shows an info modal).
+    const isBookable = item.approvalStatus === 'APPROVED';
+    const statusLabel = item.approvalStatus === 'PENDING' ? 'Under review'
+                      : item.approvalStatus === 'REJECTED' ? 'Unavailable'
+                      : null;
 
     const matchScore = item.matchScore;
     const matchTier =
@@ -220,7 +232,7 @@ export default function SearchResultsScreen({ navigation, route }) {
 
     return (
       <TouchableOpacity
-        style={[styles.sitterCard, { borderColor }]}
+        style={[styles.sitterCard, { borderColor }, !isBookable && styles.sitterCardDisabled]}
         onPress={() => handleSitterPress(item)}
         activeOpacity={0.7}
       >
@@ -255,6 +267,9 @@ export default function SearchResultsScreen({ navigation, route }) {
                 <Text style={styles.sitterName}>{item.name}</Text>
                 <Text style={styles.businessName}>{item.business}</Text>
                 <Text style={styles.distance}>{item.distance} km away</Text>
+                {statusLabel && (
+                  <Text style={styles.statusPill}>{statusLabel}</Text>
+                )}
               </View>
             </View>
             <View style={styles.priceSection}>
@@ -265,7 +280,7 @@ export default function SearchResultsScreen({ navigation, route }) {
                 </View>
                 <Text style={styles.coinAmount}>{item.coins} Coins</Text>
               </View>
-              <Text style={styles.priceLabel}>total per night</Text>
+              <Text style={styles.priceLabel}>total per {priceUnit}</Text>
             </View>
           </View>
 
@@ -484,6 +499,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EBEBEB',
     backgroundColor: '#FFFFFF',
+  },
+  sitterCardDisabled: {
+    opacity: 0.55,
+  },
+  statusPill: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    color: '#B54708',
+    backgroundColor: '#FFF4E5',
+    fontSize: 10,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   cardContent: {
     gap: 6,

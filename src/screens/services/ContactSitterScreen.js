@@ -8,6 +8,7 @@ import { Button } from '../../components';
 import { createBooking } from '../../services/bookingService';
 import { getUserPets } from '../../services/petService';
 import { useWallet } from '../../context/WalletContext';
+import { getServiceUnit } from '../../utils/serviceUnits';
 import moment from 'moment';
 
 const { width } = Dimensions.get('window');
@@ -81,16 +82,37 @@ export default function ContactSitterScreen({ navigation, route }) {
     return parseFloat(svcData?.baseRate) || 0;
   };
 
-  // Calculate days between dates
-  const getDaysCount = () => {
+  // Effective service type once the display name is resolved to the
+  // enum shape used everywhere else. Used for unit lookup + payload.
+  const effectiveServiceType = serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING';
+  const { unit: RATE_UNIT, pricedBy } = getServiceUnit(effectiveServiceType);
+  const isHourly = pricedBy === 'hours';
+
+  // Duration for pricing math. For hour-based services the search
+  // flow packs a single day + time window into two same-day ISO
+  // timestamps, so we derive whole hours from the delta (rounded up
+  // so a 30-minute request bills as 1 hour — matches the sitter's
+  // hourly quote). For day-based, we count whole days as before.
+  const getUnitCount = () => {
     if (!startDate || !endDate) return null;
+    if (isHourly) {
+      const ms = moment(endDate).diff(moment(startDate));
+      if (ms <= 0) return 1;
+      return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
+    }
     const days = moment(endDate).diff(moment(startDate), 'days');
     return days > 0 ? days : 1;
   };
 
-  // Format date range for display
+  // Format date range for display. Hour-based bookings are a single
+  // day + time window, so show that shape instead of a two-date range.
   const formatDateRange = () => {
     if (!startDate || !endDate) return 'Dates not selected';
+    if (isHourly) {
+      const start = moment(startDate);
+      const end = moment(endDate);
+      return `${start.format('MMM D, YYYY')} · ${start.format('h:mm A')} - ${end.format('h:mm A')}`;
+    }
     return `${moment(startDate).format('MMM D')} - ${moment(endDate).format('MMM D, YYYY')}`;
   };
 
@@ -102,7 +124,8 @@ export default function ContactSitterScreen({ navigation, route }) {
   // so we mirror that here for the precheck — otherwise the displayed
   // "100 coins" cost would let a 99.5-coin balance pass the precheck and
   // then fail server-side.
-  const totalCost = Math.max(0, Math.round(getBaseRate() * (getDaysCount() || 1)));
+  const unitCount = getUnitCount();
+  const totalCost = Math.max(0, Math.round(getBaseRate() * (unitCount || 1)));
   const balance = wallet.coinBalance;
   const insufficient = totalCost > 0 && balance < totalCost;
 
@@ -168,9 +191,14 @@ export default function ContactSitterScreen({ navigation, route }) {
     navigation.navigate('OpenRequests');
   };
 
-  const daysCount = getDaysCount();
   const baseRate = getBaseRate();
-  const totalEstimate = baseRate * (daysCount || 1);
+  // Pluralized unit label — "day" / "days" or "hour" / "hours" —
+  // driven by serviceUnits so we can't drift from the sitter setup
+  // screen's "/ per X" copy.
+  const unitLabelSingular = RATE_UNIT;
+  const unitLabelPlural = `${RATE_UNIT}s`;
+  const unitLabel = (unitCount || 1) === 1 ? unitLabelSingular : unitLabelPlural;
+  const unitLabelTitle = unitLabel.charAt(0).toUpperCase() + unitLabel.slice(1);
 
   return (
     <ScreenWrapper noBottomTabs>
@@ -213,8 +241,8 @@ export default function ContactSitterScreen({ navigation, route }) {
                     <Text style={styles.cardTitle}>Service Date</Text>
                     <Text style={styles.cardSubtitle}>{formatDateRange()}</Text>
                   </View>
-                  {daysCount && (
-                    <Text style={styles.daysText}>{daysCount} {daysCount === 1 ? 'Day' : 'Days'}</Text>
+                  {unitCount && (
+                    <Text style={styles.daysText}>{unitCount} {unitLabelTitle}</Text>
                   )}
                 </View>
               </View>
@@ -227,7 +255,7 @@ export default function ContactSitterScreen({ navigation, route }) {
               <Text style={styles.sectionTitle}>Price Estimate</Text>
               <View style={styles.card}>
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>{baseRate} coins x {daysCount || 1} {(daysCount || 1) === 1 ? 'day' : 'days'}</Text>
+                  <Text style={styles.priceLabel}>{baseRate} coins x {unitCount || 1} {unitLabel}</Text>
                   <Text style={styles.priceValue}>{totalCost} coins</Text>
                 </View>
                 <View style={[styles.priceRow, { marginTop: 8 }]}>

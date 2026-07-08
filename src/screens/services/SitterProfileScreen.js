@@ -8,6 +8,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, LocationPinIcon, ImageHereIcon, VerifiedIcon, CoinIcon, CoinBackgroundIcon } from '../../assets';
 import { Button } from '../../components';
 import api from '../../config/api';
+import { getServiceUnit } from '../../utils/serviceUnits';
 import moment from 'moment';
 
 const { width } = Dimensions.get('window');
@@ -112,15 +113,14 @@ export default function SitterProfileScreen({ navigation, route }) {
   };
 
   // Helper to get price label
+  // Price-unit label driven by serviceUnits so this stays in lockstep
+  // with the sitter setup screen's "/ per X" copy and the booking math
+  // in ContactSitterScreen. Previously had a hard-coded map with per-
+  // night / per-visit / per-walk that drifted from the actual billing
+  // model (which was always per-day; now correctly per-hour for the
+  // three hour-based services).
   const getPriceLabel = (serviceType) => {
-    const labels = {
-      'BOARDING': 'per night',
-      'HOUSE_SITTING': 'per night',
-      'DROP_IN_VISITS': 'per visit',
-      'DAY_CARE': 'per day',
-      'PET_WALKING': 'per walk'
-    };
-    return labels[serviceType] || 'per service';
+    return `per ${getServiceUnit(serviceType).unit}`;
   };
 
   // Calendar navigation functions
@@ -504,18 +504,10 @@ export default function SitterProfileScreen({ navigation, route }) {
                 {isExpanded && (
                   <>
                     <View style={styles.ratesList}>
-                      {serviceType === 'DROP_IN_VISITS' && (
-                        <View style={styles.rateRow}>
-                          <Text style={styles.rateLabel}>Hourly Rate</Text>
-                          <View style={styles.rateRight}>
-                            <View style={styles.coinIconSmall}>
-                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
-                            </View>
-                            <Text style={styles.rateValue}>{baseRate} Coins</Text>
-                          </View>
-                        </View>
-                      )}
+                      {/* Base-rate row previously duplicated for DROP_IN_VISITS
+                          as "Hourly Rate" — removed now that the collapsed
+                          card header already shows the base rate + "per hour"
+                          label. The expanded list starts with modifiers only. */}
                       <View style={styles.rateRow}>
                         <View style={styles.rateLeft}>
                           <Text style={styles.rateLabel}>Holiday Rate</Text>
@@ -530,7 +522,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                         </View>
                       </View>
                       <View style={styles.rateRow}>
-                        <Text style={styles.rateLabel}>Additional Dog Rate</Text>
+                        <Text style={styles.rateLabel}>Additional Pet Rate</Text>
                         <View style={styles.rateRight}>
                           <View style={styles.coinIconSmall}>
                             <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
@@ -540,7 +532,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                         </View>
                       </View>
                       <View style={styles.rateRow}>
-                        <Text style={styles.rateLabel}>Puppy Rate</Text>
+                        <Text style={styles.rateLabel}>Puppy / Kitten Rate</Text>
                         <View style={styles.rateRight}>
                           <View style={styles.coinIconSmall}>
                             <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
@@ -549,7 +541,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                           <Text style={styles.rateValue}>{puppyRate} Coins</Text>
                         </View>
                       </View>
-                      {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
+                      {getServiceUnit(serviceType).pricedBy === 'days' && (
                         <View style={styles.rateRow}>
                           <Text style={styles.rateLabel}>Stays of 14 Nights or More</Text>
                           <View style={styles.rateRight}>
@@ -561,7 +553,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                           </View>
                         </View>
                       )}
-                      {(serviceType === 'BOARDING' || serviceType === 'HOUSE_SITTING') && (
+                      {getServiceUnit(serviceType).pricedBy === 'days' && (
                         <>
                           <View style={styles.rateRow}>
                             <Text style={styles.rateLabel}>Bathing / Grooming</Text>

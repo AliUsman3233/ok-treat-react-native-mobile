@@ -11,13 +11,13 @@ import api from '../../../../config/api';
 
 const SKILL_OPTIONS = [
   'Skilled in oral medication delivery',
-  'Experienced with senior dogs',
+  'Experienced with senior pets',
   'Able to provide daily exercise',
-  'Comfortable with puppies',
+  'Comfortable with puppies/kittens',
   'Experienced with special needs pets',
   'Trained in pet first aid',
   'Experienced with multiple pets',
-  'Can handle reactive dogs',
+  'Can handle reactive pets',
   'Comfortable with exotic pets',
   'Skilled in injection medication',
 ];
@@ -28,11 +28,15 @@ const YARD_TYPE_OPTIONS = ['Fenced yard', 'Unfenced yard', 'No yard'];
 
 const SMOKING_POLICY_OPTIONS = ['Smoke-free home', 'Outdoor smoking only', 'Smoking allowed'];
 
-const PETS_IN_HOME_OPTIONS = ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Reptile', 'None'];
+// "Pets in your home" is the sitter disclosing their OWN household pets,
+// not the species they offer to sit — so it isn't locked to Dog/Cat.
+// We surface Dog/Cat/None by default (no hardcoded bird/reptile/fish
+// list) and let the sitter add any other animal they own via free text.
+const PETS_IN_HOME_OPTIONS = ['Dog', 'Cat', 'None'];
 
 const PET_RESTRICTION_OPTIONS = [
-  'Only spayed/neutered dogs',
-  'No puppies under 1 year',
+  'Only spayed/neutered pets',
+  'No puppies/kittens under 1 year',
   'No aggressive breeds',
   'No unvaccinated pets',
   'No intact males',
@@ -50,6 +54,10 @@ export default function DetailsScreen({ navigation }) {
   const [smokingPolicy, setSmokingPolicy] = useState('');
   const [childrenInHome, setChildrenInHome] = useState(null);
   const [petsInHome, setPetsInHome] = useState([]);
+  // Free-text entry for a household pet that isn't one of the default
+  // Dog/Cat chips (e.g. the sitter owns a bird). Added values are stored
+  // in petsInHome just like the presets.
+  const [customPetInHome, setCustomPetInHome] = useState('');
   const [petRestrictions, setPetRestrictions] = useState([]);
   const [yearsExperience, setYearsExperience] = useState('');
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -202,6 +210,20 @@ export default function DetailsScreen({ navigation }) {
     }
   };
 
+  // Append a free-text household pet to petsInHome (deduped, case-insensitive).
+  const addCustomPetInHome = () => {
+    const value = customPetInHome.trim();
+    if (!value || value.toLowerCase() === 'none') {
+      setCustomPetInHome('');
+      return;
+    }
+    const exists = petsInHome.some((p) => p.toLowerCase() === value.toLowerCase());
+    if (!exists) {
+      setPetsInHome([...petsInHome.filter((p) => p !== 'None'), value]);
+    }
+    setCustomPetInHome('');
+  };
+
   // Render a single-select chip row
   const renderSingleSelect = (options, selected, onSelect) => (
     <View style={styles.chipsContainer}>
@@ -309,7 +331,7 @@ export default function DetailsScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <Text style={styles.helperText}>
-              Dog parents will be able to see this on your profile.
+              Pet parents will be able to see this on your profile.
             </Text>
             <View style={styles.textAreaContainer}>
               <TextInput
@@ -415,7 +437,36 @@ export default function DetailsScreen({ navigation }) {
             <Text style={styles.helperText}>
               What pets do you currently have?
             </Text>
-            {renderMultiSelect(PETS_IN_HOME_OPTIONS, petsInHome, setPetsInHome)}
+            {/* Dog/Cat/None presets plus any custom animals the sitter added.
+                Custom values live in petsInHome and render as toggleable chips. */}
+            {renderMultiSelect(
+              [
+                'Dog',
+                'Cat',
+                ...petsInHome.filter((p) => !PETS_IN_HOME_OPTIONS.includes(p)),
+                'None',
+              ],
+              petsInHome,
+              setPetsInHome
+            )}
+            <View style={styles.addCustomRow}>
+              <TextInput
+                style={styles.addCustomInput}
+                value={customPetInHome}
+                onChangeText={setCustomPetInHome}
+                placeholder="Add another pet (e.g. Bird)"
+                placeholderTextColor="#A0AEC0"
+                returnKeyType="done"
+                onSubmitEditing={addCustomPetInHome}
+              />
+              <TouchableOpacity
+                style={styles.addCustomButton}
+                onPress={addCustomPetInHome}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.addCustomButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 8. Pet Restrictions */}
@@ -613,6 +664,38 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 4,
+  },
+  addCustomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  addCustomInput: {
+    flex: 1,
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+    color: '#25314C',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+  },
+  addCustomButton: {
+    paddingHorizontal: 18,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#32A6D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addCustomButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
   },
   chip: {
     paddingHorizontal: 14,

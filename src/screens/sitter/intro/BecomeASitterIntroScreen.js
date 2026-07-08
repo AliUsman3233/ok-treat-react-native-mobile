@@ -277,18 +277,18 @@ export default function BecomeASitterIntroScreen({ navigation }) {
                   <View style={styles.serviceIconContainer}>
                     <SunIcon width={24} height={24} fill="#32A6D8" />
                   </View>
-                  <Text style={styles.serviceTitle}>Doggy Day Care</Text>
+                  <Text style={styles.serviceTitle}>Day Care</Text>
                   <Text style={styles.serviceDescription}>
-                    Great for dog enthusiasts working remotely.
+                    Great for pet enthusiasts working remotely.
                   </Text>
                 </View>
                 <View style={styles.serviceCard}>
                   <View style={styles.serviceIconContainer}>
                     <PawIcon width={24} height={24} fill="#32A6D8" />
                   </View>
-                  <Text style={styles.serviceTitle}>Doggy Walking</Text>
+                  <Text style={styles.serviceTitle}>Pet Walking</Text>
                   <Text style={styles.serviceDescription}>
-                    Pick dog walks that suit your timing.
+                    Pick pet walks that suit your timing.
                   </Text>
                 </View>
               </View>
@@ -336,7 +336,7 @@ export default function BecomeASitterIntroScreen({ navigation }) {
                     <PawFilledIconPink width={10} height={10} fill="#FFC2EB" />
                   </View>
                   <Text style={styles.bulletText}>
-                    Background checks included for every pet sitter and dog walker.
+                    Background checks included for every pet sitter and walker.
                   </Text>
                 </View>
                 <View style={styles.bulletItem}>

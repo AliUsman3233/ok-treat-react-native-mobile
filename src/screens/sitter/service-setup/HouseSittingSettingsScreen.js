@@ -6,15 +6,21 @@ import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import Dropdown from '../../../components/Dropdown';
 import PetTypeMultiSelect from '../../../components/PetTypeMultiSelect';
+import TimeField from '../../../components/TimeField';
 import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
+import { getServiceUnit } from '../../../utils/serviceUnits';
+
+const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('HOUSE_SITTING');
 
 
 const { width } = Dimensions.get('window');
 
-const DEFAULT_BASE_RATE = '1440';
+// Hour-based service (2026-07-08): 60 coins/hour (1 min = 1 coin →
+// 1 hr = 60 coins, i.e. the 1440/day day-rate divided across 24h).
+const DEFAULT_BASE_RATE = '60';
 const HOLIDAY_RATE_MULTIPLIER = 1.12;
 const ADDITIONAL_DOG_RATE_MULTIPLIER = 0.72;
 const PUPPY_RATE_MULTIPLIER = 0.72;
@@ -47,6 +53,10 @@ export default function HouseSittingSettingsScreen({ navigation }) {
     
     const [availabilityImportant, setAvailabilityImportant] = useState('yes');
     const [selectedDays, setSelectedDays] = useState(['Su']);
+    // Daily availability window (HH:mm, 24-hour). Applied to every day in
+    // selectedDays. Owner-side hour-based search filters by this window.
+    const [dailyStartTime, setDailyStartTime] = useState('09:00');
+    const [dailyEndTime, setDailyEndTime] = useState('17:00');
     const [pottyBreaks, setPottyBreaks] = useState('0-2 hours');
     const [homeType, setHomeType] = useState('House');
     const [yardType, setYardType] = useState('Fenced yard');
@@ -67,16 +77,21 @@ export default function HouseSittingSettingsScreen({ navigation }) {
     // Legacy rows that saved a single string are tolerated on load below.
     const [hostAvailability, setHostAvailability] = useState([]);
 
-    // Calculate additional rates based on base rate when toggle is ON
+    // Auto-fill additional rate defaults only for fields the sitter
+    // hasn't touched — same behavior as the other setup screens.
     React.useEffect(() => {
-        if (additionalRates && baseRate) {
-            const base = parseFloat(baseRate) || 0;
-            setHolidayRate(Math.round(base * HOLIDAY_RATE_MULTIPLIER).toString());
-            setAdditionalDogRate(Math.round(base * ADDITIONAL_DOG_RATE_MULTIPLIER).toString());
-            setPuppyRate(Math.round(base * PUPPY_RATE_MULTIPLIER).toString());
-            setLongStayRate(Math.round(base * LONG_STAY_RATE_MULTIPLIER).toString());
-        }
-    }, [additionalRates, baseRate]);
+        if (!additionalRates || !baseRate) return;
+        const base = parseFloat(baseRate) || 0;
+        const fillIfEmpty = (setter, current, multiplier) => {
+            if (!current || !current.toString().trim()) {
+                setter(Math.round(base * multiplier).toString());
+            }
+        };
+        fillIfEmpty(setHolidayRate, holidayRate, HOLIDAY_RATE_MULTIPLIER);
+        fillIfEmpty(setAdditionalDogRate, additionalDogRate, ADDITIONAL_DOG_RATE_MULTIPLIER);
+        fillIfEmpty(setPuppyRate, puppyRate, PUPPY_RATE_MULTIPLIER);
+        fillIfEmpty(setLongStayRate, longStayRate, LONG_STAY_RATE_MULTIPLIER);
+    }, [additionalRates, baseRate, holidayRate, additionalDogRate, puppyRate, longStayRate]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -105,6 +120,8 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                 setSelectedPetSizes(settings.selectedPetSizes || []);
                 setAvailabilityImportant(settings.availabilityImportant || 'yes');
                 setSelectedDays(settings.selectedDays || ['Su']);
+                setDailyStartTime(settings.dailyStartTime || '09:00');
+                setDailyEndTime(settings.dailyEndTime || '17:00');
                 setPottyBreaks(settings.pottyBreaks || '0-2 hours');
                 setContactTime(settings.contactTime || 'Select time');
                 setMaxPets(settings.maxPets || '2');
@@ -170,6 +187,8 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                 selectedPetSizes,
                 availabilityImportant,
                 selectedDays,
+                dailyStartTime,
+                dailyEndTime,
                 pottyBreaks,
                 contactTime,
                 maxPets,
@@ -259,7 +278,7 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                                     leftIcon={<CoinIcon width={18.35} height={18.35} />}
                                     containerStyle={styles.rateInputContainer}
                                 />
-                                <Text style={styles.rateUnitText}>/ per day</Text>
+                                <Text style={styles.rateUnitText}>/ per {RATE_UNIT}</Text>
                             </View>
                         </View>
 
@@ -295,6 +314,7 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                             extendedCareMax={extendedCareMax}
                             selectedPetSizes={selectedPetSizes}
                             onTogglePetSize={togglePetSize}
+                            pricedBy={PRICED_BY}
                         />
                     </View>
 
@@ -340,6 +360,18 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.fieldLabel}>What hours are you available on those days?</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <TimeField value={dailyStartTime} onChange={setDailyStartTime} label="Start" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <TimeField value={dailyEndTime} onChange={setDailyEndTime} label="End" />
+                                </View>
                             </View>
                         </View>
 
@@ -454,7 +486,7 @@ export default function HouseSittingSettingsScreen({ navigation }) {
                             <PetTypeMultiSelect
                                 value={hostAvailability}
                                 onChange={setHostAvailability}
-                                options={['Pets that are not crate trained', 'Unneutered male dogs', 'Female dogs in heat', 'Puppies', 'Senior pets', 'Special needs pets']}
+                                options={['Pets that are not crate trained', 'Unneutered males', 'Females in heat', 'Puppies / kittens', 'Senior pets', 'Special needs pets']}
                             />
                         </View>
                     </View>

@@ -176,12 +176,12 @@ export default function SearchFilterModal({ visible, onClose, onApply, onLocatio
                 onValueChange={setFencedYard}
               />
               <FilterOption
-                title="Dogs permitted on furniture"
+                title="Pets permitted on furniture"
                 value={furnitureAllowed}
                 onValueChange={setFurnitureAllowed}
               />
               <FilterOption
-                title="Dogs permitted on beds"
+                title="Pets permitted on beds"
                 value={bedAllowed}
                 onValueChange={setBedAllowed}
               />
@@ -211,12 +211,12 @@ export default function SearchFilterModal({ visible, onClose, onApply, onLocatio
                 onValueChange={setOneClient}
               />
               <FilterOption
-                title="Welcomes unspayed female dogs"
+                title="Welcomes unspayed females"
                 value={unspayedFemale}
                 onValueChange={setUnspayedFemale}
               />
               <FilterOption
-                title="Welcomes non-neutered male dogs"
+                title="Welcomes non-neutered males"
                 value={nonNeuteredMale}
                 onValueChange={setNonNeuteredMale}
               />
@@ -226,7 +226,7 @@ export default function SearchFilterModal({ visible, onClose, onApply, onLocatio
                 onValueChange={setBathing}
               />
               <FilterOption
-                title="Trained in dog first aid and CPR"
+                title="Trained in pet first aid and CPR"
                 value={firstAid}
                 onValueChange={setFirstAid}
               />

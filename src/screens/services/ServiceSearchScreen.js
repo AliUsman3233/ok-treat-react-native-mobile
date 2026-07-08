@@ -8,18 +8,15 @@ import { BackArrowIcon, CalendarIcon, LocationPinIcon, AngleDownIcon } from '../
 import DateRangePicker from '../../components/DateRangePicker';
 import DateTimeWindowPicker from '../../components/DateTimeWindowPicker';
 import { formatTime12h } from '../../components/TimeField';
+import { isHourBasedService } from '../../utils/serviceUnits';
 import moment from 'moment';
 
-// Boarding + House Sitting are day-based (overnight). Drop-In / Day Care /
-// Pet Walking need a single-day + time-window because they run for a few
-// hours within one day. Anything not listed here falls back to day-based
-// for safety.
-//
-// ServicesScreen navigates with the enum-style serviceType (DROP_IN_VISITS
-// etc). SearchResultsScreen forwards the same value on to the API. Keep
-// this in sync with the ServiceType enum on the backend.
-const HOUR_BASED_SERVICES = new Set(['DROP_IN_VISITS', 'DAY_CARE', 'PET_WALKING']);
-const isHourBased = (t) => HOUR_BASED_SERVICES.has(t);
+// Only Boarding is day-based (an overnight/multi-day stay → date-range
+// calendar). House Sitting / Drop-In / Day Care / Pet Walking run for a
+// few hours within one day → single-day + time-window picker. The unit
+// per service is defined once in utils/serviceUnits.js — don't re-list
+// services here or the search picker and the pricing math will diverge.
+const isHourBased = (t) => isHourBasedService(t);
 
 export default function ServiceSearchScreen({ navigation, route }) {
   const alert = useAppAlert();
