@@ -107,8 +107,9 @@ export default function AddPetScreen({ navigation, route }) {
       // Vet name is the anchor field — most owners know at least the clinic name.
       // Phone and address stay optional so a partial record still saves.
       ['vetName', 'Please enter your vet\'s name or clinic', () => has(formData.vetName)],
-      // insuranceProvider, qrCode, photos all optional — sitter/owner may
-      // not have these and blocking save would be too strict
+      // QR is mandatory — every pet must be linked to an OkTreat tag.
+      ['qrCode', 'Please scan a QR code to link this pet', () => has(formData.qrCode)],
+      // insuranceProvider + photos stay optional.
     ],
   };
 
