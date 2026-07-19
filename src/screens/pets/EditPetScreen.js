@@ -167,9 +167,7 @@ export default function EditPetScreen({ navigation, route }) {
     ],
     4: [
       ['vetName', 'Please enter your vet\'s name or clinic', () => has(formData.vetName)],
-      // QR is mandatory — a pet can't be saved without a linked OkTreat tag.
-      // (Unlinking a tag requires scanning a replacement before Save.)
-      ['qrCode', 'Please scan a QR code to link this pet', () => has(formData.qrCode)],
+      // qrCode optional — owner can link/unlink a tag any time.
     ],
   };
 
