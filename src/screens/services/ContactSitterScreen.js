@@ -198,8 +198,15 @@ export default function ContactSitterScreen({ navigation, route }) {
         // Validation (e.g. price mismatch, bad dates) — surface the specific reason.
         alert('Couldn’t place booking', msg, 'pending');
       } else if (!err?.status || err.status >= 500) {
-        // Server error (500) or unknown — don't leak internals; keep it friendly.
-        alert('Something went wrong', 'We couldn’t complete your booking right now. Please try again in a moment.', 'error');
+        // Server error (500). In test mode we surface the server-side detail
+        // (err.error) to speed up debugging; keep it friendly if absent.
+        alert(
+          'Something went wrong',
+          err?.error
+            ? `Booking couldn’t be completed.\n\nServer: ${err.error}`
+            : 'We couldn’t complete your booking right now. Please try again in a moment.',
+          'error',
+        );
       } else {
         alert('Couldn’t place booking', msg || 'Please try again.', 'error');
       }

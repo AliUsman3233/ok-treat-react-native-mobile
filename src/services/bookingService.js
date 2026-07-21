@@ -31,6 +31,7 @@ export const createBooking = async (bookingData) => {
         message: d.message,
         reason: d.reason,
         expected: d.expected,
+        error: d.error, // server-side detail (test mode)
       };
     }
     // No response → the request never reached the server (offline / timeout).
