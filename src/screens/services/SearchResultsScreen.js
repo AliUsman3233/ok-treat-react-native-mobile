@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSelector } from 'react-redux';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
@@ -37,8 +36,6 @@ export default function SearchResultsScreen({ navigation, route }) {
   const [radiusKm, setRadiusKm] = useState(NEARBY_RADIUS_KM);
   const [showNoNearbyModal, setShowNoNearbyModal] = useState(false);
   const isExpanded = radiusKm > NEARBY_RADIUS_KM;
-  // Admin-only diagnostics affordance (works in production builds too).
-  const isAdmin = useSelector((s) => s.auth?.user?.role === 'ADMIN');
 
   // Fetch user's pets once (used as ML context)
   useEffect(() => {
@@ -342,14 +339,15 @@ export default function SearchResultsScreen({ navigation, route }) {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{serviceType}</Text>
           <View style={styles.headerActions}>
-            {isAdmin && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('SearchDiagnostics', { serviceType, searchParams, radiusKm })}
-              >
-                <Icon name="pulse-outline" size={22} color="#32A6D8" />
-              </TouchableOpacity>
-            )}
+            {/* Diagnostics icon — UNGATED while the app is in test mode.
+                TODO before launch: re-gate to admins (user.role === 'ADMIN')
+                here AND re-add requireAdmin on /sitter/search/diagnose. */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('SearchDiagnostics', { serviceType, searchParams, radiusKm })}
+            >
+              <Icon name="pulse-outline" size={22} color="#32A6D8" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton} onPress={handleFilters}>
               <SliderIcon width={24} height={24} fill="pink"/>
             </TouchableOpacity>
