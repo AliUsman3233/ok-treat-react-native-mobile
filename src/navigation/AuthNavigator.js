@@ -3,7 +3,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
-import LanguageScreen from '../screens/auth/LanguageScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import CompleteRegistrationScreen from '../screens/auth/CompleteRegistrationScreen';
@@ -21,9 +20,8 @@ export default function AuthNavigator() {
   return (
     <Stack.Navigator 
       screenOptions={{ headerShown: false }}
-      initialRouteName={onboardingCompleted ? 'Login' : 'Language'}
+      initialRouteName={onboardingCompleted ? 'Login' : 'Onboarding'}
     >
-      <Stack.Screen name="Language" component={LanguageScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />

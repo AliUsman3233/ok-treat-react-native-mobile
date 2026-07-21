@@ -41,9 +41,6 @@ export default function SettingsScreen({ navigation }) {
   const generalSettings = [
     { title: t('settings.accountSetting'), screen: 'EditProfileDetails' },
     { title: t('settings.notification'), screen: 'Notifications' },
-    // Re-opens the language picker. fromSettings=true so Proceed goBack()s
-    // instead of redirecting to Onboarding.
-    { title: t('settings.language'), screen: 'Language', params: { fromSettings: true } },
     { title: t('settings.privacyChoices'), screen: 'PrivacyPolicy' },
     { title: t('settings.logout'), action: handleLogout },
   ];
