@@ -15,14 +15,26 @@ export const getUserBookings = async (status) => {
   }
 };
 
-// Create a new booking
+// Create a new booking. Normalizes the error so the screen can show a proper,
+// case-specific message: preserves HTTP status + backend message/reason, and
+// flags no-response (network/timeout) distinctly from a server error.
 export const createBooking = async (bookingData) => {
   try {
     const response = await api.post('/bookings', bookingData);
     return response.data;
   } catch (error) {
     console.error('Create booking error:', error.response?.data || error.message);
-    throw error.response?.data || { message: 'Failed to create booking' };
+    if (error.response) {
+      const d = error.response.data || {};
+      throw {
+        status: error.response.status,
+        message: d.message,
+        reason: d.reason,
+        expected: d.expected,
+      };
+    }
+    // No response → the request never reached the server (offline / timeout).
+    throw { status: 0, isNetwork: true, message: 'Could not reach the server.' };
   }
 };
 

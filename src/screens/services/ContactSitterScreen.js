@@ -145,6 +145,18 @@ export default function ContactSitterScreen({ navigation, route }) {
       return;
     }
 
+    // The sitter must have a usable rate for this service, otherwise the
+    // server-computed total won't match and the request would fail with a
+    // confusing "total mismatch". Catch it here with a clear message.
+    if (getBaseRate() <= 0) {
+      alert(
+        'Price unavailable',
+        `This sitter hasn't set a price for ${service || serviceType} yet, so it can't be booked right now. Try another sitter.`,
+        'pending',
+      );
+      return;
+    }
+
     if (insufficient) {
       alert(
         'Not Enough Coins',
@@ -174,13 +186,23 @@ export default function ContactSitterScreen({ navigation, route }) {
       setShowSuccessModal(true);
     } catch (err) {
       console.error('Failed to create booking:', err);
-      // The backend's "Insufficient coin balance" error message is fine to
-      // surface verbatim — it already contains the needed/have numbers.
-      alert(
-        'Request Failed',
-        err?.message || 'Failed to send your request. Please try again.',
-        'error',
-      );
+      const msg = err?.message;
+      if (err?.isNetwork || err?.status === 0) {
+        alert('No connection', 'We couldn’t reach the server. Check your internet and try again.', 'error');
+      } else if (msg && /coin balance/i.test(msg)) {
+        // Server-side balance rejection — the message already has need/have numbers.
+        alert('Not enough coins', `${msg} Tap Buy Coins to top up.`, 'pending');
+      } else if (err?.status === 404) {
+        alert('No longer available', msg || 'This sitter or pet is no longer available. Please search again.', 'pending');
+      } else if (err?.status === 400 && msg) {
+        // Validation (e.g. price mismatch, bad dates) — surface the specific reason.
+        alert('Couldn’t place booking', msg, 'pending');
+      } else if (!err?.status || err.status >= 500) {
+        // Server error (500) or unknown — don't leak internals; keep it friendly.
+        alert('Something went wrong', 'We couldn’t complete your booking right now. Please try again in a moment.', 'error');
+      } else {
+        alert('Couldn’t place booking', msg || 'Please try again.', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
