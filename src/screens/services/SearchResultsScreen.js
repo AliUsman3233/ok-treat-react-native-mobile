@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -9,6 +9,12 @@ import { searchSitters } from '../../services/sitterService';
 import { getUserPets } from '../../services/petService';
 import { rankSitters } from '../../services/sitterMatching';
 import { getServiceUnit } from '../../utils/serviceUnits';
+
+// Default "nearby" radius, and the widened radius used when the owner opts to
+// "search all sitters" (effectively any distance — service + day/time filters
+// still apply). See handleSearchAll.
+const NEARBY_RADIUS_KM = 30;
+const ALL_RADIUS_KM = 100000;
 
 export default function SearchResultsScreen({ navigation, route }) {
   const { serviceType = 'Boarding', searchParams = {} } = route?.params || {};
@@ -25,6 +31,11 @@ export default function SearchResultsScreen({ navigation, route }) {
   const [statusModalConfig, setStatusModalConfig] = useState({});
   const [pets, setPets] = useState([]);
   const [activePetIndex, setActivePetIndex] = useState(0);
+  // Search radius — starts nearby; "Search all" widens it. isExpanded drives
+  // the banner + the "still nothing" empty state.
+  const [radiusKm, setRadiusKm] = useState(NEARBY_RADIUS_KM);
+  const [showNoNearbyModal, setShowNoNearbyModal] = useState(false);
+  const isExpanded = radiusKm > NEARBY_RADIUS_KM;
 
   // Fetch user's pets once (used as ML context)
   useEffect(() => {
@@ -64,7 +75,7 @@ export default function SearchResultsScreen({ navigation, route }) {
           searchParams.longitude,
           searchParams.startDate,
           searchParams.endDate,
-          30, // 30km radius
+          radiusKm,
           searchParams.startTime, // "HH:mm" for hour-based services; undefined otherwise
           searchParams.endTime,
         );
@@ -84,6 +95,11 @@ export default function SearchResultsScreen({ navigation, route }) {
         setSitters(sittersWithUpdate);
         // Reset filtered list so ranked order shows by default after a new search
         setFilteredSitters(null);
+        // Nobody nearby → offer to widen the search. Only prompt for the
+        // initial nearby radius, not after the user already expanded.
+        if (sittersWithUpdate.length === 0 && radiusKm === NEARBY_RADIUS_KM) {
+          setShowNoNearbyModal(true);
+        }
       } catch (err) {
         console.error('❌ Error fetching sitters:', err);
         setError(err.response?.data?.message || 'Failed to fetch sitters');
@@ -93,7 +109,7 @@ export default function SearchResultsScreen({ navigation, route }) {
     };
 
     fetchSitters();
-  }, [serviceType, searchParams]);
+  }, [serviceType, searchParams, radiusKm]);
 
   // Rank sitters with the edge ML matcher whenever sitters/pet changes
   const rankedSitters = useMemo(() => {
@@ -104,9 +120,9 @@ export default function SearchResultsScreen({ navigation, route }) {
       pet: activePet,
       user: { firstTimeUser: false },
       serviceType: enumServiceType,
-      maxDistance: 30,
+      maxDistance: radiusKm,
     });
-  }, [sitters, filteredSitters, activePet, serviceType]);
+  }, [sitters, filteredSitters, activePet, serviceType, radiusKm]);
 
   const cyclePet = () => {
     if (pets.length <= 1) return;
@@ -115,6 +131,13 @@ export default function SearchResultsScreen({ navigation, route }) {
 
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  // Widen the search to any distance (keeps service + day/time filters).
+  // Changing radiusKm re-runs the fetch effect.
+  const handleSearchAll = () => {
+    setShowNoNearbyModal(false);
+    setRadiusKm(ALL_RADIUS_KM);
   };
 
   const handleMapView = () => {
@@ -365,20 +388,42 @@ export default function SearchResultsScreen({ navigation, route }) {
         {!loading && !error && rankedSitters.length === 0 && (
           <View style={styles.emptyContainer}>
             <Icon name="search-outline" size={48} color="#818898" />
-            <Text style={styles.emptyText}>No sitters found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your search criteria</Text>
+            {isExpanded ? (
+              <>
+                <Text style={styles.emptyText}>No sitters available</Text>
+                <Text style={styles.emptySubtext}>No sitters offer this service at the selected time yet.</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyText}>No sitters found nearby</Text>
+                <Text style={styles.emptySubtext}>No sitters within {NEARBY_RADIUS_KM} km match this service and time.</Text>
+                <TouchableOpacity style={styles.searchAllBtn} onPress={handleSearchAll} activeOpacity={0.8}>
+                  <Text style={styles.searchAllBtnText}>Search all sitters</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
         {/* Sitters List */}
         {!loading && !error && rankedSitters.length > 0 && (
-          <FlatList
-            data={rankedSitters}
-            renderItem={renderSitterCard}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
+          <>
+            {isExpanded && (
+              <View style={styles.expandBanner}>
+                <Icon name="globe-outline" size={16} color="#32A6D8" />
+                <Text style={styles.expandBannerText}>Showing sitters outside your area — nearest first</Text>
+              </View>
+            )}
+            <FlatList
+              data={isExpanded
+                ? [...rankedSitters].sort((a, b) => (a.distance || 0) - (b.distance || 0))
+                : rankedSitters}
+              renderItem={renderSitterCard}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          </>
         )}
       </View>
 
@@ -399,6 +444,33 @@ export default function SearchResultsScreen({ navigation, route }) {
         onApply={handleApplyFilters}
         onLocationPress={handleLocationPress}
       />
+
+      {/* No-sitters-nearby prompt */}
+      <Modal
+        visible={showNoNearbyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNoNearbyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIcon}>
+              <Icon name="location-outline" size={28} color="#32A6D8" />
+            </View>
+            <Text style={styles.modalTitle}>No sitters found nearby</Text>
+            <Text style={styles.modalMsg}>
+              No sitters within {NEARBY_RADIUS_KM} km match this service and time. Would you like to
+              search all sitters, regardless of distance?
+            </Text>
+            <TouchableOpacity style={styles.modalPrimary} onPress={handleSearchAll} activeOpacity={0.85}>
+              <Text style={styles.modalPrimaryText}>Search all sitters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalSecondary} onPress={() => setShowNoNearbyModal(false)}>
+              <Text style={styles.modalSecondaryText}>Not now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -407,6 +479,102 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  searchAllBtn: {
+    marginTop: 20,
+    backgroundColor: '#32A6D8',
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+  },
+  searchAllBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+  },
+  expandBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 24,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(50,166,216,0.10)',
+  },
+  expandBannerText: {
+    flex: 1,
+    color: '#2B8FB8',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(50,166,216,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    color: '#0D1B26',
+    textAlign: 'center',
+  },
+  modalMsg: {
+    fontSize: 13.5,
+    fontFamily: 'Avenir LT Std',
+    color: '#5A6B7B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  modalPrimary: {
+    width: '100%',
+    backgroundColor: '#32A6D8',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '700',
+  },
+  modalSecondary: {
+    width: '100%',
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  modalSecondaryText: {
+    color: '#818898',
+    fontSize: 14,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
