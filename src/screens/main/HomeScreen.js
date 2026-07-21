@@ -16,8 +16,7 @@ import {
   ExploreOutlineIcon,
   SplashIcon
 } from '../../assets';
-import { getSitterStatus } from '../../services/sitterService';
-import { getData, saveData, STORAGE_KEYS } from '../../utils/storage';
+import { getSitterStatus, markSitterApprovalSeen } from '../../services/sitterService';
 import api from '../../config/api';
 
 const { width, height } = Dimensions.get('window');
@@ -77,7 +76,7 @@ export default function HomeScreen({ navigation }) {
         const { sitter } = response.data;
 
         if (sitter.approvalStatus === 'APPROVED') {
-          const alreadySeen = await getData(STORAGE_KEYS.SITTER_APPROVAL_SEEN);
+          const alreadySeen = sitter.approvalSeen;
           if (alreadySeen) {
             navigation.navigate('SitterTabs');
           } else {
@@ -116,7 +115,7 @@ export default function HomeScreen({ navigation }) {
 
   const handleApprovedModalNext = async () => {
     setShowApprovedModal(false);
-    await saveData(STORAGE_KEYS.SITTER_APPROVAL_SEEN, true);
+    await markSitterApprovalSeen();
     navigation.navigate('SitterTabs');
   };
 

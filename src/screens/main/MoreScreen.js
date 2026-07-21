@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import api from '../../config/api';
-import { getData, saveData, STORAGE_KEYS } from '../../utils/storage';
+import { markSitterApprovalSeen } from '../../services/sitterService';
 import {
   UserCircleIcon,
   PawIcon,
@@ -22,6 +22,7 @@ export default function MoreScreen({ navigation }) {
   const [isSitterMode, setIsSitterMode] = useState(false);
   const [sitterStatus, setSitterStatus] = useState(null);
   const [hasSitterProfile, setHasSitterProfile] = useState(false);
+  const [approvalSeen, setApprovalSeen] = useState(false);
   const [showApprovedModal, setShowApprovedModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showRejectedModal, setShowRejectedModal] = useState(false);
@@ -40,6 +41,7 @@ export default function MoreScreen({ navigation }) {
             const { sitter, hasSitterProfile: hasProfile } = payload;
             setHasSitterProfile(hasProfile);
             setSitterStatus(sitter?.approvalStatus || null);
+            setApprovalSeen(!!sitter?.approvalSeen);
             // Only keep sitter mode on if approved and was previously on
             if (!sitter || sitter.approvalStatus !== 'APPROVED') {
               setIsSitterMode(false);
@@ -59,8 +61,7 @@ export default function MoreScreen({ navigation }) {
   const handleSitterModeToggle = async (value) => {
     if (value) {
       if (sitterStatus === 'APPROVED') {
-        const alreadySeen = await getData(STORAGE_KEYS.SITTER_APPROVAL_SEEN);
-        if (alreadySeen) {
+        if (approvalSeen) {
           setIsSitterMode(true);
           navigation.navigate('SitterTabs');
         } else {
@@ -72,7 +73,13 @@ export default function MoreScreen({ navigation }) {
         setRejectionReason('Your sitter application was not approved. Please contact support for details.');
         setShowRejectedModal(true);
       } else {
-        navigation.navigate('BecomeASitterIntro');
+        // No sitter profile yet — mirror HomeScreen: skip the intro if the
+        // user has already verified identity, otherwise start at the intro.
+        if (user?.stripeVerified) {
+          navigation.navigate('ProfileSetup');
+        } else {
+          navigation.navigate('BecomeASitterIntro');
+        }
       }
     } else {
       setIsSitterMode(false);
@@ -81,7 +88,8 @@ export default function MoreScreen({ navigation }) {
 
   const handleApprovedModalNext = async () => {
     setShowApprovedModal(false);
-    await saveData(STORAGE_KEYS.SITTER_APPROVAL_SEEN, true);
+    await markSitterApprovalSeen();
+    setApprovalSeen(true);
     setIsSitterMode(true);
     navigation.navigate('SitterTabs');
   };

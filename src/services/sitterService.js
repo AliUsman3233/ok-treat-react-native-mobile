@@ -60,6 +60,24 @@ export const getSitterStatus = async () => {
   }
 };
 
+// Mark the "You're approved!" congrats dialog as seen. Server-persisted so it
+// never shows again on any device. Non-fatal on failure (worst case: shown
+// once more next time).
+export const markSitterApprovalSeen = async () => {
+  try {
+    const token = await getAuthToken();
+    const response = await axios.post(
+      `${API_BASE_URL}/api/sitter/approval-seen`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Mark approval seen error:', error.response?.data || error.message);
+    return null;
+  }
+};
+
 // Update sitter profile
 export const updateSitterProfile = async (updates) => {
   try {
