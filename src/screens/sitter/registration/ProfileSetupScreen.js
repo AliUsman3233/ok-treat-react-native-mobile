@@ -230,7 +230,10 @@ export default function ProfileSetupScreen({ navigation, route }) {
 
   const handleModalNext = () => {
     setShowSuccessModal(false);
-    navigation.navigate('SitterTabs');
+    // Application just submitted → status is PENDING. Return to the owner/user
+    // flow, NOT sitter mode. Sitter mode is only reachable after approval
+    // (gated in Home/More by approvalStatus).
+    navigation.navigate('MainTabs');
   };
 
   const handleApprovedModalNext = () => {
