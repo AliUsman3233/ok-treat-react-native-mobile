@@ -43,6 +43,7 @@ import ServicesScreen from '../screens/services/ServicesScreen';
 import ServiceSearchScreen from '../screens/services/ServiceSearchScreen';
 import LocationPickerScreen from '../screens/services/LocationPickerScreen';
 import SearchResultsScreen from '../screens/services/SearchResultsScreen';
+import SearchDiagnosticsScreen from '../screens/services/SearchDiagnosticsScreen';
 import SitterProfileScreen from '../screens/services/SitterProfileScreen';
 import ContactSitterScreen from '../screens/services/ContactSitterScreen';
 import OpenRequestsScreen from '../screens/services/OpenRequestsScreen';
@@ -401,6 +402,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="ServiceSearch" component={ServiceSearchScreen} />
       <RootStack.Screen name="LocationPicker" component={LocationPickerScreen} />
       <RootStack.Screen name="SearchResults" component={SearchResultsScreen} />
+      <RootStack.Screen name="SearchDiagnostics" component={SearchDiagnosticsScreen} />
       <RootStack.Screen name="SitterProfile" component={SitterProfileScreen} />
       <RootStack.Screen name="ContactSitter" component={ContactSitterScreen} />
       <RootStack.Screen name="OpenRequests" component={OpenRequestsScreen} />

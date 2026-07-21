@@ -78,6 +78,22 @@ export const markSitterApprovalSeen = async () => {
   }
 };
 
+// Admin-only: diagnose why sitters are shown/hidden for a given search.
+// Mirrors the searchSitters params. Returns { summary, candidates, params }.
+export const diagnoseSitterSearch = async (serviceType, latitude, longitude, startDate, endDate, radius, startTime, endTime) => {
+  const token = await getAuthToken();
+  const params = { serviceType, latitude, longitude, radius };
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
+  if (startTime) params.startTime = startTime;
+  if (endTime) params.endTime = endTime;
+  const response = await axios.get(`${API_BASE_URL}/api/sitter/search/diagnose`, {
+    params,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 // Update sitter profile
 export const updateSitterProfile = async (updates) => {
   try {
