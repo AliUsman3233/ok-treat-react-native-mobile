@@ -164,6 +164,13 @@ export default function BoardingSettingsScreen({ navigation }) {
     };
 
     const handleSave = async () => {
+        // A base rate greater than 0 is required — without it the sitter shows
+        // up in search but can't be booked (rate 0 → total mismatch server-side).
+        if (!Number.isFinite(parseFloat(baseRate)) || parseFloat(baseRate) <= 0) {
+            alert('Please enter a base rate greater than 0 before saving.');
+            return;
+        }
+
         // Validate that at least one pet size is selected
         if (selectedPetSizes.length === 0) {
             alert('Please select at least one pet size category');
