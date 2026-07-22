@@ -457,7 +457,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     </View>
                     <View style={styles.infoRow}>
                       <KidIcon />
-                      <Text style={styles.infoText}>{pet.friendlyWithChildren === "Yes" ? "Friendly With Childrens" : "Not Friendly With Children" || 'Not specified'}</Text>
+                      <Text style={styles.infoText}>{pet.friendlyWithChildren == null ? 'Not specified' : (pet.friendlyWithChildren === "Yes" ? "Friendly With Children" : "Not Friendly With Children")}</Text>
                     </View>
                     <View style={styles.infoRow}>
                       <WomanIcon width={20} height={20} />
@@ -470,7 +470,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                     <Text style={styles.sectionTitle}>Care</Text>
                     <View style={styles.infoRow}>
                       <HomeIconNew />
-                      <Text style={styles.infoText}>{pet.houseTrained === "Yes" ? "House Trained" : "Not House Trained" || 'Not specified'}</Text>
+                      <Text style={styles.infoText}>{pet.houseTrained == null ? 'Not specified' : (pet.houseTrained === "Yes" ? "House Trained" : "Not House Trained")}</Text>
                     </View>
                     <View style={styles.infoRow}>
                       <PotyIcon width={20} height={20} />
@@ -498,7 +498,7 @@ export default function MyPetProfileScreen({ route, navigation }) {
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Other Info</Text>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>{pet.microchipped === "Yes" ? "Microchipped" : "Not microchipped" || 'Not microchipped'}</Text>
+                      <Text style={styles.infoText}>{pet.microchipped == null ? 'Not specified' : (pet.microchipped === "Yes" ? "Microchipped" : "Not microchipped")}</Text>
                     </View>
                     {pet.adoptionDate && (
                       <View style={styles.infoRow}>

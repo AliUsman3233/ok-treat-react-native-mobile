@@ -125,7 +125,11 @@ export default function SitterProfileScreen({ navigation }) {
           <View style={styles.profileSection}>
             <View style={styles.profileImageWrapper}>
               <View style={styles.profileImageContainer}>
-                <Image source={ProfileImagePersonIcon} style={{ width: 103, height: 103, borderRadius: 51.5 }} resizeMode="cover" />
+                <Image
+                  source={user?.avatarUrl ? { uri: user.avatarUrl } : ProfileImagePersonIcon}
+                  style={{ width: 103, height: 103, borderRadius: 51.5 }}
+                  resizeMode="cover"
+                />
               </View>
               <TouchableOpacity
                 style={styles.editButton}

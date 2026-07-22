@@ -93,13 +93,6 @@ export default function ServicesScreen({ navigation }) {
             <Text style={styles.welcomeText}>Services</Text>
             <Text style={styles.emailText}>You can choose services</Text>
           </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => alert('Service Filters', 'Coming after release', 'pending')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <SliderIcon width={19} height={19} />
-          </TouchableOpacity>
         </View>
 
         {/* Services Grid */}

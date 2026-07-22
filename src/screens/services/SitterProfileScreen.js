@@ -392,7 +392,7 @@ export default function SitterProfileScreen({ navigation, route }) {
           sitterData.pets.map((pet, index) => (
             <View key={index} style={styles.petItem}>
               <Image
-                source={pet.image ? { uri: pet.image } : require('../../assets/images/Pet_default_image.png')}
+                source={(pet.photoUrl || pet.image) ? { uri: pet.photoUrl || pet.image } : require('../../assets/images/Pet_default_image.png')}
                 style={styles.petImage}
                 resizeMode="cover"
               />
@@ -454,14 +454,16 @@ export default function SitterProfileScreen({ navigation, route }) {
             const isSearchedService = serviceType === searchedServiceType;
             const isExpanded = expandedServices[serviceType] || isSearchedService;
             const service = sitterData.services[serviceType];
-            const baseRate = parseFloat(service.baseRate) || 50;
-            const holidayRate = parseFloat(service.holidayRate) || Math.round(baseRate * 1.12);
-            const additionalDogRate = parseFloat(service.additionalDogRate) || Math.round(baseRate * 0.72);
-            const puppyRate = parseFloat(service.puppyRate) || Math.round(baseRate * 0.72);
-            const longStayRate = parseFloat(service.longStayRate) || Math.round(baseRate * 0.94);
+            // Show only the sitter's REAL rates. Optional modifiers default to
+            // null (row hidden) rather than fabricated multiples of the base.
+            const baseRate = parseFloat(service.baseRate) || 0;
+            const holidayRate = parseFloat(service.holidayRate) || null;
+            const additionalDogRate = parseFloat(service.additionalDogRate) || null;
+            const puppyRate = parseFloat(service.puppyRate) || null;
+            const longStayRate = parseFloat(service.longStayRate) || null;
             const bathingGrooming = service.bathingGrooming;
-            const extendedCareMin = parseFloat(service.extendedCareMin) || 50;
-            const extendedCareMax = parseFloat(service.extendedCareMax) || 100;
+            const extendedCareMin = parseFloat(service.extendedCareMin) || null;
+            const extendedCareMax = parseFloat(service.extendedCareMax) || null;
             const selectedPetSizes = service.selectedPetSizes || [];
 
             return (
@@ -508,40 +510,46 @@ export default function SitterProfileScreen({ navigation, route }) {
                           as "Hourly Rate" — removed now that the collapsed
                           card header already shows the base rate + "per hour"
                           label. The expanded list starts with modifiers only. */}
-                      <View style={styles.rateRow}>
-                        <View style={styles.rateLeft}>
-                          <Text style={styles.rateLabel}>Holiday Rate</Text>
-                          <Icon name="information-circle" size={16} color="#25314C" />
-                        </View>
-                        <View style={styles.rateRight}>
-                          <View style={styles.coinIconSmall}>
-                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                      {holidayRate != null && (
+                        <View style={styles.rateRow}>
+                          <View style={styles.rateLeft}>
+                            <Text style={styles.rateLabel}>Holiday Rate</Text>
+                            <Icon name="information-circle" size={16} color="#25314C" />
                           </View>
-                          <Text style={styles.rateValue}>{holidayRate} Coins</Text>
-                        </View>
-                      </View>
-                      <View style={styles.rateRow}>
-                        <Text style={styles.rateLabel}>Additional Pet Rate</Text>
-                        <View style={styles.rateRight}>
-                          <View style={styles.coinIconSmall}>
-                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                          <View style={styles.rateRight}>
+                            <View style={styles.coinIconSmall}>
+                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                            </View>
+                            <Text style={styles.rateValue}>{holidayRate} Coins</Text>
                           </View>
-                          <Text style={styles.rateValue}>{additionalDogRate} Coins</Text>
                         </View>
-                      </View>
-                      <View style={styles.rateRow}>
-                        <Text style={styles.rateLabel}>Puppy / Kitten Rate</Text>
-                        <View style={styles.rateRight}>
-                          <View style={styles.coinIconSmall}>
-                            <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
-                            <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                      )}
+                      {additionalDogRate != null && (
+                        <View style={styles.rateRow}>
+                          <Text style={styles.rateLabel}>Additional Pet Rate</Text>
+                          <View style={styles.rateRight}>
+                            <View style={styles.coinIconSmall}>
+                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                            </View>
+                            <Text style={styles.rateValue}>{additionalDogRate} Coins</Text>
                           </View>
-                          <Text style={styles.rateValue}>{puppyRate} Coins</Text>
                         </View>
-                      </View>
-                      {getServiceUnit(serviceType).pricedBy === 'days' && (
+                      )}
+                      {puppyRate != null && (
+                        <View style={styles.rateRow}>
+                          <Text style={styles.rateLabel}>Puppy / Kitten Rate</Text>
+                          <View style={styles.rateRight}>
+                            <View style={styles.coinIconSmall}>
+                              <CoinBackgroundIcon width={16} height={16} style={styles.coinBackground} />
+                              <CoinIcon width={16} height={16} style={styles.coinForeground} />
+                            </View>
+                            <Text style={styles.rateValue}>{puppyRate} Coins</Text>
+                          </View>
+                        </View>
+                      )}
+                      {getServiceUnit(serviceType).pricedBy === 'days' && longStayRate != null && (
                         <View style={styles.rateRow}>
                           <Text style={styles.rateLabel}>Stays of 14 Nights or More</Text>
                           <View style={styles.rateRight}>
@@ -553,23 +561,17 @@ export default function SitterProfileScreen({ navigation, route }) {
                           </View>
                         </View>
                       )}
-                      {getServiceUnit(serviceType).pricedBy === 'days' && (
-                        <>
-                          <View style={styles.rateRow}>
-                            <Text style={styles.rateLabel}>Bathing / Grooming</Text>
-                            <Text style={styles.freeText}>{typeof bathingGrooming === 'string' ? bathingGrooming : (bathingGrooming ? 'Included' : 'Free')}</Text>
+                      {getServiceUnit(serviceType).pricedBy === 'days' && extendedCareMin != null && extendedCareMax != null && (
+                        <View style={styles.rateRow}>
+                          <View style={styles.rateLeft}>
+                            <Text style={styles.rateLabel}>Extended Care</Text>
+                            <Icon name="information-circle" size={16} color="#25314C" />
                           </View>
-                          <View style={styles.rateRow}>
-                            <View style={styles.rateLeft}>
-                              <Text style={styles.rateLabel}>Extended Care</Text>
-                              <Icon name="information-circle" size={16} color="#25314C" />
-                            </View>
-                            <View style={styles.rateRight}>
-                              <Text style={styles.percentText}>{extendedCareMin}-{extendedCareMax}%</Text>
-                              <Text style={styles.percentLabel}>of nightly rate</Text>
-                            </View>
+                          <View style={styles.rateRight}>
+                            <Text style={styles.percentText}>{extendedCareMin}-{extendedCareMax}%</Text>
+                            <Text style={styles.percentLabel}>of nightly rate</Text>
                           </View>
-                        </>
+                        </View>
                       )}
                     </View>
 
@@ -721,10 +723,10 @@ export default function SitterProfileScreen({ navigation, route }) {
       <View style={styles.card}>
         <View style={styles.reviewSummary}>
           <Text style={styles.reviewSummaryRating}>
-            {sitterData?.rating ? parseFloat(sitterData.rating).toFixed(1) : '5.0'}
+            {sitterData?.rating ? parseFloat(sitterData.rating).toFixed(1) : 'New'}
           </Text>
           <View style={styles.reviewSummaryStars}>
-            {renderStars(Math.round(sitterData?.rating || 5))}
+            {renderStars(Math.round(sitterData?.rating || 0))}
           </View>
           <Text style={styles.reviewSummaryCount}>
             {sitterData?.reviews || reviews.length || 0} review{(sitterData?.reviews || reviews.length || 0) !== 1 ? 's' : ''}
@@ -848,11 +850,13 @@ export default function SitterProfileScreen({ navigation, route }) {
                 <Text style={styles.businessNameText}>{sitterData.businessName}</Text>
               ) : null}
 
-              {/* Verified Badge */}
-              <View style={styles.verifiedBadge}>
-                <VerifiedIcon width={17} height={17} />
-                <Text style={styles.verifiedText}>Verified</Text>
-              </View>
+              {/* Verified Badge — only when actually approved */}
+              {(sitterData?.approvalStatus === 'APPROVED' || sitterData?.isVerified) && (
+                <View style={styles.verifiedBadge}>
+                  <VerifiedIcon width={17} height={17} />
+                  <Text style={styles.verifiedText}>Verified</Text>
+                </View>
+              )}
 
               {/* Stats Section */}
               <View style={styles.statsContainer}>
@@ -861,7 +865,7 @@ export default function SitterProfileScreen({ navigation, route }) {
                   <View style={styles.statItem}>
                     <StarIcon width={16} height={16} fill="#FBBC04" />
                     <Text style={styles.statText}>
-                      {sitterData?.rating || '5.0'} ({sitterData?.reviews || '0'} reviews)
+                      {sitterData?.rating ? `${sitterData.rating} (${sitterData?.reviews || 0} reviews)` : 'New sitter'}
                     </Text>
                   </View>
                   <View style={styles.statItem}>

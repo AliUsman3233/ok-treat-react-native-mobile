@@ -20,11 +20,21 @@ export default function SitterMapViewScreen({ navigation, route }) {
     try {
       setLoading(true);
       setError(null);
-      const latitude = route?.params?.latitude || 40.7580;
-      const longitude = route?.params?.longitude || -73.9855;
+      const latitude = route?.params?.latitude;
+      const longitude = route?.params?.longitude;
+      if (latitude == null || longitude == null) {
+        setSitters([]);
+        setError('Location unavailable. Please search from the Services tab.');
+        return;
+      }
       const radius = parseFloat(filters.distance) || 10;
       const response = await getNearbySitters(latitude, longitude, radius);
-      const data = response?.sitters || response?.data || response || [];
+      // Body is { success, data: { sitters } } — reach into data.sitters.
+      const data =
+        response?.data?.sitters ||
+        response?.sitters ||
+        (Array.isArray(response?.data) ? response.data : null) ||
+        (Array.isArray(response) ? response : []);
       const sittersArray = Array.isArray(data) ? data : [];
       setSitters(sittersArray.map(s => ({
         id: s.id || s._id,

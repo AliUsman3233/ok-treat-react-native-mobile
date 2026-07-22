@@ -30,7 +30,11 @@ export default function TransactionHistoryScreen({ navigation }) {
 
       // Fetch transactions
       const txRes = await api.get('/coins/transactions');
-      const txList = txRes.data?.data || txRes.data?.transactions || txRes.data || [];
+      const txList =
+        txRes.data?.data?.transactions ||
+        txRes.data?.transactions ||
+        (Array.isArray(txRes.data?.data) ? txRes.data.data : null) ||
+        (Array.isArray(txRes.data) ? txRes.data : []);
       const list = Array.isArray(txList) ? txList : [];
 
       const formatted = list.map(tx => ({

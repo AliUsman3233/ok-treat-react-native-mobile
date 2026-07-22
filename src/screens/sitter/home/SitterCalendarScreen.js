@@ -414,6 +414,7 @@ export default function SitterCalendarScreen({ navigation }) {
                         onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
                           otherUserId: booking.clientUserId,
                           chatName: booking.clientName,
+                          avatar: booking.clientImage,
                         })}
                         disabled={!booking.clientUserId}
                       >

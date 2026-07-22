@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, Image } from 'react-native';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -279,9 +279,13 @@ export default function SearchResultsScreen({ navigation, route }) {
           <View style={styles.topRow}>
             <View style={styles.leftSection}>
               <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <ImageHereIcon width={50} height={50} fill="#CCCCCC" />
-                </View>
+                {item.avatarUrl ? (
+                  <Image source={{ uri: item.avatarUrl }} style={[styles.avatar, { overflow: 'hidden' }]} resizeMode="cover" />
+                ) : (
+                  <View style={styles.avatar}>
+                    <ImageHereIcon width={50} height={50} fill="#CCCCCC" />
+                  </View>
+                )}
                 <View style={styles.verifiedBadge}>
                   <ShieldCheckIcon width={14} height={14} fill="#32A6D8" />
                 </View>

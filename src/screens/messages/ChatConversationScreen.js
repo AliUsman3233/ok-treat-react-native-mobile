@@ -8,16 +8,24 @@ import api from '../../config/api';
 import { useSelector } from 'react-redux';
 import { getSocket } from '../../config/socket';
 
-const MessageBubble = ({ message }) => {
+const BubbleAvatar = ({ uri }) => (
+  uri ? (
+    <Image source={{ uri }} style={styles.avatar} resizeMode="cover" />
+  ) : (
+    <View style={styles.avatar}>
+      <ImageHereIcon width={30} height={30} fill="#CCCCCC" />
+    </View>
+  )
+);
+
+const MessageBubble = ({ message, otherAvatar, myAvatar }) => {
   const isMe = message.sender === 'me';
 
   return (
     <View style={[styles.messageRow, isMe && styles.messageRowReverse]}>
       {!isMe && (
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <ImageHereIcon width={30} height={30} fill="#CCCCCC" />
-          </View>
+          <BubbleAvatar uri={otherAvatar} />
           <View style={styles.onlineIndicator} />
         </View>
       )}
@@ -35,17 +43,13 @@ const MessageBubble = ({ message }) => {
         </View>
       </View>
 
-      {isMe && (
-        <View style={styles.avatar}>
-          <ImageHereIcon width={30} height={30} fill="#CCCCCC" />
-        </View>
-      )}
+      {isMe && <BubbleAvatar uri={myAvatar} />}
     </View>
   );
 };
 
 export default function ChatConversationScreen({ route, navigation }) {
-  const { chatName = 'Chat', otherUserId, chatId } = route?.params || {};
+  const { chatName = 'Chat', otherUserId, chatId, avatar } = route?.params || {};
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,12 @@ export default function ChatConversationScreen({ route, navigation }) {
   const currentUserId = user?.id || user?._id;
 
   const receiverId = otherUserId || chatId;
+
+  // The `avatar` param may arrive as a URL string or an Image source object
+  // ({ uri }) depending on the caller — normalize to a plain URL. Own avatar
+  // comes from the logged-in user.
+  const otherAvatar = typeof avatar === 'string' ? avatar : (avatar?.uri || null);
+  const myAvatar = user?.avatarUrl || null;
 
   // Refetch on focus so reopening the chat (e.g. after leaving to ContactSitter
   // / BookingDetail / a different conversation) reloads the persisted thread
@@ -188,11 +198,14 @@ export default function ChatConversationScreen({ route, navigation }) {
 
           <View style={styles.headerCenter}>
             <View style={styles.headerAvatar}>
-              <ImageHereIcon width={40} height={40} fill="#CCCCCC" />
+              {otherAvatar ? (
+                <Image source={{ uri: otherAvatar }} style={styles.headerAvatarImage} resizeMode="cover" />
+              ) : (
+                <ImageHereIcon width={40} height={40} fill="#CCCCCC" />
+              )}
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.headerName}>{chatName}</Text>
-              <Text style={styles.headerRole}>Pet sitter</Text>
             </View>
           </View>
 
@@ -224,7 +237,7 @@ export default function ChatConversationScreen({ route, navigation }) {
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
             >
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble key={msg.id} message={msg} otherAvatar={otherAvatar} myAvatar={myAvatar} />
               ))}
             </ScrollView>
           )}
@@ -307,6 +320,13 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     overflow: 'hidden',
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAvatarImage: {
+    width: 40,
+    height: 40,
   },
   headerInfo: {
     gap: 2,

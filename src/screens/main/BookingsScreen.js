@@ -121,7 +121,7 @@ export default function BookingsScreen({ navigation, route }) {
   const renderBookingCard = (booking) => {
     const statusStyle = getStatusStyle(booking.status);
     const sitterName = booking.sitter?.name || booking.sitterName || 'Sitter';
-    const sitterImage = booking.sitter?.profileImage || booking.sitterImage || null;
+    const sitterImage = booking.sitter?.user?.avatarUrl || booking.sitter?.profileImage || booking.sitterImage || null;
     const serviceType = booking.serviceType || booking.service || '';
     const dateRange = formatDateRange(booking.startDate, booking.endDate);
     const rating = booking.sitter?.rating || booking.rating || 0;

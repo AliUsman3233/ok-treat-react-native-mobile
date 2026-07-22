@@ -6,6 +6,7 @@ import ProfileVerifiedModal from '../../../components/ProfileVerifiedModal';
 import { BackArrowIcon, DogImage } from '../../../assets';
 import { getSitterRequests, updateBookingStatus } from '../../../services/bookingService';
 import { getSocket } from '../../../config/socket';
+import api from '../../../config/api';
 
 // Enum → human label for the service type.
 const SERVICE_LABELS = {
@@ -18,7 +19,9 @@ const SERVICE_LABELS = {
 const humanizeService = (t) => SERVICE_LABELS[t] || t || '';
 
 export default function SitterRequestsScreen({ navigation }) {
+  const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'chats'
   const [requests, setRequests] = useState([]);
+  const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingIds, setProcessingIds] = useState(new Set());
@@ -55,11 +58,41 @@ export default function SitterRequestsScreen({ navigation }) {
     }
   }, []);
 
-  // Refresh on screen focus
+  // Active chats come from real message threads (same source as the Inbox),
+  // NOT from bookings — a booking becomes a chat once a message is exchanged.
+  const fetchConversations = useCallback(async () => {
+    try {
+      const response = await api.get('/messages/conversations');
+      const conversations =
+        response.data?.data?.conversations ||
+        response.data?.conversations ||
+        (Array.isArray(response.data) ? response.data : []);
+      const formatted = (Array.isArray(conversations) ? conversations : []).map((conv) => {
+        const otherId = conv.otherUserId || conv.otherUser?.id || conv.otherUser?._id;
+        return {
+          id: otherId,
+          clientUserId: otherId,
+          name: conv.otherUser?.fullName || conv.otherUser?.name || 'Unknown',
+          message: conv.lastMessage?.content || conv.lastMessage || '',
+          time: conv.lastMessage?.createdAt
+            ? new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '',
+          unread: conv.unreadCount || 0,
+          avatar: conv.otherUser?.avatarUrl ? { uri: conv.otherUser.avatarUrl } : DogImage,
+        };
+      });
+      setChats(formatted);
+    } catch (err) {
+      console.error('Failed to fetch conversations:', err);
+    }
+  }, []);
+
+  // Refresh both lists on screen focus
   useFocusEffect(
     useCallback(() => {
       fetchRequests();
-    }, [fetchRequests])
+      fetchConversations();
+    }, [fetchRequests, fetchConversations])
   );
 
   // Real-time refresh via socket
@@ -72,12 +105,17 @@ export default function SitterRequestsScreen({ navigation }) {
         fetchRequests();
       }
     };
+    const handleNewMessage = () => fetchConversations();
 
     socket.on('newNotification', handleNewNotification);
+    socket.on('newMessage', handleNewMessage);
+    socket.on('messageSent', handleNewMessage);
     return () => {
       socket.off('newNotification', handleNewNotification);
+      socket.off('newMessage', handleNewMessage);
+      socket.off('messageSent', handleNewMessage);
     };
-  }, [fetchRequests]);
+  }, [fetchRequests, fetchConversations]);
 
   // Helper to display relative time
   const getTimeDisplay = (date) => {
@@ -148,6 +186,7 @@ export default function SitterRequestsScreen({ navigation }) {
         onPress={() => navigation.navigate('ChatConversation', {
           otherUserId: item.clientUserId,
           chatName: item.name,
+          avatar: item.avatar,
         })}
         disabled={!item.clientUserId}
       >
@@ -183,6 +222,34 @@ export default function SitterRequestsScreen({ navigation }) {
     );
   };
 
+  const renderChatCard = (item) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.card}
+      onPress={() => navigation.navigate('ChatConversation', {
+        otherUserId: item.clientUserId,
+        chatName: item.name,
+      })}
+      disabled={!item.clientUserId}
+    >
+      <Image source={typeof item.avatar === 'string' ? { uri: item.avatar } : item.avatar} style={styles.avatar} />
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardName}>{item.name}</Text>
+          <Text style={styles.cardTime}>{item.time}</Text>
+        </View>
+        <View style={styles.messageRow}>
+          <Text style={styles.cardMessage} numberOfLines={1}>{item.message}</Text>
+          {item.unread > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>{item.unread}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   const handleBack = () => {
     navigation.goBack();
   };
@@ -195,8 +262,30 @@ export default function SitterRequestsScreen({ navigation }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} fill="#090E12" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Requests</Text>
+          <Text style={styles.headerTitle}>Inbox</Text>
           <View style={styles.backButton} />
+        </View>
+
+        {/* Tab Selector */}
+        <View style={styles.tabContainer}>
+          <View style={styles.tabSelector}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+              onPress={() => setActiveTab('requests')}
+            >
+              <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
+                Requests{requests.length > 0 ? ` (${requests.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'chats' && styles.activeTab]}
+              onPress={() => setActiveTab('chats')}
+            >
+              <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>
+                Chats{chats.length > 0 ? ` (${chats.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Content */}
@@ -214,15 +303,27 @@ export default function SitterRequestsScreen({ navigation }) {
           </View>
         ) : (
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <View style={styles.listContainer}>
-              {requests.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No pending requests</Text>
-                </View>
-              ) : (
-                requests.map(renderRequestCard)
-              )}
-            </View>
+            {activeTab === 'requests' ? (
+              <View style={styles.listContainer}>
+                {requests.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No pending requests</Text>
+                  </View>
+                ) : (
+                  requests.map(renderRequestCard)
+                )}
+              </View>
+            ) : (
+              <View style={styles.listContainer}>
+                {chats.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No active chats yet</Text>
+                  </View>
+                ) : (
+                  chats.map(renderChatCard)
+                )}
+              </View>
+            )}
           </ScrollView>
         )}
       </View>

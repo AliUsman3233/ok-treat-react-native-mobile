@@ -88,8 +88,12 @@ export default function RebookScreen({ navigation }) {
             setLoading(true);
             setError(null);
             const response = await getUserBookings('COMPLETED');
-            const data = response?.bookings || response?.data || response || [];
-            const bookingsArray = Array.isArray(data) ? data : [];
+            // Body is { success, data: { bookings } } — reach into data.bookings.
+            const bookingsArray =
+                response?.data?.bookings ||
+                response?.bookings ||
+                (Array.isArray(response?.data) ? response.data : null) ||
+                (Array.isArray(response) ? response : []);
 
             // Group by sitter and extract unique sitters with their services
             const sitterMap = {};
@@ -104,7 +108,7 @@ export default function RebookScreen({ navigation }) {
                         location: booking.sitter?.city && booking.sitter?.state
                             ? `${booking.sitter.city}, ${booking.sitter.state}`
                             : booking.sitter?.location || 'Location not available',
-                        image: booking.sitter?.profileImage || null,
+                        image: booking.sitter?.user?.avatarUrl || booking.sitter?.profileImage || null,
                         mostRecentService: booking.serviceType || booking.service || '',
                         services: new Map(),
                         lastDate: new Date(booking.endDate || booking.startDate || 0),

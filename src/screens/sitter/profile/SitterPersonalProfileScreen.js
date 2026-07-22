@@ -111,7 +111,7 @@ export default function SitterPersonalProfileScreen({ navigation }) {
   const reviewCount = sitter?.totalReviews ?? reviews.length ?? 0;
   const repeatClients = sitter?.repeatClients ?? null;
   const isApproved = sitter?.approvalStatus === 'APPROVED';
-  const profileImage = sitter?.profileImage || sitter?.avatarUrl || user?.avatarUrl || null;
+  const profileImage = sitter?.profilePhoto || sitter?.profileImage || sitter?.avatarUrl || user?.avatarUrl || null;
   const coverImage = sitter?.coverImage || (Array.isArray(sitter?.photos) && sitter.photos[0]) || null;
   const aboutText = sitter?.aboutPet || sitter?.about || '';
 

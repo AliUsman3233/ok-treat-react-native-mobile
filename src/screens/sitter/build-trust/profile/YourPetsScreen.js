@@ -91,7 +91,7 @@ export default function YourPetsScreen({ navigation }) {
   };
 
   const renderPetImage = (pet) => {
-    const imageUri = pet.photo || pet.profileImage || pet.avatarUrl;
+    const imageUri = pet.photoUrl || pet.photo || pet.profileImage || pet.avatarUrl;
     if (imageUri) {
       return <Image source={{ uri: imageUri }} style={styles.petImage} />;
     }

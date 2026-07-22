@@ -164,7 +164,7 @@ export default function SitterHomeScreen({ navigation }) {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Image source={DogImage} style={styles.avatar} />
+          <Image source={user?.avatarUrl ? { uri: user.avatarUrl } : DogImage} style={styles.avatar} />
           <View style={styles.headerText}>
             <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.userName}>{user?.fullName || 'Sitter'}</Text>
@@ -353,6 +353,7 @@ export default function SitterHomeScreen({ navigation }) {
                       onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
                         otherUserId: booking.clientUserId,
                         chatName: booking.clientName,
+                        avatar: booking.clientImage,
                       })}
                       disabled={!booking.clientUserId}
                     >

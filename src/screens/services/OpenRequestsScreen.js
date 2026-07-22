@@ -300,13 +300,7 @@ export default function OpenRequestsScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Requests</Text>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => alert('Request Filters', 'Coming after release', 'pending')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Setting2IconAlt width={16.36} height={16.36} />
-          </TouchableOpacity>
+          <View style={styles.backButton} />
         </View>
 
         {/* Content */}

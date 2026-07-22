@@ -28,10 +28,22 @@ export default function PrivacyPolicyScreen({ navigation }) {
         >
           <View style={styles.content}>
             <Text style={styles.paragraph}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur
+              OkTreat ("we", "us") is committed to protecting your privacy. This policy explains what information we collect, how we use it, and the choices you have. By using the OkTreat app you agree to the practices described here.
             </Text>
             <Text style={styles.paragraph}>
-              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur
+              Information we collect: the details you provide when you create an account and profile (name, email, phone, address, profile photo), your pets' information, booking and payment activity, messages you exchange with sitters or owners, and — only when you grant permission — your device location, which is used to match you with nearby sitters and to help reunite lost pets scanned via a QR tag.
+            </Text>
+            <Text style={styles.paragraph}>
+              How we use your information: to operate the service (matching, bookings, messaging and payments), to keep the platform safe, to send you notifications you have enabled, and to improve the app. We do not sell your personal information.
+            </Text>
+            <Text style={styles.paragraph}>
+              Sharing: we share the minimum information needed to complete a booking (for example, a sitter sees the owner's name, pet details and, where relevant, address). Payment processing is handled by our payment provider. We may disclose information where required by law.
+            </Text>
+            <Text style={styles.paragraph}>
+              Your choices: you can view and update your profile at any time, control notification preferences in Settings, and request deletion of your account. Location sharing can be turned off in your device settings, though some features may then be unavailable.
+            </Text>
+            <Text style={styles.paragraph}>
+              Contact us: if you have any questions about this policy or your data, please reach us through the Help & Support section of the app.
             </Text>
           </View>
         </ScrollView>
