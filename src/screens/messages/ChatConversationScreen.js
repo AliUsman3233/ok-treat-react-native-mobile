@@ -61,9 +61,13 @@ export default function ChatConversationScreen({ route, navigation }) {
   const receiverId = otherUserId || chatId;
 
   // The `avatar` param may arrive as a URL string or an Image source object
-  // ({ uri }) depending on the caller — normalize to a plain URL. Own avatar
-  // comes from the logged-in user.
-  const otherAvatar = typeof avatar === 'string' ? avatar : (avatar?.uri || null);
+  // ({ uri }) depending on the caller — normalize to a plain URL. If no usable
+  // avatar was passed, we fall back to one derived from the fetched messages
+  // (which include sender/receiver avatarUrl), so the header/bubbles show the
+  // real photo regardless of how the chat was opened.
+  const avatarParam = typeof avatar === 'string' ? avatar : (avatar?.uri || null);
+  const [resolvedAvatar, setResolvedAvatar] = useState(null);
+  const otherAvatar = avatarParam || resolvedAvatar;
   const myAvatar = user?.avatarUrl || null;
 
   // Refetch on focus so reopening the chat (e.g. after leaving to ContactSitter
@@ -116,6 +120,18 @@ export default function ChatConversationScreen({ route, navigation }) {
         response.data?.data?.messages ||
         response.data?.messages ||
         (Array.isArray(response.data) ? response.data : []);
+
+      // Derive the other party's avatar from the messages (they include
+      // sender/receiver { avatarUrl }) so the header isn't dependent on the
+      // caller passing an avatar param.
+      if (Array.isArray(list)) {
+        for (const m of list) {
+          const other = String(m.senderId) === String(receiverId) ? m.sender
+            : (String(m.receiverId) === String(receiverId) ? m.receiver : null);
+          if (other?.avatarUrl) { setResolvedAvatar(other.avatarUrl); break; }
+        }
+      }
+
       const formatted = (Array.isArray(list) ? list : []).map(msg => ({
         id: msg.id || msg._id,
         text: msg.content || msg.text || '',
