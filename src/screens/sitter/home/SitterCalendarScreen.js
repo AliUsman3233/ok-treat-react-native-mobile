@@ -1,12 +1,32 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenWrapper from '../../../components/ScreenWrapper';
-import { BackArrowIcon, DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
+import { BackArrowIcon, DogImage, ChatIcon, PhoneCallBlueIcon } from '../../../assets';
 import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterCalendar } from '../../../services/bookingService';
 
 const daysOfWeek = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+// Enum → human label for the booking cards.
+const SERVICE_LABELS = {
+  BOARDING: 'Boarding',
+  HOUSE_SITTING: 'House Sitting',
+  DROP_IN_VISITS: 'Drop-In Visit',
+  DAY_CARE: 'Day Care',
+  PET_WALKING: 'Pet Walking',
+};
+
+// Status → badge colors (status is already lowercased on the booking object).
+const STATUS_COLORS = {
+  pending: { bg: '#FFEED3', text: '#E5A33D' },
+  confirmed: { bg: '#DCF5E5', text: '#2E9E5B' },
+  accepted: { bg: '#DCF5E5', text: '#2E9E5B' },
+  completed: { bg: '#E3F0FB', text: '#3A8DCC' },
+  declined: { bg: '#FBE3E3', text: '#D06060' },
+};
+
+const humanizeService = (t) => SERVICE_LABELS[t] || t || '';
+const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
 // Helper function to get calendar days for a month
 const getCalendarDays = (year, month) => {
@@ -52,7 +72,6 @@ const getMonthName = (year, month) => {
 };
 
 export default function SitterCalendarScreen({ navigation }) {
-  const insets = useSafeAreaInsets();
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -74,22 +93,31 @@ export default function SitterCalendarScreen({ navigation }) {
       const endDate = new Date(displayYear, displayMonth + 1, 0).toISOString();
 
       const response = await getSitterCalendar(startDate, endDate);
-      const data = response?.bookings || response?.data || response || [];
-      const bookingsArray = Array.isArray(data) ? data : [];
+      // API shape: { success, data: { bookings: [...], count } }. Reach into
+      // data.bookings; keep the looser fallbacks in case the shape changes.
+      const bookingsArray =
+        response?.data?.bookings ||
+        response?.bookings ||
+        (Array.isArray(response?.data) ? response.data : null) ||
+        (Array.isArray(response) ? response : []);
 
-      setAllBookings(bookingsArray.map(booking => ({
-        id: booking.id || booking._id,
-        clientUserId: booking.user?.id || booking.client?.id || null,
-        clientName: booking.client?.name || booking.clientName || booking.user?.fullName || booking.user?.name || 'Client',
-        clientImage: booking.client?.profileImage || booking.clientImage
-          ? { uri: booking.client?.profileImage || booking.clientImage }
-          : DogImage,
-        serviceType: booking.serviceType || booking.service || '',
-        date: new Date(booking.startDate || booking.date),
-        address: booking.address || booking.client?.address || booking.location || '',
-        phone: booking.client?.phone || booking.phone || '',
-        status: booking.status?.toLowerCase() || 'upcoming',
-      })));
+      setAllBookings(bookingsArray.map(booking => {
+        // The client is returned as `owner` (fullName / avatarUrl / phone).
+        const owner = booking.owner || booking.user || booking.client || {};
+        const avatar = owner.avatarUrl || owner.profileImage;
+        return {
+          id: booking.id || booking._id,
+          clientUserId: owner.id || null,
+          clientName: owner.fullName || owner.name || 'Client',
+          clientImage: avatar ? { uri: avatar } : DogImage,
+          petName: booking.pet?.name || '',
+          serviceType: booking.serviceType || booking.service || '',
+          date: new Date(booking.startDate || booking.date),
+          address: owner.address || '',
+          phone: owner.phone || '',
+          status: booking.status?.toLowerCase() || 'upcoming',
+        };
+      }));
     } catch (err) {
       console.error('Failed to fetch calendar data:', err);
       setError(err?.message || 'Failed to load calendar data');
@@ -138,6 +166,13 @@ export default function SitterCalendarScreen({ navigation }) {
     const dateStr = `${displayYear}-${displayMonth}-${day}`;
     return bookingDates.has(dateStr);
   };
+
+  // Is this cell today's date (only meaningful while viewing the current month)
+  const isTodayDate = (day) =>
+    !!day &&
+    displayYear === currentYear &&
+    displayMonth === currentMonth &&
+    day === today.getDate();
 
   // Check if we can navigate to next month (limit to 1 year in future)
   const canGoNext = () => {
@@ -197,7 +232,7 @@ export default function SitterCalendarScreen({ navigation }) {
   const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date)) return '';
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${monthNames[date.getMonth()]}-${date.getDate()}-${date.getFullYear()}`;
+    return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   return (
@@ -221,26 +256,24 @@ export default function SitterCalendarScreen({ navigation }) {
           <View style={styles.monthHeader}>
             <Text style={styles.monthText}>{getMonthName(displayYear, displayMonth)}</Text>
             <View style={styles.monthNavigation}>
+              {!isCurrentMonth && (
+                <TouchableOpacity style={styles.todayButton} onPress={goToCurrentMonth} activeOpacity={0.85}>
+                  <Icon name="today-outline" size={13} color="#FFFFFF" />
+                  <Text style={styles.todayButtonText}>Today</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.navButton} onPress={goToPreviousMonth}>
-                <Icon name="chevron-back" size={17.84} color="#212121" />
+                <Icon name="chevron-back" size={18} color="#212121" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.navButton, !canGoNext() && styles.navButtonDisabled]}
                 onPress={goToNextMonth}
                 disabled={!canGoNext()}
               >
-                <Icon name="chevron-forward" size={17.84} color={canGoNext() ? "#5CADF4" : "#BDBDBD"} />
+                <Icon name="chevron-forward" size={18} color={canGoNext() ? "#5CADF4" : "#BDBDBD"} />
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Today Button */}
-          {!isCurrentMonth && (
-            <TouchableOpacity style={[styles.todayButton, { top: 14.27 + insets.top }]} onPress={goToCurrentMonth}>
-              <Icon name="today-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.todayButtonText}>Today</Text>
-            </TouchableOpacity>
-          )}
 
           {/* Loading indicator for calendar */}
           {loading && (
@@ -266,15 +299,17 @@ export default function SitterCalendarScreen({ navigation }) {
                 {week.map((day, dayIndex) => {
                   const isBookingDate = hasBooking(day);
                   const isSelected = day === selectedDate;
+                  const isToday = isTodayDate(day);
 
                   return (
                     <TouchableOpacity
                       key={dayIndex}
                       style={[
                         styles.dateCell,
-                        (isSelected || isBookingDate) && styles.dateCellWithBackground,
-                        isSelected && styles.selectedDateCell,
+                        (isSelected || isBookingDate || isToday) && styles.dateCellWithBackground,
                         isBookingDate && !isSelected && styles.bookingDateCell,
+                        isToday && !isSelected && styles.todayCell,
+                        isSelected && styles.selectedDateCell,
                       ]}
                       onPress={() => handleDatePress(day)}
                       disabled={!day || !isBookingDate}
@@ -283,17 +318,31 @@ export default function SitterCalendarScreen({ navigation }) {
                         <Text
                           style={[
                             styles.dateText,
+                            isToday && !isSelected && styles.todayText,
                             isSelected && styles.selectedDateText,
                           ]}
                         >
                           {day}
                         </Text>
                       )}
+                      {isBookingDate && !isSelected && <View style={styles.bookingDot} />}
                     </TouchableOpacity>
                   );
                 })}
               </View>
             ))}
+          </View>
+
+          {/* Legend */}
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, styles.legendBooking]} />
+              <Text style={styles.legendText}>Has bookings</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, styles.legendToday]} />
+              <Text style={styles.legendText}>Today</Text>
+            </View>
           </View>
         </View>
 
@@ -317,48 +366,63 @@ export default function SitterCalendarScreen({ navigation }) {
 
               {/* Booking Cards */}
               <View style={styles.bookingsList}>
-                {selectedBookings.map((booking) => (
+                {selectedBookings.map((booking) => {
+                  const sc = STATUS_COLORS[booking.status] || { bg: '#EEF0F3', text: '#818898' };
+                  return (
                   <View key={booking.id} style={styles.bookingCard}>
                     <View style={styles.bookingTop}>
                       <Image source={typeof booking.clientImage === 'string' ? { uri: booking.clientImage } : booking.clientImage} style={styles.bookingAvatar} />
                       <View style={styles.bookingInfo}>
                         <Text style={styles.bookingClientName}>{booking.clientName}</Text>
                         <Text style={styles.bookingService}>
-                          <Text style={styles.bookingServiceType}>{booking.serviceType}</Text>
+                          <Text style={styles.bookingServiceType}>{humanizeService(booking.serviceType)}</Text>
                           <Text style={styles.bookingDate}> - {formatDate(booking.date)}</Text>
                         </Text>
                       </View>
-                      <View style={styles.bookingStatusBadge}>
-                        <Text style={styles.bookingStatusText}>{booking.status}</Text>
+                      <View style={[styles.bookingStatusBadge, { backgroundColor: sc.bg }]}>
+                        <Text style={[styles.bookingStatusText, { color: sc.text }]}>{capitalize(booking.status)}</Text>
                       </View>
                     </View>
 
-                    <View style={styles.bookingContact}>
-                      <View style={styles.bookingContactItem}>
-                        <LocationArrowCircleUnfilledIcon width={16} height={16} />
-                        <Text style={styles.bookingContactText}>{booking.address}</Text>
+                    <View style={styles.bookingBottom}>
+                      <View style={styles.bookingContact}>
+                        {!!booking.address && (
+                          <View style={styles.bookingContactItem}>
+                            <Icon name="location-outline" size={14} color="#32A6D8" />
+                            <Text style={styles.bookingContactText} numberOfLines={2}>{booking.address}</Text>
+                          </View>
+                        )}
+                        {!!booking.petName && (
+                          <View style={styles.bookingContactItem}>
+                            <Icon name="paw-outline" size={14} color="#32A6D8" />
+                            <Text style={styles.bookingContactText}>{booking.petName}</Text>
+                          </View>
+                        )}
+                        {!!booking.phone && (
+                          <View style={styles.bookingContactItem}>
+                            <View style={styles.phoneIconsWrapper}>
+                              <PhoneCallBlueIcon width={10} height={10} />
+                              <View style={styles.phoneCircle} />
+                            </View>
+                            <Text style={styles.bookingContactText}>{booking.phone}</Text>
+                          </View>
+                        )}
                       </View>
-                      <View style={styles.bookingContactItem}>
-                        <View style={styles.phoneIconsWrapper}>
-                          <PhoneCallBlueIcon width={10} height={10} />
-                          <View style={styles.phoneCircle} />
-                        </View>
-                        <Text style={styles.bookingContactText}>{booking.phone}</Text>
-                      </View>
-                    </View>
 
-                    <TouchableOpacity
-                      style={styles.bookingChatButton}
-                      onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
-                        otherUserId: booking.clientUserId,
-                        chatName: booking.clientName,
-                      })}
-                      disabled={!booking.clientUserId}
-                    >
-                      <ChatIcon width={21.05} height={21.05} />
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.bookingChatButton, !booking.clientUserId && styles.bookingChatButtonDisabled]}
+                        onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                          otherUserId: booking.clientUserId,
+                          chatName: booking.clientName,
+                        })}
+                        disabled={!booking.clientUserId}
+                      >
+                        <ChatIcon width={21.05} height={21.05} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                ))}
+                  );
+                })}
               </View>
             </View>
           )
@@ -410,6 +474,7 @@ const styles = StyleSheet.create({
     padding: 10.71,
     paddingTop: 14.27,
     paddingBottom: 10.71,
+    position: 'relative',
   },
   monthHeader: {
     flexDirection: 'row',
@@ -427,32 +492,29 @@ const styles = StyleSheet.create({
   },
   monthNavigation: {
     flexDirection: 'row',
-    gap: 3.57,
+    alignItems: 'center',
+    gap: 6,
   },
   navButton: {
-    width: 17.84,
-    height: 17.84,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   navButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   todayButton: {
-    position: 'absolute',
-    right: 80,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     backgroundColor: '#32A6D8',
     borderRadius: 20,
-    shadowColor: '#32A6D8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    marginRight: 2,
   },
   todayButtonText: {
     color: '#FFFFFF',
@@ -462,11 +524,52 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   calendarLoadingOverlay: {
-    paddingVertical: 8,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderRadius: 17.84,
+    zIndex: 10,
   },
   calendarGrid: {
     gap: 0,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 18,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(90, 172, 244, 0.2)',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendBooking: {
+    backgroundColor: 'rgba(90, 172, 244, 0.2)',
+  },
+  legendToday: {
+    borderWidth: 1.5,
+    borderColor: '#32A6D8',
+    backgroundColor: '#FFFFFF',
+  },
+  legendText: {
+    color: '#5B6B7B',
+    fontSize: 11,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
   },
   daysRow: {
     flexDirection: 'row',
@@ -489,18 +592,33 @@ const styles = StyleSheet.create({
   dateCell: {
     width: 35.68,
     height: 35.68,
-    padding: 8.92,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dateCellWithBackground: {
-    borderRadius: 892.11,
+    borderRadius: 999,
   },
   selectedDateCell: {
     backgroundColor: '#FFC2EB',
   },
   bookingDateCell: {
     backgroundColor: 'rgba(90, 172, 244, 0.2)',
+  },
+  todayCell: {
+    borderWidth: 1.5,
+    borderColor: '#32A6D8',
+  },
+  todayText: {
+    color: '#32A6D8',
+    fontWeight: '700',
+  },
+  bookingDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#32A6D8',
   },
   dateText: {
     color: '#424242',
@@ -632,7 +750,14 @@ const styles = StyleSheet.create({
     lineHeight: 15.5,
     textAlign: 'center',
   },
+  bookingBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   bookingContact: {
+    flex: 1,
     gap: 4,
   },
   bookingContactItem: {
@@ -664,14 +789,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   bookingChatButton: {
-    position: 'absolute',
-    right: 12,
-    top: 47,
-    padding: 14.03,
+    width: 48,
+    height: 48,
     backgroundColor: 'rgba(90, 172, 244, 0.15)',
-    borderRadius: 87.69,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bookingChatButtonDisabled: {
+    opacity: 0.4,
   },
   emptyStateContainer: {
     marginTop: 40,

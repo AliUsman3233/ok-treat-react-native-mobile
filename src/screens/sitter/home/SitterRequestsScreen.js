@@ -1,18 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { useAppAlert } from '../../../context/AlertContext';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../../components/ProfileVerifiedModal';
-import { BackArrowIcon, Setting2IconAlt, DogImage } from '../../../assets';
+import { BackArrowIcon, DogImage } from '../../../assets';
 import { getSitterRequests, updateBookingStatus } from '../../../services/bookingService';
 import { getSocket } from '../../../config/socket';
 
+// Enum → human label for the service type.
+const SERVICE_LABELS = {
+  BOARDING: 'Boarding',
+  HOUSE_SITTING: 'House Sitting',
+  DROP_IN_VISITS: 'Drop-In Visit',
+  DAY_CARE: 'Day Care',
+  PET_WALKING: 'Pet Walking',
+};
+const humanizeService = (t) => SERVICE_LABELS[t] || t || '';
+
 export default function SitterRequestsScreen({ navigation }) {
-  const alert = useAppAlert();
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'chats'
   const [requests, setRequests] = useState([]);
-  const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingIds, setProcessingIds] = useState(new Set());
@@ -24,44 +30,23 @@ export default function SitterRequestsScreen({ navigation }) {
       setLoading(true);
       setError(null);
       const response = await getSitterRequests();
+      // /sitter/requests only ever returns PENDING bookings — this screen is
+      // the pending-requests queue. (Active chats live in the Inbox.)
       const data = response?.data?.requests || response?.requests || response?.data || [];
       const requestsArray = Array.isArray(data) ? data : [];
 
-      const requestItems = [];
-      const chatItems = [];
-
-      requestsArray.forEach((item) => {
-        const mapped = {
-          id: item.id || item._id,
-          bookingId: item.id || item._id,
-          clientUserId: item.user?.id || null,
-          name: item.user?.fullName || 'User',
-          message: item.notes || item.serviceType?.replace(/_/g, ' ') || 'New request',
-          time: item.createdAt
-            ? getTimeDisplay(new Date(item.createdAt))
-            : '',
-          avatar: item.user?.avatarUrl
-            ? { uri: item.user.avatarUrl }
-            : DogImage,
-          type: item.type || 'request',
-          status: item.status,
-          unread: item.unreadCount || 0,
-          serviceType: item.serviceType,
-          petName: item.pet?.name,
-          startDate: item.startDate,
-          endDate: item.endDate,
-          totalAmount: item.totalAmount,
-        };
-
-        if (item.status === 'CONFIRMED' || item.status === 'ONGOING') {
-          chatItems.push(mapped);
-        } else {
-          requestItems.push(mapped);
-        }
-      });
-
-      setRequests(requestItems);
-      setChats(chatItems);
+      setRequests(requestsArray.map((item) => ({
+        id: item.id || item._id,
+        bookingId: item.id || item._id,
+        clientUserId: item.user?.id || null,
+        name: item.user?.fullName || 'User',
+        message: (item.notes && item.notes.trim())
+          || `${humanizeService(item.serviceType)}${item.pet?.name ? ` · ${item.pet.name}` : ''}`
+          || 'New request',
+        time: item.createdAt ? getTimeDisplay(new Date(item.createdAt)) : '',
+        avatar: item.user?.avatarUrl ? { uri: item.user.avatarUrl } : DogImage,
+        status: item.status,
+      })));
     } catch (err) {
       console.error('Failed to fetch requests:', err);
       setError(err?.message || 'Failed to load requests');
@@ -119,8 +104,7 @@ export default function SitterRequestsScreen({ navigation }) {
     try {
       await updateBookingStatus(bookingId, 'CONFIRMED');
       setRequests(prev => prev.filter(r => r.bookingId !== bookingId));
-      setChats(prev => [...prev, { ...item, type: 'chat', status: 'CONFIRMED' }]);
-      showModal('Request Accepted', `Request from ${item.name} has been accepted.`, 'success');
+      showModal('Request Accepted', `Request from ${item.name} has been accepted. You can chat with them from your Bookings.`, 'success');
     } catch (err) {
       console.error('Failed to accept request:', err);
       showModal('Error', err?.message || 'Failed to accept request', 'error');
@@ -199,34 +183,6 @@ export default function SitterRequestsScreen({ navigation }) {
     );
   };
 
-  const renderChatCard = (item) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.card}
-      onPress={() => navigation.navigate('ChatConversation', {
-        otherUserId: item.clientUserId,
-        chatName: item.name,
-      })}
-      disabled={!item.clientUserId}
-    >
-      <Image source={typeof item.avatar === 'string' ? { uri: item.avatar } : item.avatar} style={styles.avatar} />
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardName}>{item.name}</Text>
-          <Text style={styles.cardTime}>{item.time}</Text>
-        </View>
-        <View style={styles.messageRow}>
-          <Text style={styles.cardMessage}>{item.message}</Text>
-          {item.unread > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{item.unread}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
   const handleBack = () => {
     navigation.goBack();
   };
@@ -239,36 +195,8 @@ export default function SitterRequestsScreen({ navigation }) {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} fill="#090E12" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Inbox</Text>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => alert('Inbox Filters', 'Coming after release', 'pending')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Setting2IconAlt width={16.36} height={16.36} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Tab Selector */}
-        <View style={styles.tabContainer}>
-          <View style={styles.tabSelector}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
-              onPress={() => setActiveTab('requests')}
-            >
-              <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
-                Requests
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'chats' && styles.activeTab]}
-              onPress={() => setActiveTab('chats')}
-            >
-              <Text style={[styles.tabText, activeTab === 'chats' && styles.activeTabText]}>
-                Chats
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.headerTitle}>Requests</Text>
+          <View style={styles.backButton} />
         </View>
 
         {/* Content */}
@@ -286,27 +214,15 @@ export default function SitterRequestsScreen({ navigation }) {
           </View>
         ) : (
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {activeTab === 'requests' ? (
-              <View style={styles.listContainer}>
-                {requests.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No pending requests</Text>
-                  </View>
-                ) : (
-                  requests.map(renderRequestCard)
-                )}
-              </View>
-            ) : (
-              <View style={styles.listContainer}>
-                {chats.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No active chats</Text>
-                  </View>
-                ) : (
-                  chats.map(renderChatCard)
-                )}
-              </View>
-            )}
+            <View style={styles.listContainer}>
+              {requests.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No pending requests</Text>
+                </View>
+              ) : (
+                requests.map(renderRequestCard)
+              )}
+            </View>
           </ScrollView>
         )}
       </View>

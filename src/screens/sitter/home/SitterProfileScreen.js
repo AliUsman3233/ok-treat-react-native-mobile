@@ -10,7 +10,6 @@ import {
   UserProfileIcon,
   NotebookProfileIcon,
   SupportProfileIcon,
-  RateUsIcon,
   LogoutProfileIcon,
   EditIcon,
   ProfileImagePersonIcon,
@@ -29,7 +28,9 @@ export default function SitterProfileScreen({ navigation }) {
     const fetchProfile = async () => {
       try {
         const response = await getSitterProfile();
-        setSitter(response?.data || response || null);
+        // API shape: { success, data: { sitter } }. Reading response.data
+        // set state one level too shallow, so every stat read as undefined.
+        setSitter(response?.data?.sitter || response?.data || null);
       } catch (err) {
         console.error('Failed to fetch sitter profile:', err);
       }
@@ -76,13 +77,6 @@ export default function SitterProfileScreen({ navigation }) {
       screen: 'HelpSupport',
       color: '#32A6D8'
     },
-    {
-      title: 'Rate Us',
-      component: RateUsIcon,
-      screen: null,
-      color: '#32A6D8',
-      action: 'rate'
-    },
     // Tester complaint #12: stuck in Sitter mode with no way back. The
     // mode toggle lives on the user-side MoreScreen; once in SitterTabs
     // we need an explicit "go back to owner UI" affordance.
@@ -105,8 +99,6 @@ export default function SitterProfileScreen({ navigation }) {
   const handleMenuPress = (item) => {
     if (item.action === 'logout') {
       handleLogout();
-    } else if (item.action === 'rate') {
-      console.log('Rate us');
     } else if (item.action === 'switch_to_owner') {
       // Pop back to the pet-owner UI. Auth stays intact; the user can
       // flip back on via Settings → "Switch to Sitter Mode" anytime.
@@ -147,11 +139,13 @@ export default function SitterProfileScreen({ navigation }) {
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.fullName || 'Sitter'}</Text>
               
-              {/* Verified Badge */}
-              <View style={styles.verifiedBadge}>
-                <Icon name="checkmark-circle" size={17} color="#00B100" />
-                <Text style={styles.verifiedText}>Verified</Text>
-              </View>
+              {/* Verified Badge — only when actually approved */}
+              {sitter?.approvalStatus === 'APPROVED' && (
+                <View style={styles.verifiedBadge}>
+                  <Icon name="checkmark-circle" size={17} color="#00B100" />
+                  <Text style={styles.verifiedText}>Verified</Text>
+                </View>
+              )}
 
               {/* Stats Row 1 */}
               <View style={styles.statsRow}>
@@ -169,12 +163,16 @@ export default function SitterProfileScreen({ navigation }) {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Icon name="briefcase" size={14} color="#32A6D8" />
-                  <Text style={styles.statTextGray}>Yaletown pet sitter & walker</Text>
+                  <Text style={styles.statTextGray}>
+                    {user?.yearsOfExperience ? `${user.yearsOfExperience} yrs experience` : 'Pet sitter & walker'}
+                  </Text>
                 </View>
-                <View style={styles.statItem}>
-                  <Icon name="location" size={14} color="#32A6D8" />
-                  <Text style={styles.statTextGray}>{user?.address || ''}</Text>
-                </View>
+                {!!user?.address && (
+                  <View style={styles.statItem}>
+                    <Icon name="location" size={14} color="#32A6D8" />
+                    <Text style={styles.statTextGray}>{user.address}</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>

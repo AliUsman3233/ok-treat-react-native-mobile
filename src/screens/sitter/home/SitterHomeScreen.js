@@ -1,23 +1,29 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
-import { useAppAlert } from '../../../context/AlertContext';
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Polygon } from 'react-native-svg';
 import ScreenWrapper from '../../../components/ScreenWrapper';
-import { DogImage, ChatIcon, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon } from '../../../assets';
+import { DogImage, ChatIcon } from '../../../assets';
 import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterEarnings, getSitterBookings, getSitterRequests } from '../../../services/bookingService';
 
+// Enum → human label for the service type.
+const SERVICE_LABELS = {
+  BOARDING: 'Boarding',
+  HOUSE_SITTING: 'House Sitting',
+  DROP_IN_VISITS: 'Drop-In Visit',
+  DAY_CARE: 'Day Care',
+  PET_WALKING: 'Pet Walking',
+};
+const humanizeService = (t) => SERVICE_LABELS[t] || t || '';
+
 export default function SitterHomeScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
-  const alert = useAppAlert();
-  const comingSoon = (label) => () => alert(label, 'Coming after release', 'pending');
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const [chartData, setChartData] = useState([]);
-  const [totalSales, setTotalSales] = useState('$0.00');
-  const [salesPercent, setSalesPercent] = useState('0');
+  const [totalSales, setTotalSales] = useState(0);
   const [completedOrders, setCompletedOrders] = useState(0);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loadingEarnings, setLoadingEarnings] = useState(true);
@@ -30,29 +36,23 @@ export default function SitterHomeScreen({ navigation }) {
       const response = await getSitterEarnings();
       const data = response?.data || response || {};
 
-      // Parse chart data from response
-      const monthlyData = data?.monthlyData || data?.chartData || [];
-      if (Array.isArray(monthlyData) && monthlyData.length > 0) {
-        setChartData(monthlyData.map(item => ({
-          month: item.month || item.label || '',
-          value: item.value || item.amount || 0,
+      // Backend returns dailyEarnings: [{ date, amount }] for the last 30
+      // days. Plot the most recent 7 for the mini chart, labelled by weekday.
+      const daily = Array.isArray(data.dailyEarnings) ? data.dailyEarnings : [];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const last7 = daily.slice(-7);
+      if (last7.length > 0) {
+        setChartData(last7.map(d => ({
+          month: dayNames[new Date(d.date).getDay()],
+          value: d.amount || 0,
         })));
       } else {
-        // Fallback: create empty chart
-        setChartData([
-          { month: 'Jun', value: 0 },
-          { month: 'Jul', value: 0 },
-          { month: 'Aug', value: 0 },
-          { month: 'Sep', value: 0 },
-          { month: 'Oct', value: 0 },
-          { month: 'Nov', value: 0 },
-          { month: 'Dec', value: 0 },
-        ]);
+        setChartData([0, 0, 0, 0, 0, 0, 0].map((v) => ({ month: '', value: v })));
       }
 
-      setTotalSales(data?.totalSales || data?.totalEarnings || '$0.00');
-      setSalesPercent(data?.percentChange || data?.growthPercent || '0');
-      setCompletedOrders(data?.completedOrders || data?.totalCompleted || 0);
+      // Values are coins (booking totalAmount). Show this month's earnings.
+      setTotalSales(data?.thisMonthEarnings ?? 0);
+      setCompletedOrders(data?.totalCompletedBookings ?? 0);
     } catch (err) {
       console.error('Failed to fetch earnings:', err);
       // Set fallback data on error
@@ -77,17 +77,21 @@ export default function SitterHomeScreen({ navigation }) {
       const data = response?.data?.bookings || response?.bookings || response?.data || [];
       const bookingsArray = Array.isArray(data) ? data : [];
 
-      setUpcomingBookings(bookingsArray.slice(0, 5).map(booking => ({
-        id: booking.id || booking._id,
-        clientUserId: booking.user?.id || null,
-        clientName: booking.user?.fullName || booking.client?.name || 'Client',
-        clientImage: booking.user?.avatarUrl ? { uri: booking.user.avatarUrl } : DogImage,
-        serviceType: booking.serviceType || '',
-        date: booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '',
-        address: booking.address || booking.location || '',
-        phone: booking.user?.phone || '',
-        status: 'upcoming',
-      })));
+      setUpcomingBookings(bookingsArray.slice(0, 5).map(booking => {
+        const client = booking.owner || booking.user || {};
+        return {
+          id: booking.id || booking._id,
+          clientUserId: client.id || null,
+          clientName: client.fullName || client.name || 'Client',
+          clientImage: client.avatarUrl ? { uri: client.avatarUrl } : DogImage,
+          serviceType: humanizeService(booking.serviceType),
+          date: booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '',
+          petName: booking.pet?.name || '',
+          address: client.address || '',
+          phone: client.phone || '',
+          status: 'Upcoming',
+        };
+      }));
     } catch (err) {
       console.error('Failed to fetch upcoming bookings:', err);
     } finally {
@@ -184,18 +188,6 @@ export default function SitterHomeScreen({ navigation }) {
             <Text style={styles.overviewTitle}>Overview</Text>
           </View>
 
-          {/* Filter Buttons */}
-          <View style={styles.filterButtons}>
-            <TouchableOpacity style={styles.filterButton} onPress={comingSoon('Date Range Filter')}>
-              <Text style={styles.filterButtonText}>Monthly</Text>
-              <Icon name="chevron-down" size={14.03} color="#808D9E" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.downloadButton} onPress={comingSoon('Download Report')}>
-              <Text style={styles.downloadButtonText}>Download Report</Text>
-              <Icon name="download-outline" size={14.03} color="#5CADF4" />
-            </TouchableOpacity>
-          </View>
-
           {/* Chart Area */}
           {loadingEarnings ? (
             <View style={styles.chartLoadingContainer}>
@@ -265,13 +257,10 @@ export default function SitterHomeScreen({ navigation }) {
           {/* Statistics */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Total monthly sales</Text>
+              <Text style={styles.statLabel}>This month's earnings</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>{typeof totalSales === 'number' ? `$${totalSales.toFixed(2)}` : totalSales}</Text>
-                <View style={styles.percentageContainer}>
-                  <Icon name="arrow-up" size={10.52} color="#60D39C" />
-                  <Text style={styles.percentageText}>{salesPercent}%</Text>
-                </View>
+                <Icon name="server-outline" size={13} color="#FBCE04" />
+                <Text style={styles.statValue}>{Number(totalSales || 0).toLocaleString()} coins</Text>
               </View>
             </View>
             <View style={styles.statItem}>
@@ -337,30 +326,39 @@ export default function SitterHomeScreen({ navigation }) {
                     </View>
                   </View>
 
-                  <View style={styles.bookingContact}>
-                    <View style={styles.bookingContactItem}>
-                      <LocationArrowCircleUnfilledIcon width={16} height={16} />
-                      <Text style={styles.bookingContactText}>{booking.address}</Text>
+                  <View style={styles.bookingBottom}>
+                    <View style={styles.bookingContact}>
+                      {!!booking.address && (
+                        <View style={styles.bookingContactItem}>
+                          <Icon name="location-outline" size={14} color="#32A6D8" />
+                          <Text style={styles.bookingContactText} numberOfLines={2}>{booking.address}</Text>
+                        </View>
+                      )}
+                      {!!booking.petName && (
+                        <View style={styles.bookingContactItem}>
+                          <Icon name="paw-outline" size={14} color="#32A6D8" />
+                          <Text style={styles.bookingContactText}>{booking.petName}</Text>
+                        </View>
+                      )}
+                      {!!booking.phone && (
+                        <View style={styles.bookingContactItem}>
+                          <Icon name="call-outline" size={13} color="#32A6D8" />
+                          <Text style={styles.bookingContactText}>{booking.phone}</Text>
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.bookingContactItem}>
-                      <View style={styles.phoneIconsWrapper}>
-                        <PhoneCallBlueIcon width={10} height={10} />
-                        <View style={styles.phoneCircle} />
-                      </View>
-                      <Text style={styles.bookingContactText}>{booking.phone}</Text>
-                    </View>
-                  </View>
 
-                  <TouchableOpacity
-                    style={styles.bookingChatButton}
-                    onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
-                      otherUserId: booking.clientUserId,
-                      chatName: booking.clientName,
-                    })}
-                    disabled={!booking.clientUserId}
-                  >
-                    <ChatIcon width={21.05} height={21.05} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.bookingChatButton, !booking.clientUserId && styles.bookingChatButtonDisabled]}
+                      onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                        otherUserId: booking.clientUserId,
+                        chatName: booking.clientName,
+                      })}
+                      disabled={!booking.clientUserId}
+                    >
+                      <ChatIcon width={20} height={20} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
@@ -722,13 +720,20 @@ const styles = StyleSheet.create({
     lineHeight: 15.5,
     textAlign: 'center',
   },
+  bookingBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   bookingContact: {
+    flex: 1,
     gap: 4,
   },
   bookingContactItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   bookingContactText: {
     color: '#8D8E90',
@@ -754,13 +759,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   bookingChatButton: {
-    position: 'absolute',
-    right: 12,
-    top: 47,
-    padding: 14.03,
+    width: 44,
+    height: 44,
     backgroundColor: 'rgba(90, 172, 244, 0.15)',
-    borderRadius: 87.69,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bookingChatButtonDisabled: {
+    opacity: 0.4,
   },
 });

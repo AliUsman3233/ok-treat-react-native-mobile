@@ -1,24 +1,35 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import MapView, { Marker } from 'react-native-maps';
 import ScreenWrapper from '../../../components/ScreenWrapper';
-import { BackArrowIcon, StarIcon, CoinIcon, DogImage, LocationArrowCircleUnfilledIcon, PhoneCallBlueIcon, ChatIcon } from '../../../assets';
+import { BackArrowIcon, StarIcon, CoinIcon, DogImage, ChatIcon } from '../../../assets';
 import Icon from '@expo/vector-icons/Ionicons';
 import { getSitterBookings } from '../../../services/bookingService';
+
+// Enum → human label for the service type.
+const SERVICE_LABELS = {
+  BOARDING: 'Boarding',
+  HOUSE_SITTING: 'House Sitting',
+  DROP_IN_VISITS: 'Drop-In Visit',
+  DAY_CARE: 'Day Care',
+  PET_WALKING: 'Pet Walking',
+};
+const humanizeService = (t) => SERVICE_LABELS[t] || t || '';
 
 // Helper to derive status style
 const getStatusStyle = (status) => {
   switch (status?.toUpperCase()) {
     case 'CONFIRMED':
     case 'UPCOMING':
-      return { color: '#FFEED3', textColor: '#E5A33D', label: 'upcoming', category: 'Upcoming' };
+      return { color: '#DCF5E5', textColor: '#2E9E5B', label: 'Confirmed', category: 'Upcoming' };
     case 'IN_PROGRESS':
     case 'ONGOING':
-      return { color: '#FFEED3', textColor: '#E5A33D', label: 'ongoing', category: 'Upcoming' };
+      return { color: '#E3F0FB', textColor: '#3A8DCC', label: 'Ongoing', category: 'Upcoming' };
     case 'COMPLETED':
       return { color: '#ECF5EA', textColor: '#219A27', label: 'Completed', category: 'Completed' };
     case 'CANCELLED':
       return { color: '#FFEBEE', textColor: '#D32F2F', label: 'Cancelled', category: 'Completed' };
+    case 'DECLINED':
+      return { color: '#FBE3E3', textColor: '#D06060', label: 'Declined', category: 'Completed' };
     case 'PENDING':
       return { color: '#FFF3D0', textColor: '#E5A33D', label: 'Pending', category: 'Upcoming' };
     default:
@@ -28,7 +39,6 @@ const getStatusStyle = (status) => {
 
 export default function SitterBookingsScreen({ navigation }) {
   const [selectedTab, setSelectedTab] = useState('All');
-  const [expandedBookings, setExpandedBookings] = useState({});
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,8 +48,13 @@ export default function SitterBookingsScreen({ navigation }) {
       setLoading(true);
       setError(null);
       const response = await getSitterBookings();
-      const data = response?.bookings || response?.data || response || [];
-      const bookingsArray = Array.isArray(data) ? data : [];
+      // API shape: { success, data: { bookings: [...], total } }. Reach into
+      // data.bookings; keep looser fallbacks in case the shape changes.
+      const bookingsArray =
+        response?.data?.bookings ||
+        response?.bookings ||
+        (Array.isArray(response?.data) ? response.data : null) ||
+        (Array.isArray(response) ? response : []);
 
       setBookings(bookingsArray.map(booking => {
         const statusStyle = getStatusStyle(booking.status);
@@ -49,7 +64,7 @@ export default function SitterBookingsScreen({ navigation }) {
         const formatShortDate = (d) => {
           if (!d) return '';
           const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return `${months[d.getMonth()]}-${String(d.getDate()).padStart(2, '0')}-${d.getFullYear()}`;
+          return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
         };
 
         const formatDateTime = (start, end) => {
@@ -58,27 +73,30 @@ export default function SitterBookingsScreen({ navigation }) {
           const dateStr = `${months[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()}`;
           const startTime = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
           const endTime = end ? end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
-          return endTime ? `${dateStr} | ${startTime}- ${endTime}` : `${dateStr} | ${startTime}`;
+          return endTime ? `${dateStr} | ${startTime} - ${endTime}` : `${dateStr} | ${startTime}`;
         };
+
+        // The client (booking owner) is returned under `user`.
+        const client = booking.owner || booking.user || booking.client || {};
+        const avatar = client.avatarUrl || client.profileImage;
 
         return {
           id: booking.id || booking._id,
-          clientUserId: booking.user?.id || booking.client?.id || null,
-          clientName: booking.client?.name || booking.clientName || booking.user?.fullName || booking.user?.name || 'Client',
-          clientImage: booking.client?.profileImage || booking.clientImage ? { uri: booking.client?.profileImage || booking.clientImage } : DogImage,
-          serviceType: booking.serviceType || booking.service || '',
+          clientUserId: client.id || null,
+          clientName: client.fullName || client.name || 'Client',
+          clientImage: avatar ? { uri: avatar } : DogImage,
+          petName: booking.pet?.name || '',
+          serviceType: humanizeService(booking.serviceType || booking.service),
           date: formatShortDate(startDate),
           dateTime: formatDateTime(startDate, endDate),
-          address: booking.address || booking.client?.address || booking.location || '',
-          phone: booking.client?.phone || booking.phone || '',
-          latitude: booking.latitude || booking.location?.latitude || null,
-          longitude: booking.longitude || booking.location?.longitude || null,
+          address: client.address || '',
+          phone: client.phone || '',
           status: statusStyle.label,
           statusColor: statusStyle.color,
           statusTextColor: statusStyle.textColor,
           category: statusStyle.category,
           rating: booking.rating || null,
-          coins: booking.totalAmount || booking.coins || null,
+          coins: booking.totalAmount || booking.totalPrice || booking.coins || null,
         };
       }));
     } catch (err) {
@@ -99,13 +117,6 @@ export default function SitterBookingsScreen({ navigation }) {
     navigation.goBack();
   };
 
-  const toggleExpand = (bookingId) => {
-    setExpandedBookings(prev => ({
-      ...prev,
-      [bookingId]: !prev[bookingId]
-    }));
-  };
-
   // Filter bookings based on selected tab
   const getFilteredBookings = () => {
     if (selectedTab === 'All') {
@@ -117,188 +128,87 @@ export default function SitterBookingsScreen({ navigation }) {
   const filteredBookings = getFilteredBookings();
 
   const renderBookingCard = (booking) => {
-    const isExpanded = expandedBookings[booking.id];
-    const isUpcoming = booking.status === 'upcoming';
-    const showCollapsible = isUpcoming && selectedTab === 'Upcoming';
+    const isUpcoming = booking.category === 'Upcoming';
+    const isCompleted = booking.status === 'Completed';
+    const hasMeta = booking.dateTime || booking.address || booking.petName || booking.phone ||
+      (isCompleted && (booking.coins || booking.rating));
 
-    // Render collapsible upcoming booking card (only in Upcoming tab)
-    if (showCollapsible) {
-      return (
-        <View key={booking.id} style={styles.upcomingCard}>
-          {/* Top Section */}
-          <View style={styles.upcomingTopSection}>
-            <Image source={booking.clientImage} style={styles.upcomingAvatar} />
-            <View style={styles.upcomingInfo}>
-              <Text style={styles.upcomingServiceType}>{booking.serviceType}</Text>
-              <Text style={styles.upcomingClientName}>{booking.clientName}</Text>
-            </View>
-            <TouchableOpacity style={styles.upcomingChatButton}>
-              <ChatIcon width={21.28} height={21.28} />
-            </TouchableOpacity>
-            <View style={[styles.upcomingStatusBadge, { backgroundColor: booking.statusColor }]}>
-              <Text style={[styles.upcomingStatusText, { color: booking.statusTextColor }]}>
-                {booking.status}
-              </Text>
-            </View>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.upcomingDivider} />
-
-          {/* Collapsed Info */}
-          {!isExpanded && (
-            <>
-              <View style={styles.upcomingCollapsedInfo}>
-                <View style={styles.upcomingInfoRow}>
-                  <Text style={styles.upcomingLabel}>Date & Time</Text>
-                  <Text style={styles.upcomingValue}>{booking.dateTime}</Text>
-                </View>
-                <View style={styles.upcomingInfoRow}>
-                  <Text style={styles.upcomingLabel}>Location</Text>
-                  <Text style={styles.upcomingValueLocation}>{booking.address}</Text>
-                </View>
-              </View>
-
-              {/* Expand Button */}
-              <TouchableOpacity
-                style={styles.expandButton}
-                onPress={() => toggleExpand(booking.id)}
-              >
-                <Icon name="chevron-down" size={17.74} color="#212121" />
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* Expanded Content */}
-          {isExpanded && (
-            <>
-              <View style={styles.upcomingExpandedInfo}>
-                <View style={styles.upcomingInfoRow}>
-                  <Text style={styles.upcomingLabel}>Date & Time</Text>
-                  <Text style={styles.upcomingValue}>{booking.dateTime}</Text>
-                </View>
-                <View style={styles.upcomingInfoRow}>
-                  <Text style={styles.upcomingLabel}>Location</Text>
-                  <Text style={styles.upcomingValueLocation}>{booking.address}</Text>
-                </View>
-              </View>
-
-              {/* Map Container */}
-              <View style={styles.mapContainer}>
-                <MapView
-                  style={styles.map}
-                  initialRegion={{
-                    latitude: booking.latitude,
-                    longitude: booking.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  pitchEnabled={false}
-                  rotateEnabled={false}
-                >
-                  <Marker
-                    coordinate={{
-                      latitude: booking.latitude,
-                      longitude: booking.longitude,
-                    }}
-                    title={booking.serviceType}
-                    description={booking.address}
-                  />
-                </MapView>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.cancelButton}>
-                  <Text style={styles.cancelButtonText}>Cancel Booking</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.receiptButton}>
-                  <Text style={styles.receiptButtonText}>View E-Receipt</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Collapse Button */}
-              <TouchableOpacity
-                style={styles.collapseButton}
-                onPress={() => toggleExpand(booking.id)}
-              >
-                <Icon name="chevron-up" size={17.74} color="#212121" />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      );
-    }
-
-    // Render compact card (for All tab and Completed bookings)
     return (
-      <View key={booking.id} style={styles.bookingCard}>
-        <View style={styles.cardContainer}>
-          <View style={styles.topRow}>
-            <Image source={booking.clientImage} style={styles.avatar} />
-            <View style={styles.clientInfo}>
-              <Text style={styles.clientName}>{booking.clientName}</Text>
-              <View style={styles.serviceRow}>
-                <Text style={styles.serviceType}>{booking.serviceType}</Text>
-                <Text style={styles.separator}> - </Text>
-                <Text style={styles.date}>{booking.date}</Text>
-              </View>
-            </View>
+      <View key={booking.id} style={styles.card}>
+        {/* Header row */}
+        <View style={styles.cardTop}>
+          <Image source={booking.clientImage} style={styles.avatar} />
+          <View style={styles.cardHeadInfo}>
+            <Text style={styles.clientName} numberOfLines={1}>{booking.clientName}</Text>
+            <Text style={styles.serviceLine} numberOfLines={1}>
+              {booking.serviceType}{booking.date ? ` · ${booking.date}` : ''}
+            </Text>
           </View>
-
           <View style={[styles.statusBadge, { backgroundColor: booking.statusColor }]}>
             <Text style={[styles.statusText, { color: booking.statusTextColor }]}>
               {booking.status}
             </Text>
           </View>
-
-          {booking.status === 'Completed' && booking.rating && (
-            <View style={styles.ratingContainer}>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <StarIcon key={star} width={15} height={15} fill="#FBBC04" />
-                ))}
-              </View>
-              <Text style={styles.ratingValue}>{booking.rating}</Text>
-            </View>
-          )}
-
-          <View style={styles.contactSection}>
-            <View style={styles.contactItem}>
-              <LocationArrowCircleUnfilledIcon width={20} height={20} />
-              <Text style={styles.contactText}>{booking.address}</Text>
-            </View>
-            <View style={styles.contactItem}>
-              <View style={styles.phoneIconsWrapper}>
-                <PhoneCallBlueIcon width={15} height={15} />
-                <View style={styles.phoneCircle} />
-              </View>
-              <Text style={styles.contactText}>{booking.phone}</Text>
-            </View>
-          </View>
-
-          {isUpcoming && (
-            <TouchableOpacity
-              style={styles.chatButton}
-              onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
-                otherUserId: booking.clientUserId,
-                chatName: booking.clientName,
-              })}
-              disabled={!booking.clientUserId}
-            >
-              <ChatIcon width={21.05} height={21.05} />
-            </TouchableOpacity>
-          )}
-
-          {booking.status === 'Completed' && booking.coins && (
-            <View style={styles.coinsContainer}>
-              <CoinIcon width={19} height={19} fill="#FBCE04" />
-              <Text style={styles.coinsText}>{booking.coins} Coins</Text>
-            </View>
-          )}
         </View>
+
+        {hasMeta && <View style={styles.cardDivider} />}
+
+        {/* Meta + actions */}
+        {hasMeta && (
+          <View style={styles.cardBottom}>
+            <View style={styles.metaColumn}>
+              {!!booking.dateTime && (
+                <View style={styles.metaRow}>
+                  <Icon name="time-outline" size={15} color="#32A6D8" />
+                  <Text style={styles.metaText} numberOfLines={1}>{booking.dateTime}</Text>
+                </View>
+              )}
+              {!!booking.address && (
+                <View style={styles.metaRow}>
+                  <Icon name="location-outline" size={15} color="#32A6D8" />
+                  <Text style={styles.metaText} numberOfLines={2}>{booking.address}</Text>
+                </View>
+              )}
+              {!!booking.petName && (
+                <View style={styles.metaRow}>
+                  <Icon name="paw-outline" size={15} color="#32A6D8" />
+                  <Text style={styles.metaText} numberOfLines={1}>{booking.petName}</Text>
+                </View>
+              )}
+              {!!booking.phone && (
+                <View style={styles.metaRow}>
+                  <Icon name="call-outline" size={14} color="#32A6D8" />
+                  <Text style={styles.metaText} numberOfLines={1}>{booking.phone}</Text>
+                </View>
+              )}
+              {isCompleted && !!booking.coins && (
+                <View style={styles.metaRow}>
+                  <CoinIcon width={16} height={16} fill="#FBCE04" />
+                  <Text style={styles.coinsText}>{booking.coins} Coins</Text>
+                </View>
+              )}
+              {isCompleted && !!booking.rating && (
+                <View style={styles.metaRow}>
+                  <StarIcon width={14} height={14} fill="#FBBC04" />
+                  <Text style={styles.metaText}>{booking.rating}</Text>
+                </View>
+              )}
+            </View>
+
+            {isUpcoming && (
+              <TouchableOpacity
+                style={[styles.chatButton, !booking.clientUserId && styles.chatButtonDisabled]}
+                onPress={() => booking.clientUserId && navigation.navigate('ChatConversation', {
+                  otherUserId: booking.clientUserId,
+                  chatName: booking.clientName,
+                })}
+                disabled={!booking.clientUserId}
+              >
+                <ChatIcon width={20} height={20} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -492,351 +402,99 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 15,
   },
-  bookingCard: {
+  card: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EBEBEB',
-    paddingHorizontal: 12,
-    paddingVertical: 9.5,
+    padding: 14,
     marginBottom: 15,
+    backgroundColor: '#FFFFFF',
   },
-  cardContainer: {
-    width: '100%',
-    height: 95,
-    position: 'relative',
-  },
-  topRow: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
+  cardTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
   },
   avatar: {
-    width: 34,
-    height: 33,
-    borderRadius: 9999,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F0F0',
   },
-  clientInfo: {
-    marginLeft: 8,
-    justifyContent: 'center',
+  cardHeadInfo: {
+    flex: 1,
   },
   clientName: {
     color: '#040404',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 19.6,
+    fontWeight: '500',
+    lineHeight: 21,
   },
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 0.5,
-  },
-  serviceType: {
-    color: '#000000',
-    fontSize: 10,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 15.5,
-  },
-  separator: {
+  serviceLine: {
     color: '#818898',
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Poppins',
     fontWeight: '400',
-    lineHeight: 15.5,
-  },
-  date: {
-    color: '#818898',
-    fontSize: 10,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 15.5,
+    lineHeight: 17,
+    marginTop: 1,
   },
   statusBadge: {
-    position: 'absolute',
-    right: 0,
-    top: 3,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 30,
   },
   statusText: {
     fontSize: 10,
-    fontFamily: 'Avenir LT Std',
+    fontFamily: 'Poppins',
     fontWeight: '600',
     lineHeight: 15.5,
     textAlign: 'center',
   },
-  ratingContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 40,
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 12,
+  },
+  cardBottom: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  starsRow: {
+  metaColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 0,
+    gap: 8,
   },
-  ratingValue: {
-    color: '#000000',
-    fontSize: 9.03,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 14,
-    marginLeft: 3,
-  },
-  contactSection: {
-    position: 'absolute',
-    left: 4,
-    top: 54,
-    gap: 4,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  contactText: {
-    color: '#8D8E90',
-    fontSize: 10,
+  metaText: {
+    flex: 1,
+    color: '#5B6B7B',
+    fontSize: 12,
     fontFamily: 'Poppins',
     fontWeight: '400',
-    lineHeight: 14,
-    width: 151,
-  },
-  phoneIconsWrapper: {
-    width: 16,
-    height: 16,
-    marginLeft: 2,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  phoneCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9999,
-    borderWidth: 1.2,
-    borderColor: '#32A6D8',
-    position: 'absolute',
-  },
-  coinsContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 69,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4.84,
+    lineHeight: 17,
   },
   coinsText: {
     color: '#32A6D8',
     fontSize: 12,
-    fontFamily: 'Avenir LT Std',
+    fontFamily: 'Poppins',
     fontWeight: '600',
-    lineHeight: 18.6,
+    lineHeight: 17,
   },
   chatButton: {
-    position: 'absolute',
-    right: 10,
-    top: 47,
-    width: 49.11,
-    height: 49.11,
-    padding: 14.03,
+    width: 44,
+    height: 44,
     backgroundColor: 'rgba(90, 172, 244, 0.15)',
-    borderRadius: 87.69,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Upcoming Card Styles
-  upcomingCard: {
-    padding: 17.74,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 20,
-    marginBottom: 15,
-    gap: 14.19,
-  },
-  upcomingTopSection: {
-    height: 88.68, 
-    position: 'relative',
-  },
-  upcomingAvatar: {
-    width: 88,
-    height: 94,
-    position: 'absolute',
-    left: 0.26,
-    top: -5.74,
-    borderRadius: 17.74,
-  },
-  upcomingInfo: {
-    position: 'absolute',
-    left: 102.87,
-    top: 6.88,
-    width: 134.8,
-  },
-  upcomingServiceType: {
-    color: '#212121',
-    fontSize: 16,
-    fontFamily: 'Urbanist',
-    fontWeight: '700',
-    lineHeight: 19.2,
-  },
-  upcomingClientName: {
-    color: '#616161',
-    fontSize: 10.64,
-    fontFamily: 'Urbanist',
-    fontWeight: '500',
-    letterSpacing: 0.18,
-    marginTop: 10,
-  },
-  upcomingChatButton: {
-    position: 'absolute',
-    left: 251.86,
-    top: 19.51,
-    padding: 14.19,
-    backgroundColor: 'rgba(90, 172, 244, 0.15)',
-    borderRadius: 88.68,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  upcomingStatusBadge: {
-    position: 'absolute',
-    left: 103.26,
-    top: 59.26,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 30,
-  },
-  upcomingStatusText: {
-    fontSize: 10,
-    fontFamily: 'Avenir LT Std',
-    fontWeight: '600',
-    lineHeight: 15.5,
-    textAlign: 'center',
-  },
-  upcomingDivider: {
-    height: 0.89,
-    backgroundColor: '#EEEEEE',
-  },
-  upcomingCollapsedInfo: {
-    gap: 7.09,
-  },
-  upcomingExpandedInfo: {
-    gap: 7.09,
-  },
-  upcomingInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10.64,
-  },
-  upcomingLabel: {
-    color: '#616161',
-    fontSize: 12,
-    fontFamily: 'Poppins',
-    fontWeight: '500',
-    lineHeight: 16.8,
-    letterSpacing: 0.18,
-  },
-  upcomingValue: {
-    flex: 1,
-    textAlign: 'right',
-    color: '#424242',
-    fontSize: 12,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 16.8,
-    letterSpacing: 0.18,
-  },
-  upcomingValueLocation: {
-    width: 240,
-    textAlign: 'right',
-    color: '#424242',
-    fontSize: 12,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 16.8,
-    letterSpacing: 0.18,
-  },
-  expandButton: {
-    alignSelf: 'center',
-    marginTop: 10,
-  },
-  collapseButton: {
-    alignSelf: 'center',
-    marginTop: 10,
-  },
-  mapContainer: {
-    width: '100%',
-    height: 192.44,
-    borderRadius: 21.28,
-    marginTop: 14.19,
-    overflow: 'hidden',
-    backgroundColor: '#E0E0E0',
-  },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
-  petAvatarContainer: {
-    alignSelf: 'center',
-    marginTop: 14.19,
-  },
-  petAvatar: {
-    width: 28.38,
-    height: 28.38,
-    borderRadius: 886.84,
-    borderWidth: 2.66,
-    borderColor: '#FFFFFF',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 10.64,
-    marginTop: 14.19,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 56,
-    paddingHorizontal: 14.19,
-    paddingVertical: 5.32,
-    borderRadius: 88.68,
-    borderWidth: 1.77,
-    borderColor: '#FFC2EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#FFC2EB',
-    fontSize: 12.42,
-    fontFamily: 'Urbanist',
-    fontWeight: '600',
-    lineHeight: 17.38,
-    letterSpacing: 0.18,
-    textAlign: 'center',
-  },
-  receiptButton: {
-    flex: 1,
-    height: 56,
-    paddingHorizontal: 14.19,
-    paddingVertical: 5.32,
-    backgroundColor: '#FFC2EB',
-    borderRadius: 88.68,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  receiptButtonText: {
-    color: '#32A6D8',
-    fontSize: 12.42,
-    fontFamily: 'Urbanist',
-    fontWeight: '600',
-    lineHeight: 17.38,
-    letterSpacing: 0.18,
-    textAlign: 'center',
+  chatButtonDisabled: {
+    opacity: 0.4,
   },
 });

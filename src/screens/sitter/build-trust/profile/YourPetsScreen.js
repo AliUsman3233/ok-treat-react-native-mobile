@@ -27,14 +27,10 @@ export default function YourPetsScreen({ navigation }) {
     try {
       setIsLoading(true);
       const response = await getUserPets();
-
-      if (response.success && response.data) {
-        setUserPets(response.data);
-      } else if (response.data) {
-        setUserPets(response.data);
-      } else {
-        setUserPets([]);
-      }
+      // getUserPets() returns { success, data: { pets } }. Reading
+      // response.data set state to an object and crashed on .map().
+      const pets = response?.data?.pets || response?.pets || [];
+      setUserPets(Array.isArray(pets) ? pets : []);
     } catch (error) {
       console.error('Failed to fetch pets:', error);
       setUserPets([]);

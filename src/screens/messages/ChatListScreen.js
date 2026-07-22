@@ -177,9 +177,15 @@ export default function ChatListScreen({ navigation }) {
         response.data?.data?.conversations ||
         response.data?.conversations ||
         (Array.isArray(response.data) ? response.data : []);
-      const formatted = Array.isArray(conversations) ? conversations.map(conv => ({
-        id: conv.id || conv._id || conv.otherUserId,
-        otherUserId: conv.otherUserId || conv.otherUser?.id || conv.otherUser?._id,
+      const formatted = Array.isArray(conversations) ? conversations.map(conv => {
+        // The backend groups by the other party and does NOT send a
+        // conversation id — the other user's id is the stable key. Without
+        // this, every card got key={undefined}, colliding so only one
+        // conversation rendered.
+        const otherId = conv.otherUserId || conv.otherUser?.id || conv.otherUser?._id;
+        return {
+        id: conv.id || conv._id || otherId,
+        otherUserId: otherId,
         name: conv.otherUser?.fullName || conv.otherUser?.name || conv.name || 'Unknown',
         lastMessage: conv.lastMessage?.content || conv.lastMessage || '',
         time: conv.lastMessage?.createdAt
@@ -187,7 +193,8 @@ export default function ChatListScreen({ navigation }) {
           : conv.time || '',
         unread: conv.unreadCount || 0,
         avatar: conv.otherUser?.avatarUrl || conv.otherUser?.avatar || conv.otherUser?.profileImage || null,
-      })) : [];
+        };
+      }) : [];
       setChats(formatted);
     } catch (err) {
       console.error('Error fetching conversations:', err);
