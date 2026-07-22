@@ -198,7 +198,14 @@ export default function LocationPickerScreen({ navigation, route }) {
           // used to be supported here but they trip React Navigation's
           // "non-serializable values in navigation state" warning.
           if (route.params?.returnScreen) {
-            navigation.navigate(route.params.returnScreen, { selectedLocation: locationData });
+            // merge:true so the destination keeps its existing params (e.g.
+            // ServiceSearch's serviceType) — a plain navigate REPLACES params,
+            // which dropped serviceType and reverted the screen to Boarding.
+            navigation.navigate({
+              name: route.params.returnScreen,
+              params: { selectedLocation: locationData },
+              merge: true,
+            });
             return;
           }
         }
