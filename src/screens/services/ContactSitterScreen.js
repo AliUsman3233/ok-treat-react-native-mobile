@@ -9,6 +9,7 @@ import { createBooking } from '../../services/bookingService';
 import { getUserPets } from '../../services/petService';
 import { useWallet } from '../../context/WalletContext';
 import { getServiceUnit } from '../../utils/serviceUnits';
+import { finishFlow } from '../../navigation/navHelpers';
 import moment from 'moment';
 
 const { width } = Dimensions.get('window');
@@ -227,7 +228,10 @@ export default function ContactSitterScreen({ navigation, route }) {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    navigation.navigate('OpenRequests');
+    // Reset the stack so the whole booking flow (ServiceSearch → SearchResults
+    // → SitterProfile → ContactSitter) is cleared — land on My Requests with
+    // Back returning to the tabs, not back into the flow.
+    finishFlow(navigation, { screen: 'OpenRequests' });
   };
 
   const baseRate = getBaseRate();
