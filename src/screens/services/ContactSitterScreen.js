@@ -38,6 +38,15 @@ const SERVICE_TYPE_MAP = {
   'Pet Walking': 'PET_WALKING',
 };
 
+// The API enums the sitter's `services` map is keyed by.
+const SERVICE_ENUMS = Object.values(SERVICE_TYPE_MAP);
+
+// Normalize whatever we were handed (an enum like "BOARDING", or a display
+// name like "Boarding") to the API enum. Callers upstream aren't consistent
+// about which shape they pass, so accept both — a display name that slips
+// through must never silently miss the enum-keyed services map.
+const toServiceEnum = (v) => (SERVICE_ENUMS.includes(v) ? v : SERVICE_TYPE_MAP[v]);
+
 export default function ContactSitterScreen({ navigation, route }) {
   const alert = useAppAlert();
   const wallet = useWallet();
@@ -76,15 +85,16 @@ export default function ContactSitterScreen({ navigation, route }) {
   }, []);
 
   // Get base rate from sitter's service data
+  // Resolved once, used everywhere (rate lookup, unit label, payload) so the
+  // three can't drift. Accepts an enum or a display name from upstream.
+  const effectiveServiceType =
+    toServiceEnum(serviceType) || toServiceEnum(service) || 'BOARDING';
+
   const getBaseRate = () => {
-    const svcType = serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING';
-    const svcData = sitter?.services?.[svcType];
+    const svcData = sitter?.services?.[effectiveServiceType];
     return parseFloat(svcData?.baseRate) || 0;
   };
 
-  // Effective service type once the display name is resolved to the
-  // enum shape used everywhere else. Used for unit lookup + payload.
-  const effectiveServiceType = serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING';
   const { unit: RATE_UNIT, pricedBy } = getServiceUnit(effectiveServiceType);
   const isHourly = pricedBy === 'hours';
 
@@ -172,7 +182,7 @@ export default function ContactSitterScreen({ navigation, route }) {
       const bookingData = {
         sitterId: sitter?.id || sitter?._id,
         petId: selectedPetId,
-        serviceType: serviceType || SERVICE_TYPE_MAP[service] || 'BOARDING',
+        serviceType: effectiveServiceType,
         startDate: startDate,
         endDate: endDate,
         totalPrice: totalCost,
