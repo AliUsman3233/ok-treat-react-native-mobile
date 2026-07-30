@@ -10,6 +10,7 @@ import {
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
+import { LEGAL_URLS, openInAppBrowser } from '../../config/links';
 import { setCredentials } from '../../store/slices/authSlice';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Button from '../../components/Button';
@@ -148,6 +149,18 @@ export default function RegisterScreen({ navigation }) {
             disabled={!isFormValid || loading}
           />
 
+          {/* Terms & Privacy consent */}
+          <Text style={styles.consentText}>
+            By proceeding, you agree to our{' '}
+            <Text style={styles.consentLink} onPress={() => openInAppBrowser(LEGAL_URLS.terms)}>
+              Terms of Service
+            </Text>{' '}
+            and{' '}
+            <Text style={styles.consentLink} onPress={() => openInAppBrowser(LEGAL_URLS.privacy)}>
+              Privacy Policy
+            </Text>.
+          </Text>
+
           {/* Login Link - Just below register button */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
@@ -251,6 +264,20 @@ const styles = StyleSheet.create({
     marginBottom: height * 0.04,
     textAlign: 'center',
     paddingBottom: 20,
+  },
+  consentText: {
+    color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '400',
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 14,
+    paddingHorizontal: 8,
+  },
+  consentLink: {
+    color: '#32A6D8',
+    fontWeight: '600',
   },
   loginContainer: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import { logout } from '../../store/slices/authSlice';
 import { clearPushTokenOnServer } from '../../services/notificationService';
+import { LEGAL_URLS, openInAppBrowser } from '../../config/links';
 
 export default function SettingsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -41,12 +42,15 @@ export default function SettingsScreen({ navigation }) {
   const generalSettings = [
     { title: t('settings.accountSetting'), screen: 'EditProfileDetails' },
     { title: t('settings.notification'), screen: 'Notifications' },
-    { title: t('settings.privacyChoices'), screen: 'PrivacyPolicy' },
+    { title: t('settings.privacyChoices'), action: () => openInAppBrowser(LEGAL_URLS.privacy) },
     { title: t('settings.logout'), action: handleLogout },
   ];
 
   const aboutSettings = [
-    { title: t('settings.privacyPolicy'), screen: 'PrivacyPolicy' },
+    { title: t('settings.privacyPolicy'), action: () => openInAppBrowser(LEGAL_URLS.privacy) },
+    { title: 'Terms of Service', action: () => openInAppBrowser(LEGAL_URLS.terms) },
+    { title: 'About OkTreat', action: () => openInAppBrowser(LEGAL_URLS.about) },
+    { title: 'Contact Us', action: () => openInAppBrowser(LEGAL_URLS.contact) },
   ];
 
   const renderMenuItem = (item, index) => (
