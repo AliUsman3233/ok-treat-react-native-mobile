@@ -8,6 +8,7 @@ import { BackArrowIcon } from '../../assets';
 import { logout } from '../../store/slices/authSlice';
 import { clearPushTokenOnServer } from '../../services/notificationService';
 import { LEGAL_URLS, openInAppBrowser } from '../../config/links';
+import api from '../../config/api';
 
 export default function SettingsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -31,6 +32,29 @@ export default function SettingsScreen({ navigation }) {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This permanently deletes your account and all associated data — profile, pets, bookings, messages, and reviews. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/users/profile');
+              await clearPushTokenOnServer().catch(() => {});
+              dispatch(logout());
+            } catch (e) {
+              Alert.alert('Error', e?.response?.data?.message || 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleMenuPress = (item) => {
     if (item.action) {
       item.action();
@@ -52,6 +76,7 @@ export default function SettingsScreen({ navigation }) {
     { title: 'Terms of Service', action: () => openInAppBrowser(LEGAL_URLS.terms) },
     { title: 'About OkTreat', action: () => openInAppBrowser(LEGAL_URLS.about) },
     { title: 'Contact Us', action: () => openInAppBrowser(LEGAL_URLS.contact) },
+    { title: 'Delete Account', action: handleDeleteAccount, danger: true },
   ];
 
   const renderMenuItem = (item, index) => (
@@ -61,8 +86,8 @@ export default function SettingsScreen({ navigation }) {
       onPress={() => handleMenuPress(item)}
       activeOpacity={0.7}
     >
-      <Text style={styles.menuText}>{item.title}</Text>
-      <Icon name="chevron-down" size={20} color="#32A6D8" style={styles.chevron} />
+      <Text style={[styles.menuText, item.danger && { color: '#F56754' }]}>{item.title}</Text>
+      <Icon name="chevron-down" size={20} color={item.danger ? '#F56754' : '#32A6D8'} style={styles.chevron} />
     </TouchableOpacity>
   );
 
