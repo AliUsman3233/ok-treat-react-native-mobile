@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Modal, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -7,6 +7,10 @@ import { ImageHereIcon, AttachmentIcon, DocumentUploadIcon, HappyIcon } from '..
 import api from '../../config/api';
 import { useSelector } from 'react-redux';
 import { getSocket } from '../../config/socket';
+import { useAppAlert } from '../../context/AlertContext';
+import { blockUser, reportUser } from '../../services/moderationService';
+
+const REPORT_REASONS = ['Spam', 'Harassment or bullying', 'Inappropriate content', 'Scam or fraud', 'Other'];
 
 const BubbleAvatar = ({ uri }) => (
   uri ? (
@@ -50,10 +54,16 @@ const MessageBubble = ({ message, otherAvatar, myAvatar }) => {
 
 export default function ChatConversationScreen({ route, navigation }) {
   const { chatName = 'Chat', otherUserId, chatId, avatar } = route?.params || {};
+  const alert = useAppAlert();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState(null);
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
   const scrollViewRef = useRef(null);
   const { user } = useSelector(state => state.auth);
   const currentUserId = user?.id || user?._id;
@@ -198,8 +208,57 @@ export default function ChatConversationScreen({ route, navigation }) {
       // Remove temp message on failure
       setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
       setMessage(content); // Restore the message input
+      // Blocked either direction -> the server returns 403.
+      if (err?.response?.status === 403) {
+        alert('Message not sent', err.response.data?.message || 'You can no longer message this user.', 'pending');
+      }
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleBlock = () => {
+    setShowMenu(false);
+    if (!receiverId) return;
+    Alert.alert(
+      `Block ${chatName}?`,
+      'You will no longer see messages from each other. You can unblock later from Settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await blockUser(receiverId);
+              alert('User blocked', `${chatName} has been blocked.`, 'success', 'OK', () => navigation.goBack());
+            } catch (e) {
+              alert('Error', e?.response?.data?.message || 'Failed to block user.', 'error');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openReport = () => {
+    setShowMenu(false);
+    setReportReason(null);
+    setReportDetails('');
+    setShowReport(true);
+  };
+
+  const submitReport = async () => {
+    if (!reportReason || !receiverId) return;
+    setSubmittingReport(true);
+    try {
+      await reportUser({ userId: receiverId, reason: reportReason, details: reportDetails.trim() || null, context: 'chat' });
+      setShowReport(false);
+      alert('Report submitted', 'Thanks — our team will review this report.', 'success');
+    } catch (e) {
+      alert('Error', e?.response?.data?.message || 'Failed to submit report.', 'error');
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -225,7 +284,7 @@ export default function ChatConversationScreen({ route, navigation }) {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.moreButton}>
+          <TouchableOpacity style={styles.moreButton} onPress={() => setShowMenu(true)}>
             <Icon name="ellipsis-vertical" size={24} color="#B46299" />
           </TouchableOpacity>
         </View>
@@ -297,6 +356,70 @@ export default function ChatConversationScreen({ route, navigation }) {
           </View>
         </KeyboardAvoidingView>
       </View>
+
+      {/* Header overflow menu — Report / Block */}
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowMenu(false)}>
+          <View style={styles.sheet}>
+            <TouchableOpacity style={styles.sheetItem} onPress={openReport}>
+              <Icon name="flag-outline" size={20} color="#212121" />
+              <Text style={styles.sheetItemText}>Report {chatName}</Text>
+            </TouchableOpacity>
+            <View style={styles.sheetDivider} />
+            <TouchableOpacity style={styles.sheetItem} onPress={handleBlock}>
+              <Icon name="ban-outline" size={20} color="#E53D3D" />
+              <Text style={[styles.sheetItemText, { color: '#E53D3D' }]}>Block {chatName}</Text>
+            </TouchableOpacity>
+            <View style={styles.sheetDivider} />
+            <TouchableOpacity style={styles.sheetItem} onPress={() => setShowMenu(false)}>
+              <Icon name="close-outline" size={20} color="#8D8E90" />
+              <Text style={[styles.sheetItemText, { color: '#8D8E90' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Report reason picker */}
+      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => setShowReport(false)}>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.reportSheet}>
+            <Text style={styles.reportTitle}>Report {chatName}</Text>
+            <Text style={styles.reportSubtitle}>Why are you reporting this user?</Text>
+            {REPORT_REASONS.map((r) => (
+              <TouchableOpacity key={r} style={styles.reasonRow} onPress={() => setReportReason(r)}>
+                <Icon
+                  name={reportReason === r ? 'radio-button-on' : 'radio-button-off'}
+                  size={20}
+                  color={reportReason === r ? '#32A6D8' : '#B5B8CB'}
+                />
+                <Text style={styles.reasonText}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+            <TextInput
+              style={styles.reportDetails}
+              placeholder="Add details (optional)"
+              placeholderTextColor="#8D8E90"
+              value={reportDetails}
+              onChangeText={setReportDetails}
+              multiline
+            />
+            <View style={styles.reportButtons}>
+              <TouchableOpacity style={styles.reportCancel} onPress={() => setShowReport(false)} disabled={submittingReport}>
+                <Text style={styles.reportCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reportSubmit, (!reportReason || submittingReport) && { opacity: 0.5 }]}
+                onPress={submitReport}
+                disabled={!reportReason || submittingReport}
+              >
+                {submittingReport
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={styles.reportSubmitText}>Submit Report</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -517,5 +640,115 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins',
     fontWeight: '400',
+  },
+  // Report / Block menu + report sheet
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 8,
+    paddingBottom: 24,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  sheetItemText: {
+    color: '#212121',
+    fontSize: 15,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+  },
+  sheetDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginHorizontal: 24,
+  },
+  reportSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 32,
+  },
+  reportTitle: {
+    color: '#212121',
+    fontSize: 18,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+  },
+  reportSubtitle: {
+    color: '#818898',
+    fontSize: 13,
+    fontFamily: 'Poppins',
+    fontWeight: '400',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  reasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 11,
+  },
+  reasonText: {
+    color: '#212121',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '400',
+  },
+  reportDetails: {
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 72,
+    marginTop: 10,
+    color: '#212121',
+    fontFamily: 'Poppins',
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  reportButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+  reportCancel: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportCancelText: {
+    color: '#818898',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+  },
+  reportSubmit: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#32A6D8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
   },
 });

@@ -42,6 +42,7 @@ export default function SettingsScreen({ navigation }) {
   const generalSettings = [
     { title: t('settings.accountSetting'), screen: 'EditProfileDetails' },
     { title: t('settings.notification'), screen: 'Notifications' },
+    { title: 'Blocked Users', screen: 'BlockedUsers' },
     { title: t('settings.privacyChoices'), action: () => openInAppBrowser(LEGAL_URLS.privacy) },
     { title: t('settings.logout'), action: handleLogout },
   ];
