@@ -81,6 +81,15 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Load release signing credentials from android/keystore.properties (gitignored).
+// If absent (e.g. CI without secrets), release falls back to debug signing.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+def hasReleaseKeystore = keystorePropertiesFile.exists()
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -109,15 +118,24 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseKeystore) {
+            release {
+                storeFile file(keystoreProperties['OKTREAT_UPLOAD_STORE_FILE'])
+                storePassword keystoreProperties['OKTREAT_UPLOAD_STORE_PASSWORD']
+                keyAlias keystoreProperties['OKTREAT_UPLOAD_KEY_ALIAS']
+                keyPassword keystoreProperties['OKTREAT_UPLOAD_KEY_PASSWORD']
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Signed with the OkTreat upload keystore when keystore.properties
+            // is present (Play Store); otherwise falls back to debug signing
+            // (local/client-review APKs).
+            signingConfig hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
             shrinkResources true
             minifyEnabled enableMinifyInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
