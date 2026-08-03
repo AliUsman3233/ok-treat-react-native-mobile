@@ -28,20 +28,19 @@ export default function ImagePickerButton({
     try {
       setLoading(true);
 
-      // Request permissions
-      let permissionResult;
+      // The camera still needs a runtime permission. The gallery does NOT:
+      // launchImageLibraryAsync uses the Android system Photo Picker, which
+      // grants one-time access without the READ_MEDIA_IMAGES permission — so
+      // we never request it (and it's stripped from the manifest).
       if (useCamera) {
-        permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      } else {
-        permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      }
-
-      if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Required',
-          `Please allow access to your ${useCamera ? 'camera' : 'photo library'} to upload images.`
-        );
-        return;
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permissionResult.granted) {
+          Alert.alert(
+            'Permission Required',
+            'Please allow access to your camera to take a photo.'
+          );
+          return;
+        }
       }
 
       // Launch picker
