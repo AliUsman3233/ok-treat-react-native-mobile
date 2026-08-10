@@ -17,7 +17,13 @@ import {
   SplashIcon
 } from '../../assets';
 import { getSitterStatus, markSitterApprovalSeen } from '../../services/sitterService';
+import ReferralPromptModal from '../../components/ReferralPromptModal';
+import { getReferralPromptStatus } from '../../services/referralService';
+import { useWallet } from '../../context/WalletContext';
 import api from '../../config/api';
+
+// Show the referral prompt at most once per app session.
+let referralPromptCheckedThisSession = false;
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,10 +39,21 @@ export default function HomeScreen({ navigation }) {
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showReferralPrompt, setShowReferralPrompt] = useState(false);
+  const wallet = useWallet();
 
   useEffect(() => {
     dispatch(fetchSitters());
   }, [dispatch]);
+
+  // "Were you invited?" prompt — check once per session for eligible users.
+  useEffect(() => {
+    if (referralPromptCheckedThisSession) return;
+    referralPromptCheckedThisSession = true;
+    getReferralPromptStatus()
+      .then((show) => { if (show) setShowReferralPrompt(true); })
+      .catch(() => {});
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -312,6 +329,12 @@ export default function HomeScreen({ navigation }) {
           description="Your sitter application is currently under review. We'll notify you once it's been processed."
           buttonText="OK"
           iconType="pending"
+        />
+
+        <ReferralPromptModal
+          visible={showReferralPrompt}
+          onClose={() => setShowReferralPrompt(false)}
+          onRedeemed={() => { wallet?.refresh?.(); }}
         />
       </View>
     </ScreenWrapper>
