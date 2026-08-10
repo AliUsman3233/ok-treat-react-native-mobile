@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
+import * as Clipboard from 'expo-clipboard';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
@@ -13,23 +14,27 @@ const REFERRED_REWARD = 50;
 export default function InviteFriendsScreen({ navigation }) {
   const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const code = stats?.referralCode || user?.referralCode || '';
 
   const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await api.get('/auth/referral-stats');
       setStats(res.data?.data || null);
     } catch (e) {
-      console.error('Failed to load referral stats:', e?.message);
-    } finally {
-      setLoading(false);
+      // leave stats null — code still comes from redux user
     }
   }, []);
 
   useFocusEffect(useCallback(() => { fetchStats(); }, [fetchStats]));
+
+  const handleCopy = async () => {
+    if (!code) return;
+    await Clipboard.setStringAsync(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const handleShare = async () => {
     if (!code) return;
@@ -37,11 +42,9 @@ export default function InviteFriendsScreen({ navigation }) {
       await Share.share({
         message:
           `Join me on OkTreat — the app for trusted pet sitters! 🐾\n\n` +
-          `Use my referral code ${code} when you sign up and you'll get ${REFERRED_REWARD} bonus coins (I get ${REFERRER_REWARD} too).`,
+          `Use my code ${code} when you sign up and you'll get ${REFERRED_REWARD} bonus coins.`,
       });
-    } catch (e) {
-      // user dismissed share sheet — ignore
-    }
+    } catch (e) { /* dismissed */ }
   };
 
   const invited = stats?.totalReferrals ?? 0;
@@ -62,55 +65,42 @@ export default function InviteFriendsScreen({ navigation }) {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.heroIcon}>
-              <Icon name="gift" size={34} color="#FFFFFF" />
-            </View>
-            <Text style={styles.heroTitle}>Give 50, get 100</Text>
+            <Icon name="gift" size={28} color="#32A6D8" />
+            <Text style={styles.heroTitle}>Give {REFERRED_REWARD}, get {REFERRER_REWARD}</Text>
             <Text style={styles.heroSubtitle}>
-              Share your code. When a friend signs up with it, they get {REFERRED_REWARD} bonus coins and you get {REFERRER_REWARD}.
+              Share your code — your friend gets {REFERRED_REWARD} coins and you get {REFERRER_REWARD} when they join.
             </Text>
           </View>
 
-          {/* Code card */}
+          {/* Code + actions */}
           <View style={styles.codeCard}>
-            <Text style={styles.codeLabel}>Your referral code</Text>
-            {loading && !code ? (
-              <ActivityIndicator size="small" color="#32A6D8" style={{ marginVertical: 12 }} />
-            ) : (
-              <Text style={styles.code} selectable>{code || '—'}</Text>
-            )}
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare} disabled={!code}>
-              <Icon name="share-social" size={18} color="#FFFFFF" />
-              <Text style={styles.shareButtonText}>Share your code</Text>
-            </TouchableOpacity>
+            <Text style={styles.codeLabel}>YOUR CODE</Text>
+            <View style={styles.codeRow}>
+              <Text style={styles.code} numberOfLines={1} selectable>{code || '—'}</Text>
+              <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} disabled={!code} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Icon name={copied ? 'checkmark' : 'copy-outline'} size={20} color="#32A6D8" />
+              </TouchableOpacity>
+            </View>
+            {copied && <Text style={styles.copiedText}>Copied!</Text>}
           </View>
+
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare} disabled={!code}>
+            <Icon name="share-social" size={18} color="#FFFFFF" />
+            <Text style={styles.shareText}>Share invite</Text>
+          </TouchableOpacity>
 
           {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{invited}</Text>
-              <Text style={styles.statLabel}>Friends invited</Text>
+              <Text style={styles.statLabel}>Invited</Text>
             </View>
+            <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{earned}</Text>
               <Text style={styles.statLabel}>Coins earned</Text>
             </View>
           </View>
-
-          {/* How it works */}
-          <Text style={styles.sectionTitle}>How it works</Text>
-          {[
-            { icon: 'share-social-outline', text: 'Share your code with friends.' },
-            { icon: 'person-add-outline', text: 'They enter it when they sign up for OkTreat.' },
-            { icon: 'server-outline', text: `You both get bonus coins added to your balance instantly.` },
-          ].map((step, i) => (
-            <View key={i} style={styles.step}>
-              <View style={styles.stepIcon}>
-                <Icon name={step.icon} size={18} color="#32A6D8" />
-              </View>
-              <Text style={styles.stepText}>{step.text}</Text>
-            </View>
-          ))}
         </ScrollView>
       </View>
     </ScreenWrapper>
@@ -125,46 +115,36 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 40, height: 40, borderRadius: 999, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { color: 'black', fontSize: 16, fontFamily: 'Poppins', fontWeight: '500', lineHeight: 24.8 },
-  content: { paddingHorizontal: 24, paddingBottom: 32 },
-  hero: { alignItems: 'center', marginTop: 8, marginBottom: 24 },
-  heroIcon: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: '#32A6D8',
-    justifyContent: 'center', alignItems: 'center', marginBottom: 14,
-  },
-  heroTitle: { color: '#0D0D12', fontSize: 22, fontFamily: 'Poppins', fontWeight: '600' },
+  content: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 28 },
+  hero: { alignItems: 'center', marginBottom: 20 },
+  heroTitle: { color: '#0D0D12', fontSize: 20, fontFamily: 'Poppins', fontWeight: '600', marginTop: 8 },
   heroSubtitle: {
     color: '#818898', fontSize: 13, fontFamily: 'Poppins', fontWeight: '400',
-    textAlign: 'center', marginTop: 8, lineHeight: 19, paddingHorizontal: 8,
+    textAlign: 'center', marginTop: 6, lineHeight: 19, paddingHorizontal: 12,
   },
   codeCard: {
-    borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16, padding: 20,
-    alignItems: 'center', backgroundColor: '#FAFCFF',
+    borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 18,
+    backgroundColor: '#FAFCFF',
   },
-  codeLabel: { color: '#818898', fontSize: 12, fontFamily: 'Poppins', fontWeight: '500' },
-  code: {
-    color: '#32A6D8', fontSize: 30, fontFamily: 'Poppins', fontWeight: '700',
-    letterSpacing: 4, marginVertical: 12,
+  codeLabel: { color: '#818898', fontSize: 11, fontFamily: 'Poppins', fontWeight: '600', letterSpacing: 1 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  code: { flex: 1, color: '#32A6D8', fontSize: 24, fontFamily: 'Poppins', fontWeight: '700', letterSpacing: 3 },
+  copyBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(90,172,244,0.12)',
+    justifyContent: 'center', alignItems: 'center', marginLeft: 8,
   },
-  shareButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#32A6D8',
-    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, marginTop: 4,
+  copiedText: { color: '#3FA477', fontSize: 12, fontFamily: 'Poppins', fontWeight: '500', marginTop: 6 },
+  shareBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#32A6D8', height: 52, borderRadius: 26, marginTop: 14,
   },
-  shareButtonText: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Poppins', fontWeight: '600' },
-  statsRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  statBox: {
-    flex: 1, borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16,
-    paddingVertical: 18, alignItems: 'center',
+  shareText: { color: '#FFFFFF', fontSize: 15, fontFamily: 'Poppins', fontWeight: '600' },
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#EBEBEB',
+    borderRadius: 14, marginTop: 20, paddingVertical: 16,
   },
-  statValue: { color: '#0D0D12', fontSize: 24, fontFamily: 'Poppins', fontWeight: '700' },
-  statLabel: { color: '#818898', fontSize: 12, fontFamily: 'Poppins', fontWeight: '400', marginTop: 4 },
-  sectionTitle: {
-    color: '#0D0D12', fontSize: 14, fontFamily: 'Poppins', fontWeight: '600',
-    marginTop: 28, marginBottom: 12,
-  },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  stepIcon: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(90,172,244,0.15)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  stepText: { flex: 1, color: '#424242', fontSize: 13, fontFamily: 'Poppins', fontWeight: '400', lineHeight: 19 },
+  statBox: { flex: 1, alignItems: 'center' },
+  statDivider: { width: 1, height: 32, backgroundColor: '#EBEBEB' },
+  statValue: { color: '#0D0D12', fontSize: 22, fontFamily: 'Poppins', fontWeight: '700' },
+  statLabel: { color: '#818898', fontSize: 12, fontFamily: 'Poppins', fontWeight: '400', marginTop: 2 },
 });
