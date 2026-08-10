@@ -37,17 +37,33 @@ export default function TransactionHistoryScreen({ navigation }) {
         (Array.isArray(txRes.data) ? txRes.data : []);
       const list = Array.isArray(txList) ? txList : [];
 
-      const formatted = list.map(tx => ({
-        id: tx.id || tx._id || String(Math.random()).slice(2, 12),
-        date: tx.createdAt
-          ? new Date(tx.createdAt).toLocaleDateString('en-US') + ' @ ' + new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : '',
-        type: tx.type || tx.description || 'Coin Transfer',
-        phone: tx.phone || tx.reference || '',
-        amount: tx.amount >= 0 ? `+${Number(tx.amount).toFixed(2)}` : `${Number(tx.amount).toFixed(2)}`,
-        status: tx.status || 'Completed',
-        createdAt: tx.createdAt || tx.created_at,
-      }));
+      const TYPE_LABELS = {
+        PURCHASE: 'Coin purchase',
+        REFERRAL_BONUS: 'Referral bonus',
+        EARN: 'Booking earnings',
+        HOLD: 'Booking hold',
+        REFUND: 'Refund',
+        SPEND: 'Coins spent',
+      };
+      const humanize = (t) => TYPE_LABELS[t] || (t ? String(t).replace(/_/g, ' ') : 'Transaction');
+
+      const formatted = list.map(tx => {
+        const rawId = tx.id || tx._id || '';
+        const n = Number(tx.amount);
+        return {
+          id: rawId || String(Math.random()).slice(2, 12),
+          shortId: rawId ? rawId.slice(0, 8).toUpperCase() : '—',
+          date: tx.createdAt
+            ? new Date(tx.createdAt).toLocaleDateString('en-US') + ' · ' + new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : '',
+          // Prefer the human description; fall back to a humanized type code.
+          label: tx.description || humanize(tx.type),
+          amount: `${n >= 0 ? '+' : ''}${Number.isInteger(n) ? n : n.toFixed(2)}`,
+          isCredit: n >= 0,
+          status: tx.status || 'Completed',
+          createdAt: tx.createdAt || tx.created_at,
+        };
+      });
       setTransactions(formatted);
     } catch (err) {
       console.error('Error fetching transaction history:', err);
@@ -109,11 +125,7 @@ export default function TransactionHistoryScreen({ navigation }) {
             <BackArrowIcon width={20} height={20} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction History</Text>
-          <View style={styles.menuButton}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </View>
+          <View style={styles.backButton} />
         </View>
 
         {loading ? (
@@ -163,8 +175,8 @@ export default function TransactionHistoryScreen({ navigation }) {
                   {filteredTransactions.map((transaction, index) => (
                     <View key={transaction.id + '-' + index} style={styles.transactionCard}>
                       <View style={styles.transactionHeader}>
-                        <Text style={styles.transactionId}>ID# {transaction.id}</Text>
-                        <Text style={styles.transactionDate}>{transaction.date}</Text>
+                        <Text style={styles.transactionId} numberOfLines={1}>ID# {transaction.shortId}</Text>
+                        <Text style={styles.transactionDate} numberOfLines={1}>{transaction.date}</Text>
                       </View>
                       <View style={styles.transactionBody}>
                         <View style={styles.transactionLeft}>
@@ -172,12 +184,11 @@ export default function TransactionHistoryScreen({ navigation }) {
                             <CoinInIcon width={16} height={16} />
                           </View>
                           <View style={styles.transactionInfo}>
-                            <Text style={styles.transactionType}>{transaction.type}</Text>
-                            <Text style={styles.transactionPhone}>{transaction.phone}</Text>
+                            <Text style={styles.transactionType} numberOfLines={2}>{transaction.label}</Text>
                           </View>
                         </View>
                         <View style={styles.transactionRight}>
-                          <Text style={[styles.transactionAmount, { color: transaction.amount.startsWith('+') ? '#3FA477' : '#FF0000' }]}>{transaction.amount}</Text>
+                          <Text style={[styles.transactionAmount, { color: transaction.isCredit ? '#3FA477' : '#FF0000' }]} numberOfLines={1}>{transaction.amount}</Text>
                           <View style={[styles.statusBadge, { backgroundColor: transaction.status === 'Pending' ? '#FFA500' : '#3FA477' }]}>
                             <Text style={styles.statusText}>{transaction.status}</Text>
                           </View>
@@ -318,8 +329,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   transactionId: {
+    flexShrink: 1,
     color: '#32A6D8',
     fontSize: 12,
     fontFamily: 'Poppins',
@@ -327,6 +340,7 @@ const styles = StyleSheet.create({
     lineHeight: 15.6,
   },
   transactionDate: {
+    flexShrink: 0,
     color: '#969696',
     fontSize: 12,
     fontFamily: 'Poppins',
@@ -337,8 +351,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   transactionLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -350,8 +366,10 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   transactionInfo: {
+    flex: 1,
     gap: 2,
   },
   transactionType: {
@@ -361,14 +379,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 15.6,
   },
-  transactionPhone: {
-    color: '#6B7271',
-    fontSize: 10,
-    fontFamily: 'Poppins',
-    fontWeight: '400',
-    lineHeight: 12.4,
-  },
   transactionRight: {
+    flexShrink: 0,
     alignItems: 'flex-end',
     gap: 4,
   },
