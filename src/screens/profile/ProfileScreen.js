@@ -73,10 +73,8 @@ export default function ProfileScreen({ navigation }) {
     {
       title: 'Refer a Friend',
       component: ReferFriendIcon,
-      screen: null,
+      screen: 'InviteFriends',
       color: '#32A6D8',
-      action: 'coming_soon',
-      comingSoonLabel: 'Refer a Friend',
     },
     {
       title: 'Support',

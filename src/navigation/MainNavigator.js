@@ -60,6 +60,7 @@ import NotificationPreferencesScreen from '../screens/notifications/Notification
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import BlockedUsersScreen from '../screens/settings/BlockedUsersScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import InviteFriendsScreen from '../screens/main/InviteFriendsScreen';
 import SupportScreen from '../screens/profile/SupportScreen';
 import EditProfileDetailsScreen from '../screens/profile/EditProfileDetailsScreen';
 import PrivacyPolicyScreen from '../screens/settings/PrivacyPolicyScreen';
@@ -409,6 +410,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="OpenRequests" component={OpenRequestsScreen} />
       <RootStack.Screen name="SubmitReview" component={SubmitReviewScreen} />
       <RootStack.Screen name="ProfileView" component={ProfileScreen} />
+      <RootStack.Screen name="InviteFriends" component={InviteFriendsScreen} />
       <RootStack.Screen name="EditProfileDetails" component={EditProfileDetailsScreen} />
       <RootStack.Screen name="HelpSupport" component={SupportScreen} />
       <RootStack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />

@@ -132,10 +132,15 @@ export default function MoreScreen({ navigation }) {
       screen: 'Scans',
       component: ScannerIcon
     },
-    { 
-      title: 'Shop Coins', 
+    {
+      title: 'Shop Coins',
       screen: 'ShopCoins',
-      component: CreditCardIcon 
+      component: CreditCardIcon
+    },
+    {
+      title: 'Invite Friends',
+      screen: 'InviteFriends',
+      component: CreditCardIcon
     },
     { 
       title: 'Transaction History', 
