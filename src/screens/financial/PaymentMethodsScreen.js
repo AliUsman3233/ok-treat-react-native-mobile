@@ -206,7 +206,7 @@ export default function PaymentMethodsScreen({ navigation }) {
             {/* Cash Out — Phase 2. Shows the coming-soon dialog for now. */}
             <Button
               title="Cash Out"
-              onPress={() => setCashOutDialogOpen(true)}
+              onPress={() => navigation.navigate('CashOut')}
               fullWidth
               size="medium"
             />
@@ -251,7 +251,7 @@ export default function PaymentMethodsScreen({ navigation }) {
                 Withdrawals will be available once cash-out launches.
               </Text>
               <TouchableOpacity
-                onPress={() => setCashOutDialogOpen(true)}
+                onPress={() => navigation.navigate('CashOut')}
                 style={styles.learnMoreBtn}
               >
                 <Text style={styles.learnMoreText}>Learn more</Text>

@@ -52,6 +52,7 @@ import SubmitReviewScreen from '../screens/services/SubmitReviewScreen';
 import ShopCoinsScreen from '../screens/financial/ShopCoinsScreen';
 import PaymentMethodsScreen from '../screens/financial/PaymentMethodsScreen';
 import TransactionHistoryScreen from '../screens/financial/TransactionHistoryScreen';
+import CashOutScreen from '../screens/financial/CashOutScreen';
 
 import ChatListScreen from '../screens/messages/ChatListScreen';
 import ChatConversationScreen from '../screens/messages/ChatConversationScreen';
@@ -414,6 +415,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="EditProfileDetails" component={EditProfileDetailsScreen} />
       <RootStack.Screen name="HelpSupport" component={SupportScreen} />
       <RootStack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+      <RootStack.Screen name="CashOut" component={CashOutScreen} />
       <RootStack.Screen name="ShopCoins" component={ShopCoinsScreen} />
       {/* PaymentMethods (AlohaPay) is also registered inside MoreStack —
           mirror at the root so deep-link callers like notification taps,
