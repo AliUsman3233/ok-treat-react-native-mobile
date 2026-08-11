@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import ScreenWrapper from '../../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, CoinIcon, DogImage, ChatIcon } from '../../../assets';
 import Icon from '@expo/vector-icons/Ionicons';
-import { getSitterBookings } from '../../../services/bookingService';
+import { getSitterBookings, markBookingCompleted } from '../../../services/bookingService';
 
 // Enum → human label for the service type.
 const SERVICE_LABELS = {
@@ -30,6 +30,8 @@ const getStatusStyle = (status) => {
       return { color: '#FFEBEE', textColor: '#D32F2F', label: 'Cancelled', category: 'Completed' };
     case 'DECLINED':
       return { color: '#FBE3E3', textColor: '#D06060', label: 'Declined', category: 'Completed' };
+    case 'EXPIRED':
+      return { color: '#F0F0F0', textColor: '#8A8A8A', label: 'Expired', category: 'Completed' };
     case 'PENDING':
       return { color: '#FFF3D0', textColor: '#E5A33D', label: 'Pending', category: 'Upcoming' };
     default:
@@ -42,6 +44,7 @@ export default function SitterBookingsScreen({ navigation }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [markingId, setMarkingId] = useState(null);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -97,6 +100,10 @@ export default function SitterBookingsScreen({ navigation }) {
           category: statusStyle.category,
           rating: booking.rating || null,
           coins: booking.totalAmount || booking.totalPrice || booking.coins || null,
+          // Raw fields for the completion flow (the flattened `status` is a label).
+          rawStatus: (booking.status || '').toUpperCase(),
+          startAtMs: startDate ? startDate.getTime() : null,
+          completionRequestedAt: booking.completionRequestedAt || null,
         };
       }));
     } catch (err) {
@@ -117,6 +124,33 @@ export default function SitterBookingsScreen({ navigation }) {
     navigation.goBack();
   };
 
+  const doMarkComplete = async (booking) => {
+    try {
+      setMarkingId(booking.id);
+      await markBookingCompleted(booking.id);
+      await fetchBookings();
+      Alert.alert(
+        'Marked complete',
+        'We’ve asked the owner to confirm. Once they do (or after 3 days), your coins are released.'
+      );
+    } catch (err) {
+      Alert.alert('Could not mark complete', err?.message || 'Please try again in a moment.');
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
+  const handleMarkComplete = (booking) => {
+    Alert.alert(
+      'Mark as completed?',
+      'Confirm you’ve finished this booking. The owner will be asked to confirm before your coins are released.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Mark completed', onPress: () => doMarkComplete(booking) },
+      ]
+    );
+  };
+
   // Filter bookings based on selected tab
   const getFilteredBookings = () => {
     if (selectedTab === 'All') {
@@ -132,6 +166,18 @@ export default function SitterBookingsScreen({ navigation }) {
     const isCompleted = booking.status === 'Completed';
     const hasMeta = booking.dateTime || booking.address || booking.petName || booking.phone ||
       (isCompleted && (booking.coins || booking.rating));
+
+    // Sitter can mark done once a confirmed/ongoing booking has started and
+    // hasn't already been reported complete.
+    const canMarkComplete =
+      ['CONFIRMED', 'ONGOING'].includes(booking.rawStatus) &&
+      booking.startAtMs != null &&
+      booking.startAtMs <= Date.now() &&
+      !booking.completionRequestedAt;
+    const awaitingConfirm =
+      !!booking.completionRequestedAt &&
+      ['CONFIRMED', 'ONGOING'].includes(booking.rawStatus);
+    const isMarking = markingId === booking.id;
 
     return (
       <View key={booking.id} style={styles.card}>
@@ -208,6 +254,30 @@ export default function SitterBookingsScreen({ navigation }) {
                 <ChatIcon width={20} height={20} />
               </TouchableOpacity>
             )}
+          </View>
+        )}
+
+        {/* Completion action / awaiting-confirmation state */}
+        {canMarkComplete && (
+          <TouchableOpacity
+            style={[styles.markButton, isMarking && styles.markButtonDisabled]}
+            onPress={() => handleMarkComplete(booking)}
+            disabled={isMarking}
+          >
+            {isMarking ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Icon name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.markButtonText}>Mark as completed</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+        {awaitingConfirm && (
+          <View style={styles.awaitingRow}>
+            <Icon name="hourglass-outline" size={14} color="#E5A33D" />
+            <Text style={styles.awaitingText}>Waiting for owner to confirm</Text>
           </View>
         )}
       </View>
@@ -497,5 +567,42 @@ const styles = StyleSheet.create({
   },
   chatButtonDisabled: {
     opacity: 0.4,
+  },
+  markButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 11,
+    borderRadius: 30,
+    backgroundColor: '#219A27',
+  },
+  markButtonDisabled: {
+    opacity: 0.6,
+  },
+  markButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  awaitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 9,
+    borderRadius: 30,
+    backgroundColor: '#FFF6E6',
+  },
+  awaitingText: {
+    color: '#E5A33D',
+    fontSize: 12,
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    lineHeight: 17,
   },
 });

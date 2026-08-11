@@ -61,6 +61,29 @@ export const cancelBooking = async (bookingId) => {
   }
 };
 
+// Sitter marks a booking as completed (service delivered). Stamps
+// completionRequestedAt and asks the owner to confirm — does not pay yet.
+export const markBookingCompleted = async (bookingId) => {
+  try {
+    const response = await api.post(`/bookings/${bookingId}/complete`);
+    return response.data;
+  } catch (error) {
+    console.error('Mark booking completed error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to mark booking as completed' };
+  }
+};
+
+// Owner confirms a booking was completed → releases the sitter's earnings.
+export const confirmBookingCompletion = async (bookingId) => {
+  try {
+    const response = await api.post(`/bookings/${bookingId}/confirm-completion`);
+    return response.data;
+  } catch (error) {
+    console.error('Confirm booking completion error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to confirm booking completion' };
+  }
+};
+
 // ========== SITTER BOOKING ENDPOINTS ==========
 
 // Get bookings for the sitter

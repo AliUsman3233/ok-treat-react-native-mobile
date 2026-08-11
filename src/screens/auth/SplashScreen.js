@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import * as Application from 'expo-application';
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
+
+// Real installed app version + build, read from the native package at runtime
+// (Android versionName / versionCode from build.gradle). Falls back to a
+// constant only if the native value is unavailable, so it never shows blank.
+const APP_VERSION = Application.nativeApplicationVersion || '1.0.4';
+const APP_BUILD = Application.nativeBuildVersion || '';
+const VERSION_LABEL = APP_BUILD
+  ? `Version ${APP_VERSION} (${APP_BUILD})`
+  : `Version ${APP_VERSION}`;
 
 // Safety: never wait on the video forever — if `playToEnd` doesn't fire
 // (load error, codec issue), advance after this many ms regardless.
@@ -101,7 +111,7 @@ export default function SplashScreen({ onServerReady }) {
       />
 
       <View style={styles.versionContainer}>
-        <Text style={styles.version}>Version 0.0.1</Text>
+        <Text style={styles.version}>{VERSION_LABEL}</Text>
       </View>
 
       <Modal

@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon, StarIcon, ShieldCheckIcon, CoinIcon } from '../../assets';
-import { getUserBookings } from '../../services/bookingService';
+import { getUserBookings, confirmBookingCompletion } from '../../services/bookingService';
 
 // Helper to derive status colors
 const getStatusStyle = (status) => {
@@ -18,6 +18,10 @@ const getStatusStyle = (status) => {
       return { bg: '#ECF5EA', text: '#219A27', label: 'Completed' };
     case 'CANCELLED':
       return { bg: '#FFEBEE', text: '#D32F2F', label: 'Cancelled' };
+    case 'DECLINED':
+      return { bg: '#FFEBEE', text: '#D32F2F', label: 'Declined' };
+    case 'EXPIRED':
+      return { bg: '#F0F0F0', text: '#8A8A8A', label: 'Expired' };
     case 'PENDING':
       return { bg: '#FFF3D0', text: '#E5A33D', label: 'Pending' };
     default:
@@ -28,8 +32,19 @@ const getStatusStyle = (status) => {
 // Helper to determine tab category from status
 const getCategory = (status) => {
   const upper = status?.toUpperCase();
-  if (['COMPLETED', 'CANCELLED'].includes(upper)) return 'Past';
+  if (['COMPLETED', 'CANCELLED', 'DECLINED', 'EXPIRED'].includes(upper)) return 'Past';
   return 'Upcoming';
+};
+
+// A confirmed/ongoing booking the owner can close out — either the sitter has
+// already marked it complete, or its start time has passed. Confirming releases
+// the sitter's earnings; if the owner never does, the server auto-completes it
+// 3 days after the end date.
+const isConfirmable = (b) => {
+  const upper = b.status?.toUpperCase();
+  if (upper !== 'CONFIRMED' && upper !== 'ONGOING') return false;
+  const startPassed = b.startDate && new Date(b.startDate).getTime() <= Date.now();
+  return !!b.completionRequestedAt || startPassed;
 };
 
 // Helper to format date range
@@ -57,6 +72,7 @@ export default function BookingsScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const tabs = ['All', 'Upcoming', 'Past'];
 
@@ -99,6 +115,44 @@ export default function BookingsScreen({ navigation, route }) {
     navigation.goBack();
   };
 
+  const doConfirmCompletion = async (booking) => {
+    try {
+      setConfirmingId(booking.id);
+      const res = await confirmBookingCompletion(booking.id);
+      await fetchBookings();
+      Alert.alert(
+        'Booking confirmed',
+        'Thanks! Your sitter has been paid. Would you like to leave a review?',
+        [
+          { text: 'Not now', style: 'cancel' },
+          {
+            text: 'Leave Review',
+            onPress: () =>
+              navigation.navigate('SubmitReview', {
+                booking: res?.data?.booking || booking,
+                sitter: booking.sitter,
+              }),
+          },
+        ]
+      );
+    } catch (err) {
+      Alert.alert('Could not confirm', err?.message || 'Please try again in a moment.');
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleConfirmCompletion = (booking) => {
+    Alert.alert(
+      'Confirm completion?',
+      'Confirm this booking is complete. This releases the coins to your sitter and can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => doConfirmCompletion(booking) },
+      ]
+    );
+  };
+
   const handleReorder = (booking) => {
     navigation.navigate('ContactSitter', {
       sitter: booking.sitter || { id: booking.sitterId, name: booking.sitterName },
@@ -130,6 +184,10 @@ export default function BookingsScreen({ navigation, route }) {
 
     const isHighlighted =
       highlightedBookingId && (booking.id === highlightedBookingId || booking._id === highlightedBookingId);
+
+    const canConfirm = isConfirmable(booking);
+    const awaitingConfirm = !!booking.completionRequestedAt && canConfirm;
+    const isConfirming = confirmingId === booking.id;
 
     return (
       <TouchableOpacity
@@ -176,7 +234,7 @@ export default function BookingsScreen({ navigation, route }) {
             <StarIcon width={16} height={16} fill="#FBBC04" />
             <Text style={styles.ratingText}>{rating} ({reviews} reviews)</Text>
           </View>
-          {statusStyle.label === 'Completed' && (
+          {statusStyle.label === 'Completed' ? (
             <View style={styles.completedActions}>
               <TouchableOpacity
                 style={styles.reviewButton}
@@ -194,8 +252,27 @@ export default function BookingsScreen({ navigation, route }) {
                 <Text style={styles.reorderText}>Reorder</Text>
               </TouchableOpacity>
             </View>
-          )}
+          ) : canConfirm ? (
+            <TouchableOpacity
+              style={[styles.confirmButton, isConfirming && styles.confirmButtonDisabled]}
+              onPress={() => handleConfirmCompletion(booking)}
+              disabled={isConfirming}
+            >
+              {isConfirming ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Confirm completion</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
         </View>
+
+        {/* Awaiting-confirmation nudge (sitter marked it done) */}
+        {awaitingConfirm && (
+          <Text style={styles.awaitingHint}>
+            Your sitter marked this complete — confirm to release their coins.
+          </Text>
+        )}
 
         {/* Bottom Section: Total Payment */}
         <View style={styles.bottomSection}>
@@ -561,6 +638,33 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 1,
     borderColor: '#818898',
+  },
+  confirmButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 30,
+    backgroundColor: '#219A27',
+    minWidth: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonDisabled: {
+    opacity: 0.6,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    lineHeight: 15.5,
+  },
+  awaitingHint: {
+    color: '#219A27',
+    fontSize: 11,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
+    marginBottom: 10,
+    marginTop: -4,
   },
   reorderText: {
     color: '#818898',
