@@ -187,9 +187,9 @@ export default function CashOutScreen({ navigation }) {
             </View>
           ) : !cfg.connect?.payoutsEnabled ? (
             /* ---- Connect setup required ---- */
-            <View style={styles.card}>
+            <View style={[styles.card, { alignItems: 'center' }]}>
               <Icon name="business-outline" size={30} color="#32A6D8" />
-              <Text style={styles.cardTitle}>Set up your payout account</Text>
+              <Text style={[styles.cardTitle, { marginTop: 8 }]}>Set up your payout account</Text>
               <Text style={styles.muted}>Before you can cash out, link your bank securely through Stripe. Stripe verifies your identity and bank details.</Text>
               <TouchableOpacity style={styles.primaryBtn} onPress={handleSetupPayouts} disabled={busy}>
                 {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Set up payouts</Text>}
@@ -218,20 +218,18 @@ export default function CashOutScreen({ navigation }) {
                 {!overBalance && belowMin && (
                   <Text style={styles.err}>Minimum is {money(settings.minWithdrawalCents)}.</Text>
                 )}
+                {coins > 0 && bd && !overBalance && !belowMin && (
+                  <>
+                    <View style={styles.divider} />
+                    <Breakdown bd={bd} feePercent={settings.feePercent} />
+                  </>
+                )}
               </View>
-
-              {/* Fee breakdown */}
-              {coins > 0 && bd && (
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Breakdown</Text>
-                  <Breakdown bd={bd} feePercent={settings.feePercent} />
-                </View>
-              )}
 
               {/* Documents */}
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Identity documents</Text>
-                <Text style={styles.muted}>Required for every withdrawal.</Text>
+                <Text style={styles.hint}>Required for every withdrawal.</Text>
                 <View style={styles.docsRow}>
                   {slots.map((s) => (
                     <TouchableOpacity key={s.key} style={styles.docSlot} onPress={() => pickDoc(s.key)} disabled={uploading[s.key]}>
@@ -309,11 +307,12 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
   muted: { color: '#818898', fontSize: 13, fontFamily: 'Poppins', lineHeight: 19, marginTop: 6, textAlign: 'center' },
-  balanceCard: { backgroundColor: '#32A6D8', borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 16 },
+  hint: { color: '#818898', fontSize: 12, fontFamily: 'Poppins', marginTop: 3 },
+  balanceCard: { backgroundColor: '#32A6D8', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', marginBottom: 14 },
   balanceLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Poppins' },
-  balanceValue: { color: '#FFFFFF', fontSize: 34, fontFamily: 'Poppins', fontWeight: '700', marginTop: 4 },
+  balanceValue: { color: '#FFFFFF', fontSize: 30, fontFamily: 'Poppins', fontWeight: '700', marginTop: 2 },
   balanceCoins: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: 'Poppins', marginTop: 2 },
-  card: { borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16, padding: 16, marginBottom: 14, alignItems: 'stretch' },
+  card: { borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'stretch' },
   cardTitle: { color: '#0D0D12', fontSize: 15, fontFamily: 'Poppins', fontWeight: '600' },
   amountRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   amountInput: { flex: 1, fontSize: 28, fontFamily: 'Poppins', fontWeight: '700', color: '#0D0D12', padding: 0 },
