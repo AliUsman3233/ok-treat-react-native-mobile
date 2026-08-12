@@ -4,7 +4,11 @@ import {
 } from '@react-native-google-signin/google-signin';
 import api from '../config/api';
 
-const GOOGLE_WEB_CLIENT_ID = '1046755845088-9o63airc9agiipiplfcs6p9o67sc4cuv.apps.googleusercontent.com';
+// Web client ID from the okay-treat-android-app GCP project (#1009514986704).
+// Google Sign-In requires a matching Android OAuth client (package
+// com.oktreat.app + the build's SHA-1) in this SAME project, or it throws
+// DEVELOPER_ERROR. Backend audience accepts this ID (auth.controller.js).
+const GOOGLE_WEB_CLIENT_ID = '1009514986704-o243heig124pirs5eiqvqarfmirosjo5.apps.googleusercontent.com';
 
 // Configure Google Sign-In (call once at app startup)
 GoogleSignin.configure({
