@@ -54,7 +54,10 @@ export const registerForPushNotifications = async () => {
       await Notifications.deleteNotificationChannelAsync('default').catch(() => {});
     }
 
-    const tokenResp = await Notifications.getExpoPushTokenAsync();
+    // Native FCM device token (Android) / APNs (iOS). We send push directly via
+    // firebase-admin from the backend, so we use the device token rather than an
+    // Expo push token (the project isn't linked to an Expo push project).
+    const tokenResp = await Notifications.getDevicePushTokenAsync();
     const token = tokenResp?.data;
     if (!token) return null;
 

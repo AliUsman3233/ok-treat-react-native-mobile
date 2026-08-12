@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "165394364307",
+    "project_id": "oktreat-4e2e0",
+    "storage_bucket": "oktreat-4e2e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165394364307:android:faefe2436b0c63a1929a66",
+        "android_client_info": {
+          "package_name": "com.oktreat.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAijQ8CCn_LiSxblX-79Y5_5nsnf_ibjQE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

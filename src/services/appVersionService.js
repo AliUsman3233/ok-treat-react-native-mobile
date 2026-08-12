@@ -51,24 +51,12 @@ export async function evaluateAppUpdate() {
   return { action: 'none' };
 }
 
-// Trigger Google Play In-App Updates for 'auto' mode. Fully guarded: silently
-// no-ops if the native module isn't linked (sideloaded / dev builds) or on iOS,
-// so it never throws into the startup path.
+// 'auto' mode → Google Play In-App Updates. DEFERRED: the native module
+// (sp-react-native-in-app-updates) can't be compiled in this environment
+// (New-Architecture C++ codegen exceeds the Windows 260-char path limit at this
+// project's deep path). Until it's added via an EAS/cloud build or a shorter
+// project path, 'auto' is a no-op and the app simply proceeds. Kept as an
+// export so the splash import stays stable and re-enabling is a one-file change.
 export async function tryPlayInAppUpdate() {
-  if (Platform.OS !== 'android') return;
-  try {
-    const Mod = require('sp-react-native-in-app-updates');
-    const SpInAppUpdates = Mod.default || Mod;
-    const IAUUpdateKind = Mod.IAUUpdateKind || {};
-    const inAppUpdates = new SpInAppUpdates(false);
-    const curVersion = Application.nativeApplicationVersion || '1.0.0';
-    const result = await inAppUpdates.checkNeedsUpdate({ curVersion });
-    if (result && result.shouldUpdate) {
-      await inAppUpdates.startUpdate({
-        updateType: IAUUpdateKind.FLEXIBLE != null ? IAUUpdateKind.FLEXIBLE : 0,
-      });
-    }
-  } catch (e) {
-    // Native module missing or Play unavailable — ignore (fail open).
-  }
+  return; // no-op until the native updater is linked
 }

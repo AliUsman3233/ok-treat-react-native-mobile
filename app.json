@@ -3,7 +3,7 @@
     "name": "OkTreat",
     "slug": "oktreat",
     "scheme": "oktreat",
-    "version": "1.0.4",
+    "version": "1.0.6",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -27,6 +27,7 @@
         "backgroundColor": "#FFC2EB"
       },
       "package": "com.oktreat.app",
+      "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
