@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as Application from 'expo-application';
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
+import { evaluateAppUpdate, tryPlayInAppUpdate } from '../../services/appVersionService';
+
+// Open the store listing; fall back to the Play web URL if the market:// deep
+// link can't be handled.
+const openStore = async (storeUrl) => {
+  const fallback = 'https://play.google.com/store/apps/details?id=com.oktreat.app';
+  try {
+    const url = storeUrl || fallback;
+    const ok = await Linking.canOpenURL(url);
+    await Linking.openURL(ok ? url : fallback);
+  } catch (e) {
+    try { await Linking.openURL(fallback); } catch (_) {}
+  }
+};
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
 
@@ -24,7 +38,11 @@ export default function SplashScreen({ onServerReady }) {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [videoFinished, setVideoFinished] = useState(false);
+  // Update gate: null = not yet checked; else { action, message, storeUrl }.
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [softDismissed, setSoftDismissed] = useState(false);
   const advancedRef = useRef(false);
+  const autoTriggeredRef = useRef(false);
 
   const videoPlayer = useVideoPlayer(splashVideo, (player) => {
     player.loop = false;
@@ -45,15 +63,34 @@ export default function SplashScreen({ onServerReady }) {
 
   useEffect(() => {
     checkServerStatus();
+    // Evaluate the update gate in parallel with the server check. Fail-open:
+    // evaluateAppUpdate resolves to { action: 'none' } on any error.
+    evaluateAppUpdate()
+      .then((info) => setUpdateInfo(info || { action: 'none' }))
+      .catch(() => setUpdateInfo({ action: 'none' }));
   }, []);
+
+  // For 'auto' mode, hand off to Google Play In-App Updates once (Android only;
+  // silently no-ops elsewhere). Doesn't block startup.
+  useEffect(() => {
+    if (updateInfo?.action === 'auto' && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      tryPlayInAppUpdate();
+    }
+  }, [updateInfo]);
 
   useEffect(() => {
     if (advancedRef.current) return;
-    if (serverStatus === 'online' && videoFinished) {
-      advancedRef.current = true;
-      onServerReady && onServerReady();
-    }
-  }, [serverStatus, videoFinished, onServerReady]);
+    if (serverStatus !== 'online' || !videoFinished) return;
+    // Wait until the update gate has resolved.
+    if (!updateInfo) return;
+    // A required update blocks entry entirely; a soft prompt blocks until the
+    // user dismisses it ("Later"). Everything else proceeds.
+    if (updateInfo.action === 'force') return;
+    if (updateInfo.action === 'soft' && !softDismissed) return;
+    advancedRef.current = true;
+    onServerReady && onServerReady();
+  }, [serverStatus, videoFinished, updateInfo, softDismissed, onServerReady]);
 
   const checkServerStatus = async () => {
     try {
@@ -149,6 +186,55 @@ export default function SplashScreen({ onServerReady }) {
               >
                 <Text style={styles.skipButtonText}>Continue Anyway</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Update gate: 'force' (required, non-dismissable) or 'soft' (optional) */}
+      <Modal
+        visible={
+          !!(videoFinished && updateInfo &&
+            (updateInfo.action === 'force' ||
+              (updateInfo.action === 'soft' && !softDismissed)))
+        }
+        transparent
+        animationType="fade"
+        // Back button dismisses a soft prompt only; a required update can't be closed.
+        onRequestClose={() => {
+          if (updateInfo?.action === 'soft') setSoftDismissed(true);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.errorIconContainer}>
+              <Text style={styles.errorIcon}>🚀</Text>
+            </View>
+
+            <Text style={styles.modalTitle}>
+              {updateInfo?.action === 'force' ? 'Update Required' : 'Update Available'}
+            </Text>
+            <Text style={styles.modalMessage}>
+              {updateInfo?.message ||
+                'A new version of OkTreat is available. Please update for the latest features and fixes.'}
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.retryButton]}
+                onPress={() => openStore(updateInfo?.storeUrl)}
+              >
+                <Text style={styles.retryButtonText}>Update now</Text>
+              </TouchableOpacity>
+
+              {updateInfo?.action === 'soft' && (
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.skipButton]}
+                  onPress={() => setSoftDismissed(true)}
+                >
+                  <Text style={styles.skipButtonText}>Later</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
