@@ -20,6 +20,12 @@ const openStore = async (storeUrl) => {
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
 
+// Module-level guard so the intro video plays AT MOST ONCE per app launch,
+// even if the splash briefly remounts during the ready/auth state transitions
+// (that remount was causing the video to play twice). Reset only on a full
+// app restart (fresh JS runtime).
+let splashVideoPlayed = false;
+
 // Real installed app version + build, read from the native package at runtime
 // (Android versionName / versionCode from build.gradle). Falls back to a
 // constant only if the native value is unavailable, so it never shows blank.
@@ -37,7 +43,9 @@ export default function SplashScreen({ onServerReady }) {
   const [serverStatus, setServerStatus] = useState('checking');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [videoFinished, setVideoFinished] = useState(false);
+  // If the video already played this launch, start "finished" so a remount
+  // advances immediately instead of replaying it.
+  const [videoFinished, setVideoFinished] = useState(splashVideoPlayed);
   // Update gate: null = not yet checked; else { action, message, storeUrl }.
   const [updateInfo, setUpdateInfo] = useState(null);
   const [softDismissed, setSoftDismissed] = useState(false);
@@ -47,7 +55,11 @@ export default function SplashScreen({ onServerReady }) {
   const videoPlayer = useVideoPlayer(splashVideo, (player) => {
     player.loop = false;
     player.muted = true;
-    player.play();
+    // Only play the first time this launch — a remount must not replay it.
+    if (!splashVideoPlayed) {
+      splashVideoPlayed = true;
+      player.play();
+    }
   });
 
   useEffect(() => {
