@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Switch } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../../store/slices/authSlice';
@@ -76,16 +76,6 @@ export default function SitterProfileScreen({ navigation }) {
       component: SupportProfileIcon,
       screen: 'HelpSupport',
       color: '#32A6D8'
-    },
-    // Tester complaint #12: stuck in Sitter mode with no way back. The
-    // mode toggle lives on the user-side MoreScreen; once in SitterTabs
-    // we need an explicit "go back to owner UI" affordance.
-    {
-      title: 'Switch to Owner Mode',
-      component: UserProfileIcon,
-      screen: null,
-      color: '#32A6D8',
-      action: 'switch_to_owner',
     },
     {
       title: 'Log out',
@@ -179,6 +169,21 @@ export default function SitterProfileScreen({ navigation }) {
                 )}
               </View>
             </View>
+          </View>
+
+          {/* Switch to Owner Mode — mirrors the owner-side "Switch to Sitter
+              Mode" toggle on the More screen, for parity. */}
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Text style={styles.toggleLabel}>Switch to Owner Mode</Text>
+            </View>
+            <Switch
+              value={false}
+              onValueChange={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+              trackColor={{ false: '#E5E5E5', true: '#FFC2EB' }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor="#E5E5E5"
+            />
           </View>
 
           {/* Menu Items */}
@@ -327,6 +332,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
     lineHeight: 18.6,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  toggleLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  toggleLabel: {
+    color: 'rgba(0, 0, 0, 0.90)',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+    fontWeight: '500',
   },
   menuContainer: {
     gap: 15,

@@ -11,7 +11,7 @@ import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
-import { getServiceUnit } from '../../../utils/serviceUnits';
+import { getServiceUnit, formatEarnRange } from '../../../utils/serviceUnits';
 
 const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('DROP_IN_VISITS');
 
@@ -82,18 +82,15 @@ export default function DropInVisitSettingsScreen({ navigation }) {
     // baseRate no longer overwrite it — the sitter has final say
     // (product decision, 2026-07-07).
     React.useEffect(() => {
-        if (!additionalRates || !baseRate) return;
+        // Relative mode ON: auto-compute + lock additional rates. OFF: leave
+        // values in place for manual editing. Recompute on toggle-on / base change.
+        if (!additionalRates) return;
         const base = parseFloat(baseRate) || 0;
-        const fillIfEmpty = (setter, current, multiplier) => {
-            if (!current || !current.toString().trim()) {
-                setter(Math.round(base * multiplier).toString());
-            }
-        };
-        fillIfEmpty(setHolidayRate, holidayRate, HOLIDAY_RATE_MULTIPLIER);
-        fillIfEmpty(setAdditionalDogRate, additionalDogRate, ADDITIONAL_DOG_RATE_MULTIPLIER);
-        fillIfEmpty(setPuppyRate, puppyRate, PUPPY_RATE_MULTIPLIER);
-        fillIfEmpty(setLongStayRate, longStayRate, LONG_STAY_RATE_MULTIPLIER);
-    }, [additionalRates, baseRate, holidayRate, additionalDogRate, puppyRate, longStayRate]);
+        setHolidayRate(Math.round(base * HOLIDAY_RATE_MULTIPLIER).toString());
+        setAdditionalDogRate(Math.round(base * ADDITIONAL_DOG_RATE_MULTIPLIER).toString());
+        setPuppyRate(Math.round(base * PUPPY_RATE_MULTIPLIER).toString());
+        setLongStayRate(Math.round(base * LONG_STAY_RATE_MULTIPLIER).toString());
+    }, [additionalRates, baseRate]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -287,8 +284,11 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                                     leftIcon={<CoinIcon width={18.35} height={18.35} />}
                                     containerStyle={styles.rateInputContainer}
                                 />
-                                <Text style={styles.rateUnitText}>/ per {RATE_UNIT}</Text>
+                                <Text style={styles.rateUnitText}>/{RATE_UNIT}</Text>
                             </View>
+                            {formatEarnRange(baseRate) && (
+                                <Text style={styles.earnRangeText}>{formatEarnRange(baseRate)}</Text>
+                            )}
                         </View>
 
                         <View style={styles.toggleCard}>
@@ -332,7 +332,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                         <Text style={styles.sectionTitle}>Availability</Text>
 
                         <View style={styles.fieldGroup}>
-                            <Text style={styles.fieldLabel}>On which days can you normally provide Drop-In Visit?</Text>
+                            <Text style={styles.fieldLabel}>Are you available full-time for this service?</Text>
                             <View style={styles.radioGroup}>
                                 <TouchableOpacity
                                     style={styles.radioOption}
@@ -663,6 +663,14 @@ const styles = StyleSheet.create({
         fontFamily: 'Avenir LT Std',
         fontWeight: '600',
         lineHeight: 20,
+    },
+    earnRangeText: {
+        marginTop: 8,
+        color: '#676869',
+        fontSize: 12,
+        fontFamily: 'Avenir LT Std',
+        fontWeight: '600',
+        lineHeight: 18,
     },
     dropdownContainer: {
         marginBottom: 0,

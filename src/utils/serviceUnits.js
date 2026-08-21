@@ -31,6 +31,29 @@ export function isHourBasedService(serviceType) {
   return getServiceUnit(serviceType).pricedBy === 'hours';
 }
 
+// Coin economy — mirrors the payout defaults (20 coins = $1, 20% cash-out
+// fee). Used to show sitters what their coin rate is worth in real dollars
+// under the base-rate input.
+export const COINS_PER_DOLLAR = 20;
+export const CASHOUT_FEE_PERCENT = 20;
+
+// Given a rate in coins, returns { net, gross } USD — gross is face value
+// (coins ÷ 20), net is what's kept after the % cash-out fee.
+export function coinsToEarnRange(coins) {
+  const c = parseFloat(coins) || 0;
+  const gross = c / COINS_PER_DOLLAR;
+  const net = gross * (1 - CASHOUT_FEE_PERCENT / 100);
+  return { net, gross };
+}
+
+// "You'll earn between $X and $Y" for a coin rate, or null when the rate is
+// empty/zero (so the caller can skip rendering the line).
+export function formatEarnRange(coins) {
+  const { net, gross } = coinsToEarnRange(coins);
+  if (gross <= 0) return null;
+  return `You'll earn between $${net.toFixed(2)} and $${gross.toFixed(2)}`;
+}
+
 // Duration in whole hours between two HH:mm strings. Rounds up so a
 // 30-minute booking bills as one hour — matching how the sitter's
 // base rate is quoted.

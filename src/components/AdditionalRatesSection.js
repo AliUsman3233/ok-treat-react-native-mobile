@@ -9,10 +9,11 @@ import { CoinIcon, CoinBackgroundIcon } from '../assets';
 // only render when pricedBy === 'days'. Default 'days' preserves the
 // old behavior for any caller that hasn't been updated yet.
 //
-// All rate fields are always editable — the sitter has final say
-// regardless of whether the auto-compute toggle is on. The toggle
-// now only controls seeding defaults on first flip; see the parent
-// screen for the auto-fill logic.
+// Rate fields are locked (auto-computed from the base rate) while the
+// "Set additional rates relative to my base rate" toggle is ON, and become
+// editable when it's OFF — mirroring Rover. The parent screen owns the
+// recompute-when-on logic; here we just reflect `additionalRates` by
+// disabling the inputs + hiding the edit pencil.
 export default function AdditionalRatesSection({
     additionalRates,
     showAdditionalRates,
@@ -80,6 +81,11 @@ export default function AdditionalRatesSection({
             {/* Additional Rates Details */}
             {showAdditionalRates && (
                 <View style={styles.additionalRatesSection}>
+                    {additionalRates && (
+                        <Text style={styles.lockedHint}>
+                            Auto-calculated from your base rate. Turn off “Set additional rates relative to my base rate” to edit these manually.
+                        </Text>
+                    )}
                     <View style={styles.ratesList}>
                         {/* Holiday Rate — always editable; sitter has final say */}
                         <View style={styles.rateRow}>
@@ -93,14 +99,15 @@ export default function AdditionalRatesSection({
                                     <CoinIcon width={16} height={16} style={styles.coinForeground} />
                                 </View>
                                 <TextInput
-                                    style={styles.rateInput}
+                                    style={[styles.rateInput, additionalRates && styles.rateInputLocked]}
                                     value={holidayRate}
                                     onChangeText={onHolidayRateChange}
+                                    editable={!additionalRates}
                                     keyboardType="numeric"
                                     placeholder="0"
                                     placeholderTextColor="#A4ACB9"
                                 />
-                                <Icon name="pencil" size={14} color="#32A6D8" />
+                                {!additionalRates && <Icon name="pencil" size={14} color="#32A6D8" />}
                             </View>
                         </View>
 
@@ -113,14 +120,15 @@ export default function AdditionalRatesSection({
                                     <CoinIcon width={16} height={16} style={styles.coinForeground} />
                                 </View>
                                 <TextInput
-                                    style={styles.rateInput}
+                                    style={[styles.rateInput, additionalRates && styles.rateInputLocked]}
                                     value={additionalDogRate}
                                     onChangeText={onAdditionalDogRateChange}
+                                    editable={!additionalRates}
                                     keyboardType="numeric"
                                     placeholder="0"
                                     placeholderTextColor="#A4ACB9"
                                 />
-                                <Icon name="pencil" size={14} color="#32A6D8" />
+                                {!additionalRates && <Icon name="pencil" size={14} color="#32A6D8" />}
                             </View>
                         </View>
 
@@ -133,14 +141,15 @@ export default function AdditionalRatesSection({
                                     <CoinIcon width={16} height={16} style={styles.coinForeground} />
                                 </View>
                                 <TextInput
-                                    style={styles.rateInput}
+                                    style={[styles.rateInput, additionalRates && styles.rateInputLocked]}
                                     value={puppyRate}
                                     onChangeText={onPuppyRateChange}
+                                    editable={!additionalRates}
                                     keyboardType="numeric"
                                     placeholder="0"
                                     placeholderTextColor="#A4ACB9"
                                 />
-                                <Icon name="pencil" size={14} color="#32A6D8" />
+                                {!additionalRates && <Icon name="pencil" size={14} color="#32A6D8" />}
                             </View>
                         </View>
 
@@ -154,14 +163,15 @@ export default function AdditionalRatesSection({
                                         <CoinIcon width={16} height={16} style={styles.coinForeground} />
                                     </View>
                                     <TextInput
-                                        style={styles.rateInput}
+                                        style={[styles.rateInput, additionalRates && styles.rateInputLocked]}
                                         value={longStayRate}
                                         onChangeText={onLongStayRateChange}
-                                        keyboardType="numeric"
+                                        editable={!additionalRates}
+                                    keyboardType="numeric"
                                         placeholder="0"
                                         placeholderTextColor="#A4ACB9"
                                     />
-                                    <Icon name="pencil" size={14} color="#32A6D8" />
+                                    {!additionalRates && <Icon name="pencil" size={14} color="#32A6D8" />}
                                 </View>
                             </View>
                         )}
@@ -294,6 +304,17 @@ const styles = StyleSheet.create({
         maxWidth: 60,
         padding: 0,
         textAlign: 'left',
+    },
+    rateInputLocked: {
+        color: '#A4ACB9',
+    },
+    lockedHint: {
+        color: '#A0AEC0',
+        fontSize: 11,
+        fontFamily: 'Avenir LT Std',
+        fontStyle: 'italic',
+        lineHeight: 15,
+        marginBottom: 4,
     },
     freeText: {
         color: '#32A6D8',
