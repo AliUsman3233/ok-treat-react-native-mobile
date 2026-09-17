@@ -20,11 +20,14 @@ const openStore = async (storeUrl) => {
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
 
-// Module-level guard so the intro video plays AT MOST ONCE per app launch,
-// even if the splash briefly remounts during the ready/auth state transitions
-// (that remount was causing the video to play twice). Reset only on a full
-// app restart (fresh JS runtime).
-let splashVideoPlayed = false;
+// Module-level guard so the intro video behaves correctly across any remount
+// within a single app launch. We mark it COMPLETED only when the video actually
+// finishes (playToEnd / fallback) — NOT when it starts. So a remount MID-play
+// replays it in full (no early cut), while a remount AFTER it finished skips it
+// (no double-play). Reset only on a full app restart (fresh JS runtime).
+// The remount that made this necessary (StripeProvider re-keying) is now fixed
+// in App.js; this stays as belt-and-suspenders.
+let splashVideoCompleted = false;
 
 // Real installed app version + build, read from the native package at runtime
 // (Android versionName / versionCode from build.gradle). Falls back to a
@@ -43,9 +46,9 @@ export default function SplashScreen({ onServerReady }) {
   const [serverStatus, setServerStatus] = useState('checking');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  // If the video already played this launch, start "finished" so a remount
-  // advances immediately instead of replaying it.
-  const [videoFinished, setVideoFinished] = useState(splashVideoPlayed);
+  // If the video already completed this launch, start "finished" so a remount
+  // skips it; otherwise (including a mid-play remount) it plays from the start.
+  const [videoFinished, setVideoFinished] = useState(splashVideoCompleted);
   // Update gate: null = not yet checked; else { action, message, storeUrl }.
   const [updateInfo, setUpdateInfo] = useState(null);
   const [softDismissed, setSoftDismissed] = useState(false);
@@ -55,18 +58,22 @@ export default function SplashScreen({ onServerReady }) {
   const videoPlayer = useVideoPlayer(splashVideo, (player) => {
     player.loop = false;
     player.muted = true;
-    // Only play the first time this launch — a remount must not replay it.
-    if (!splashVideoPlayed) {
-      splashVideoPlayed = true;
+    // Play unless the video already finished once this launch (COMPLETED is set
+    // on playToEnd / fallback below), so a mid-play remount still replays fully.
+    if (!splashVideoCompleted) {
       player.play();
     }
   });
 
   useEffect(() => {
     const sub = videoPlayer.addListener('playToEnd', () => {
+      splashVideoCompleted = true;
       setVideoFinished(true);
     });
-    const fallback = setTimeout(() => setVideoFinished(true), VIDEO_FALLBACK_MS);
+    const fallback = setTimeout(() => {
+      splashVideoCompleted = true;
+      setVideoFinished(true);
+    }, VIDEO_FALLBACK_MS);
     return () => {
       sub.remove();
       clearTimeout(fallback);
