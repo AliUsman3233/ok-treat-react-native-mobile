@@ -1,22 +1,58 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import * as Application from 'expo-application';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import { Button } from '../../components';
 import { useAppAlert } from '../../context/AlertContext';
+import { useRemoteConfig } from '../../hooks/useRemoteConfig';
 
 export default function SupportScreen({ navigation }) {
   const alert = useAppAlert();
+  // Support contacts come from the admin-editable remote config. A blank value
+  // means that channel isn't set up yet → we show an "under maintenance" note
+  // instead of opening a dead link.
+  const { supportWhatsapp, supportEmail, supportPhone } = useRemoteConfig();
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const comingSoon = (label) => () =>
-    alert(label, 'Coming after release', 'pending');
+  // App version appended to support messages so the team has debugging context.
+  const appVer = Application.nativeApplicationVersion || '';
+  const appBuild = Application.nativeBuildVersion || '';
+  const versionNote = appVer ? `\n\n(App v${appVer}${appBuild ? ` (${appBuild})` : ''})` : '';
+  const prefill = `Hi OkTreat Support, I need help with…${versionNote}`;
 
-  const handleVisitHelpCenter = comingSoon('Help Center');
-  const handleChatWithSupport = comingSoon('Live Chat');
-  const handleCallSupport = comingSoon('Phone Support');
+  const underMaintenance = (label) =>
+    alert(label, 'This option is under maintenance. Please try another way to reach us or check back soon.', 'pending');
+
+  const openOrWarn = async (url, label) => {
+    try {
+      await Linking.openURL(url);
+    } catch (e) {
+      underMaintenance(label);
+    }
+  };
+
+  const handleChatWithSupport = () => {
+    const digits = String(supportWhatsapp || '').replace(/[^0-9]/g, '');
+    if (!digits) return underMaintenance('Live Chat');
+    openOrWarn(`https://wa.me/${digits}?text=${encodeURIComponent(prefill)}`, 'Live Chat');
+  };
+
+  const handleEmailSupport = () => {
+    const email = String(supportEmail || '').trim();
+    if (!email) return underMaintenance('Email Support');
+    const subject = encodeURIComponent('OkTreat Support request');
+    const body = encodeURIComponent(prefill);
+    openOrWarn(`mailto:${email}?subject=${subject}&body=${body}`, 'Email Support');
+  };
+
+  const handleCallSupport = () => {
+    const phone = String(supportPhone || '').replace(/[^0-9+]/g, '');
+    if (!phone) return underMaintenance('Phone Support');
+    openOrWarn(`tel:${phone}`, 'Phone Support');
+  };
 
   return (
     <ScreenWrapper noBottomTabs>
@@ -39,8 +75,8 @@ export default function SupportScreen({ navigation }) {
             </Text>
             <View style={styles.buttonRow}>
               <Button
-                title="Visit the Help Center"
-                onPress={handleVisitHelpCenter}
+                title="Email Support"
+                onPress={handleEmailSupport}
                 type="primary"
                 size="small"
                 style={styles.halfButton}

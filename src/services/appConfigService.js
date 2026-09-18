@@ -17,7 +17,8 @@ export const DEFAULT_REMOTE_CONFIG = {
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.oktreat.app',
   appStoreUrl: 'https://apps.apple.com/us/app/oktreat-pet-sitting-boarding/id6479255523',
   supportEmail: '',
-  supportPhone: '',
+  supportPhone: '+1 (778) 772-3666',
+  supportWhatsapp: '+1 (778) 772-3666',
   maintenance: { ...DEFAULT_MAINTENANCE },
 };
 
