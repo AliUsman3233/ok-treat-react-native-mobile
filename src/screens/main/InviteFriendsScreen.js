@@ -7,12 +7,16 @@ import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { BackArrowIcon } from '../../assets';
 import api from '../../config/api';
+import { useRemoteConfig } from '../../hooks/useRemoteConfig';
 
 const REFERRER_REWARD = 100;
 const REFERRED_REWARD = 50;
 
 export default function InviteFriendsScreen({ navigation }) {
   const { user } = useSelector((state) => state.auth);
+  // Store links come from the admin-editable remote config so they can change
+  // without an app update. Empty links are simply omitted from the message.
+  const { playStoreUrl, appStoreUrl } = useRemoteConfig();
   const [stats, setStats] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -38,11 +42,19 @@ export default function InviteFriendsScreen({ navigation }) {
 
   const handleShare = async () => {
     if (!code) return;
+    // Append whichever store links the admin has configured. Both are omitted
+    // if empty so the message never carries a broken "download" line.
+    const links = [
+      (appStoreUrl || '').trim() && `iOS: ${appStoreUrl.trim()}`,
+      (playStoreUrl || '').trim() && `Android: ${playStoreUrl.trim()}`,
+    ].filter(Boolean);
+    const downloadBlock = links.length ? `\n\nDownload OkTreat:\n${links.join('\n')}` : '';
     try {
       await Share.share({
         message:
           `Join me on OkTreat — the app for trusted pet sitters! 🐾\n\n` +
-          `Use my code ${code} when you sign up and you'll get ${REFERRED_REWARD} bonus coins.`,
+          `Use my code ${code} when you sign up and you'll get ${REFERRED_REWARD} bonus coins.` +
+          downloadBlock,
       });
     } catch (e) { /* dismissed */ }
   };

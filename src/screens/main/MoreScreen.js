@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Linking, Alert } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import ProfileVerifiedModal from '../../components/ProfileVerifiedModal';
 import api from '../../config/api';
 import { markSitterApprovalSeen } from '../../services/sitterService';
+import { useRemoteConfig } from '../../hooks/useRemoteConfig';
 import {
   UserCircleIcon,
   PawIcon,
@@ -19,6 +20,8 @@ import {
 
 export default function MoreScreen({ navigation }) {
   const { user } = useSelector(state => state.auth);
+  // Admin-editable remote config (store links, Amazon "buy more tags" URL).
+  const { amazonTagsUrl } = useRemoteConfig();
   const [isSitterMode, setIsSitterMode] = useState(false);
   const [sitterStatus, setSitterStatus] = useState(null);
   const [hasSitterProfile, setHasSitterProfile] = useState(false);
@@ -103,6 +106,27 @@ export default function MoreScreen({ navigation }) {
     navigation.navigate('ProfileSetup');
   };
 
+  // "Buy More Tags" — opens the admin-configured Amazon URL. When the admin
+  // hasn't set a URL yet (amazonTagsUrl is empty), the feature isn't live, so
+  // we tell the user it's on the way instead of opening a dead link.
+  const handleBuyTags = async () => {
+    const url = (amazonTagsUrl || '').trim();
+    if (!url) {
+      Alert.alert('Coming soon', 'Buying more tags in the app is under development. Check back soon!');
+      return;
+    }
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Coming soon', 'Buying more tags in the app is under development. Check back soon!');
+      }
+    } catch (e) {
+      Alert.alert('Coming soon', 'Buying more tags in the app is under development. Check back soon!');
+    }
+  };
+
   const menuItems = [
     { 
       title: 'Profile', 
@@ -131,6 +155,11 @@ export default function MoreScreen({ navigation }) {
       title: 'Your Latest Scans',
       screen: 'Scans',
       component: ScannerIcon
+    },
+    {
+      title: 'Buy More Tags',
+      component: StoreIcon,
+      onPress: handleBuyTags,
     },
     {
       title: 'Shop Coins',
@@ -266,7 +295,7 @@ export default function MoreScreen({ navigation }) {
                 <TouchableOpacity
                   key={index}
                   style={styles.menuItem}
-                  onPress={() => handleMenuPress(item.screen)}
+                  onPress={() => (item.onPress ? item.onPress() : handleMenuPress(item.screen))}
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuItemLeft}>
