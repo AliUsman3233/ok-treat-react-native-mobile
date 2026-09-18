@@ -6,6 +6,14 @@ import {
   setOnboardingCompleted,
   isOnboardingCompleted
 } from '../../utils/storage';
+import { fetchAppConfig, DEFAULT_REMOTE_CONFIG } from '../../services/appConfigService';
+
+// Fetch the admin-editable remote config on launch. Fail-open — fetchAppConfig
+// never rejects (returns cache/defaults on error), so this never blocks startup.
+export const loadRemoteConfig = createAsyncThunk(
+  'app/loadRemoteConfig',
+  async () => fetchAppConfig()
+);
 
 /**
  * App Settings Slice
@@ -57,6 +65,8 @@ const initialState = {
   onboardingCompleted: false,
   loading: false,
   error: null,
+  // Admin-editable remote config (store links, Amazon link, support contact).
+  remoteConfig: DEFAULT_REMOTE_CONFIG,
 };
 
 const appSlice = createSlice({
@@ -83,6 +93,11 @@ const appSlice = createSlice({
       .addCase(loadAppSettings.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
+      })
+
+      // Remote config (fail-open: payload is always a valid config object)
+      .addCase(loadRemoteConfig.fulfilled, (state, action) => {
+        if (action.payload) state.remoteConfig = action.payload;
       })
       
       // Set language
