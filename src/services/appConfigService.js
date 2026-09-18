@@ -6,19 +6,37 @@ import api from '../config/api';
 // still has sensible values before the first fetch / when offline.
 const CACHE_KEY = 'app_remote_config';
 
+export const DEFAULT_MAINTENANCE = {
+  enabled: false,
+  title: "We'll be right back",
+  message: 'OkTreat is undergoing scheduled maintenance. Please check back shortly.',
+};
+
 export const DEFAULT_REMOTE_CONFIG = {
   amazonTagsUrl: '',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.oktreat.app',
   appStoreUrl: 'https://apps.apple.com/us/app/oktreat-pet-sitting-boarding/id6479255523',
   supportEmail: '',
   supportPhone: '',
+  maintenance: { ...DEFAULT_MAINTENANCE },
 };
+
+// Merge a raw config object over defaults, deep-merging `maintenance` so a
+// partial/missing nested object never leaves undefined fields.
+function mergeConfig(raw) {
+  const cfg = raw && typeof raw === 'object' ? raw : {};
+  return {
+    ...DEFAULT_REMOTE_CONFIG,
+    ...cfg,
+    maintenance: { ...DEFAULT_MAINTENANCE, ...(cfg.maintenance || {}) },
+  };
+}
 
 // Last cached config (or defaults) — instantly available for first paint/offline.
 export async function getCachedAppConfig() {
   try {
     const s = await AsyncStorage.getItem(CACHE_KEY);
-    if (s) return { ...DEFAULT_REMOTE_CONFIG, ...JSON.parse(s) };
+    if (s) return mergeConfig(JSON.parse(s));
   } catch (e) {
     // ignore — fall through to defaults
   }
@@ -32,7 +50,7 @@ export async function fetchAppConfig() {
     const res = await api.get('/app/config', { timeout: 6000 });
     const cfg = res.data?.data;
     if (cfg && typeof cfg === 'object') {
-      const merged = { ...DEFAULT_REMOTE_CONFIG, ...cfg };
+      const merged = mergeConfig(cfg);
       try {
         await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(merged));
       } catch (e) {
