@@ -65,7 +65,6 @@ export default function OTPMethodScreen({ route, navigation }) {
           }),
         });
         data = await response.json();
-        console.log('[DBG REGISTER] status=' + response.status + ' body=' + JSON.stringify(data));
         if (!response.ok) {
           const message = data.message || 'Registration failed';
           // The backend rejects a signup when the email OR the phone is already
@@ -98,7 +97,6 @@ export default function OTPMethodScreen({ route, navigation }) {
         _devOtp: data.data?._devOtp || data._devOtp || null,
       });
     } catch (error) {
-      console.log('[DBG REGISTER ERROR] name=' + error.name + ' msg=' + error.message + ' stack=' + (error.stack||'').split('\n').slice(0,3).join(' | '));
       alert('Error', error.message || 'Failed to send verification code.', 'error');
     } finally {
       setLoading(false);

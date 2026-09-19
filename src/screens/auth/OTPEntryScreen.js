@@ -84,7 +84,6 @@ export default function OTPEntryScreen({ route, navigation }) {
       });
 
       const data = await response.json();
-      console.log('[DBG VERIFY_OTP] status=' + response.status + ' body=' + JSON.stringify(data));
       if (!response.ok) throw new Error(data.message || 'Verification failed');
 
       await AsyncStorage.setItem('authToken', data.data.token);
@@ -93,7 +92,6 @@ export default function OTPEntryScreen({ route, navigation }) {
       dispatch(setCredentials({ user: data.data.user, token: data.data.token }));
       registerForPushNotifications().catch(() => {});
     } catch (error) {
-      console.log('[DBG VERIFY_OTP ERROR] name=' + error.name + ' msg=' + error.message + ' stack=' + (error.stack||'').split('\n').slice(0,3).join(' | '));
       alert('Verification Failed', error.message || 'Invalid code. Please try again.', 'error');
     } finally {
       setLoading(false);

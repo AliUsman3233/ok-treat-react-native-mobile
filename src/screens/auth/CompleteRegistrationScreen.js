@@ -53,10 +53,6 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const keyboardHeight = useKeyboardHeight();
 
   const handleContinue = () => {
-    console.log('[DBG COMPLETE-FORM] fullName="' + fullName + '" countryCode="' + countryCode +
-      '" phoneRaw="' + phoneNumber + '" phoneDigits=' + (phoneNumber||'').replace(/[^0-9]/g,'').length +
-      ' isValidPhone=' + isValidPhone(countryCode, phoneNumber) +
-      ' e164=' + toE164(countryCode, phoneNumber));
     // Validate required fields
     if (!fullName || !phoneNumber) {
       alert('Error', 'Please fill in all required fields', 'error');

@@ -57,9 +57,6 @@ export default function RegisterScreen({ navigation }) {
     confirmPassword === password;
 
   const handleRegister = () => {
-    console.log('[DBG REG-FORM] emailLen=' + email.length + ' trimmedLen=' + email.trim().length +
-      ' emailValid=' + emailRegex.test(email.trim()) + ' pwLen=' + password.length +
-      ' confirmLen=' + confirmPassword.length + ' match=' + (password === confirmPassword));
     if (!email || !password || !confirmPassword) {
       alert('Error', 'Please fill in all fields', 'error');
       return;
