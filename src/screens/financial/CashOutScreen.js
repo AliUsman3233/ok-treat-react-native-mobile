@@ -11,6 +11,7 @@ import { BackArrowIcon } from '../../assets';
 import { useAppAlert } from '../../context/AlertContext';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 import {
   getCashoutConfig, getMyWithdrawals, createWithdrawal,
   startConnectOnboarding, proceedWithdrawal, computeBreakdown,
@@ -153,7 +154,7 @@ export default function CashOutScreen({ navigation }) {
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
         <Header />
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
           {/* Balance */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Available to withdraw</Text>

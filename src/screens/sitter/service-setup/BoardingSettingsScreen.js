@@ -11,6 +11,7 @@ import UnsavedChangesModal from '../../../components/UnsavedChangesModal';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, CoinBackgroundIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
 import { getServiceUnit, formatEarnRange } from '../../../utils/serviceUnits';
+import { iosKeyboardDismissMode } from '../../../utils/keyboard';
 
 const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('BOARDING');
 
@@ -254,6 +255,7 @@ export default function BoardingSettingsScreen({ navigation }) {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={iosKeyboardDismissMode}
                 >
                     {/* Boarding Settings Title */}
                     <View style={styles.titleContainer}>

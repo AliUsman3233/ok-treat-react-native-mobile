@@ -13,6 +13,7 @@ import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 import { API_ENDPOINTS } from '../../config/api';
 import { setCredentials } from '../../store/slices/authSlice';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -252,7 +253,7 @@ export default function EditProfileDetailsScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
           {/* Profile Section */}
           <ImagePickerButton onImageSelected={handleImageSelected}>
             <View style={styles.profileSection}>

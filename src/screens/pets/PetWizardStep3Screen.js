@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpa
 import Icon from '@expo/vector-icons/Ionicons';
 import { Dropdown } from '../../components';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -70,6 +71,7 @@ export default function PetWizardStep3Screen({ formData, setFormData }) {
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={iosKeyboardDismissMode}
     >
       {/* Form Card */}
       <View style={styles.formCard}>

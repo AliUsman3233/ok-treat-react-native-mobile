@@ -9,6 +9,7 @@ import UnsavedChangesModal from '../../../../components/UnsavedChangesModal';
 import { BackArrowIcon, UserCircleIcon } from '../../../../assets';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 import { defaultCountryInfo, parsePhone, toE164, isValidPhone } from '../../../../utils/phone';
+import { iosKeyboardDismissMode } from '../../../../utils/keyboard';
 
 // Sitter Build-Trust "Phone Numbers" step. Owns Primary + Emergency
 // contact phones plus the emergency contact's name + notes. Uses the
@@ -127,6 +128,7 @@ export default function PhoneNumbersScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
         >
           {/* Phone Number Section */}
           <View style={styles.sectionHeader}>

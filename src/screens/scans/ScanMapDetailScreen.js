@@ -69,6 +69,19 @@ export default function ScanMapDetailScreen({ route, navigation }) {
   const petBreed = scan.pet?.breed || scan.pet?.type || 'Unknown Breed';
   const ownerName = scan.pet?.user?.fullName || 'Unknown Owner';
   const petImage = scan.pet?.photoUrl;
+
+  // Age / weight, formatted the same way as PetDetailScreen and
+  // MyPetProfileScreen so the wording is consistent wherever a pet is shown.
+  const getAgeDisplay = () => {
+    const years = scan.pet?.ageYears || 0;
+    const months = scan.pet?.ageMonths || 0;
+    if (years === 0 && months === 0) return 'Age not specified';
+    if (years === 0) return `${months} month${months !== 1 ? 's' : ''} old`;
+    if (months === 0) return `${years} year${years !== 1 ? 's' : ''} old`;
+    return `${years} year${years !== 1 ? 's' : ''} & ${months} month${months !== 1 ? 's' : ''} old`;
+  };
+  const getWeightDisplay = () =>
+    scan.pet?.weight ? `${scan.pet.weight} lbs` : 'Weight not specified';
   const scanDate = scan.scannedAt ? formatDate(scan.scannedAt) : scan.date || '';
   const scanTime = scan.scannedAt ? formatTime(scan.scannedAt) : scan.time || '';
   const scanTitle = scan.pet?.name ? `${scan.pet.name} Scanned` : scan.title || 'Tag Scanned';
@@ -126,6 +139,13 @@ export default function ScanMapDetailScreen({ route, navigation }) {
                 <PawIcon width={14} height={14} fill="#32A6D8" />
                 <Text style={styles.breedText}>{petBreed}</Text>
               </View>
+              <Text style={styles.detailsText}>
+                <Text style={styles.detailLabel}>Weight:</Text>
+                <Text style={styles.detailValue}> {getWeightDisplay()}</Text>
+                <Text style={styles.detailValue}>  ·  </Text>
+                <Text style={styles.detailLabel}>Age:</Text>
+                <Text style={styles.detailValue}> {getAgeDisplay()}</Text>
+              </Text>
               <Text style={styles.ownerText}>Owner: {ownerName}</Text>
             </View>
             <View style={styles.petImageContainer}>
@@ -238,6 +258,23 @@ const styles = StyleSheet.create({
   },
   breedText: {
     color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    lineHeight: 18.6,
+  },
+  detailsText: {
+    marginTop: 2,
+  },
+  detailLabel: {
+    color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    fontWeight: '600',
+    lineHeight: 18.6,
+  },
+  detailValue: {
+    color: '#080E1E',
     fontSize: 12,
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',

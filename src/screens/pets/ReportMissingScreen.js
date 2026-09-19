@@ -19,6 +19,7 @@ import { reportPetMissing } from '../../services/petService';
 import { useSelector } from 'react-redux';
 import PhoneInput from '../../components/PhoneInput';
 import { defaultCountryInfo, parsePhone, toE164, isValidPhone } from '../../utils/phone';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 export default function ReportMissingScreen({ navigation, route }) {
   const alert = useAppAlert();
@@ -142,6 +143,8 @@ export default function ReportMissingScreen({ navigation, route }) {
         </View>
 
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

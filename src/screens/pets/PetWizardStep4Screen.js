@@ -9,6 +9,7 @@ import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -91,6 +92,7 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={iosKeyboardDismissMode}
     >
       {/* Header Text */}
       <Text style={styles.headerText}>

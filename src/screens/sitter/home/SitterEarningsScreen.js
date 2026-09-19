@@ -24,6 +24,7 @@ import { Button } from '../../../components';
 import api from '../../../config/api';
 import { useWallet } from '../../../context/WalletContext';
 import CashOutComingSoonDialog from '../../../components/CashOutComingSoonDialog';
+import { iosKeyboardDismissMode } from '../../../utils/keyboard';
 
 // Days remaining until a timestamp; clamped at 0.
 function daysUntil(iso) {
@@ -117,7 +118,7 @@ export default function SitterEarningsScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
           {/* Earned-coin summary */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
