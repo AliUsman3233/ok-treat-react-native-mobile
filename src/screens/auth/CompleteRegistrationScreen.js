@@ -25,6 +25,7 @@ import {
 import { API_ENDPOINTS } from '../../config/api';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { defaultCountryInfo, toE164, isValidPhone } from '../../utils/phone';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -99,6 +100,7 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
       >
         {/* Title - Centered */}
         <Text style={styles.title}>Complete Registration</Text>

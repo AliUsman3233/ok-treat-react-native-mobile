@@ -8,6 +8,7 @@ import UnsavedChangesModal from '../../../../components/UnsavedChangesModal';
 import { BackArrowIcon, PawFilledIcon } from '../../../../assets';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
 import api from '../../../../config/api';
+import { iosKeyboardDismissMode } from '../../../../utils/keyboard';
 
 const SKILL_OPTIONS = [
   'Skilled in oral medication delivery',
@@ -286,6 +287,7 @@ export default function DetailsScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
         >
           {/* Tips Card */}
           <View style={styles.card}>

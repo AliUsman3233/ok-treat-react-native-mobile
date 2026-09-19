@@ -15,6 +15,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { BackArrowIcon, KeyIcon } from '../../assets';
 import api from '../../config/api';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -147,6 +148,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
         >
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
@@ -226,6 +228,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
       >
         {/* Icon Container */}
         <View style={styles.iconContainer}>

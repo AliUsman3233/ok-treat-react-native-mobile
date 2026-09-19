@@ -8,6 +8,7 @@ import DateRangePicker from '../../components/DateRangePicker';
 import { CalendarIcon, AngleDownIcon } from '../../assets';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import api from '../../config/api';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 export default function PetWizardStep2Screen({ formData, setFormData }) {
   const alert = useAppAlert();
@@ -71,6 +72,7 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
         showsVerticalScrollIndicator={true}
         bounces={true}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
       >
         {/* Form Card */}
         <View style={styles.formCard}>

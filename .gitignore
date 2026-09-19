@@ -51,3 +51,6 @@ Thumbs.db
 # Dev/build logs — never commit
 metro.log
 android/release-build.log
+
+# Xcode build logs exported from Organizer
+Build OkTreat_*.txt

@@ -7,6 +7,7 @@ import { Button } from '../../../../components';
 import UnsavedChangesModal from '../../../../components/UnsavedChangesModal';
 import { BackArrowIcon } from '../../../../assets';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
+import { iosKeyboardDismissMode } from '../../../../utils/keyboard';
 
 // Product only supports Dog and Cat (matches the Add Pet flow).
 const PET_TYPE_OPTIONS = ['Dogs', 'Cats'];
@@ -182,6 +183,7 @@ export default function PetCareInfoScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
         >
           {/* Pet Type Preferences */}
           <View style={styles.card}>

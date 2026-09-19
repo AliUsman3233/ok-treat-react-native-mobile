@@ -11,6 +11,7 @@ import { useWallet } from '../../context/WalletContext';
 import { getServiceUnit } from '../../utils/serviceUnits';
 import { finishFlow } from '../../navigation/navHelpers';
 import moment from 'moment';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -258,7 +259,7 @@ export default function ContactSitterScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
           {/* Service Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Service</Text>

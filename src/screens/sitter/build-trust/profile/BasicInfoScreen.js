@@ -10,6 +10,7 @@ import { BackArrowIcon, InfoCircleIconBlue, LocationPinIcon, CheckCircleIcon, Ca
 import { uploadToCloudinary } from '../../../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../../../config/cloudinary';
 import { getBuildTrustSection, upsertBuildTrustSection } from '../../../../services/buildTrustService';
+import { iosKeyboardDismissMode } from '../../../../utils/keyboard';
 
 export default function BasicInfoScreen({ navigation, route }) {
   const alert = useAppAlert();
@@ -304,6 +305,7 @@ export default function BasicInfoScreen({ navigation, route }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
         >
           {/* Page Title */}
           <View style={styles.titleContainer}>

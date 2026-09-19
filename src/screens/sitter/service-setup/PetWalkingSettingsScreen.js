@@ -12,6 +12,7 @@ import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
 import { getServiceUnit, formatEarnRange } from '../../../utils/serviceUnits';
+import { iosKeyboardDismissMode } from '../../../utils/keyboard';
 
 const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('PET_WALKING');
 
@@ -251,6 +252,7 @@ export default function PetWalkingSettingsScreen({ navigation }) {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={iosKeyboardDismissMode}
                 >
                     {/* Manage Pet Walking Title */}
                     <View style={styles.titleContainer}>

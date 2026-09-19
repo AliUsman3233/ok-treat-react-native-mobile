@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux';
 import { getSocket } from '../../config/socket';
 import { useAppAlert } from '../../context/AlertContext';
 import { blockUser, reportUser } from '../../services/moderationService';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const REPORT_REASONS = ['Spam', 'Harassment or bullying', 'Inappropriate content', 'Scam or fraud', 'Other'];
 
@@ -305,6 +306,8 @@ export default function ChatConversationScreen({ route, navigation }) {
             </View>
           ) : (
             <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={iosKeyboardDismissMode}
               ref={scrollViewRef}
               style={styles.messagesContainer}
               contentContainerStyle={styles.messagesContent}

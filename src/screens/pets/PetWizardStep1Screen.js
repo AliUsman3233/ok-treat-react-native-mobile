@@ -8,6 +8,7 @@ import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 import Icon from '@expo/vector-icons/Ionicons';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={iosKeyboardDismissMode}
     >
       {/* Photo Upload */}
       <ImagePickerButton onImageSelected={handleImageSelected}>

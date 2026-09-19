@@ -65,7 +65,23 @@ export default function OTPMethodScreen({ route, navigation }) {
           }),
         });
         data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Registration failed');
+        if (!response.ok) {
+          const message = data.message || 'Registration failed';
+          // The backend rejects a signup when the email OR the phone is already
+          // taken by a verified account. That isn't a failure the user can fix by
+          // retrying — they already have an account — so send them to Login
+          // instead of showing a dead-end error.
+          if (/already exists/i.test(message)) {
+            alert(
+              'Account already exists',
+              'An account with this email or phone number already exists. Please log in instead.',
+              'error'
+            );
+            navigation.navigate('Login', { email });
+            return;
+          }
+          throw new Error(message);
+        }
         // Verify-first: no user exists yet — the account is created only after
         // the OTP is confirmed. Track the pending registration so a second tap
         // resends instead of re-registering.

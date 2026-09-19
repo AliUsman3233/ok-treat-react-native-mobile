@@ -3,7 +3,7 @@
     "name": "OkTreat",
     "slug": "oktreat",
     "scheme": "oktreat",
-    "version": "1.1.1",
+    "version": "1.1.4",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -15,16 +15,19 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.oktreat.app",
+      "bundleIdentifier": "com.mubbits.oktreat",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan QR codes and take pet photos.",
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload pet photos.",
-        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby pet sitters."
-      }
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby pet sitters.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFC2EB"
+        "backgroundColor": "#FFC2EB",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "package": "com.oktreat.app",
       "googleServicesFile": "./android/app/google-services.json",
@@ -63,7 +66,10 @@
         }
       ],
       "@react-native-google-signin/google-signin",
-      "expo-localization"
-    ]
+      "expo-localization",
+      "./plugins/withModularHeaders",
+      "./plugins/withReleaseSigning"
+    ],
+    "icon": "./assets/icon.png"
   }
 }

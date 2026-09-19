@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   GoogleSignin,
   statusCodes,
@@ -10,11 +11,24 @@ import api from '../config/api';
 // audience accepts this ID (auth.controller.js).
 const GOOGLE_WEB_CLIENT_ID = '421263250507-ilfka1ik8v6agv226ot6a8u6mf7sj4hs.apps.googleusercontent.com';
 
+// iOS needs its own OAuth client ID (or a GoogleService-Info.plist), and the
+// ok-trear project has neither yet. configure() dispatches a native promise
+// without catching it, so calling it on iOS with no client ID rejects and
+// redboxes the app at startup. Skip it there until this is filled in;
+// signInWithGoogle() reports the gap when the user actually taps sign-in.
+const GOOGLE_IOS_CLIENT_ID = null;
+
+const isGoogleSignInConfigured =
+  Platform.OS !== 'ios' || !!GOOGLE_IOS_CLIENT_ID;
+
 // Configure Google Sign-In (call once at app startup)
-GoogleSignin.configure({
-  webClientId: GOOGLE_WEB_CLIENT_ID,
-  offlineAccess: false,
-});
+if (isGoogleSignInConfigured) {
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: false,
+    ...(GOOGLE_IOS_CLIENT_ID ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
+  });
+}
 
 /**
  * Hook-like export for compatibility with existing screens.
@@ -34,6 +48,10 @@ export const useGoogleAuth = () => {
  * Returns the backend response with token + user data.
  */
 export const signInWithGoogle = async () => {
+  if (!isGoogleSignInConfigured) {
+    throw { message: 'Google Sign-In is not set up for iOS yet' };
+  }
+
   try {
     await GoogleSignin.hasPlayServices();
     // Sign out first so the account picker always shows

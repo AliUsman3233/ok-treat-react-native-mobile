@@ -12,6 +12,7 @@ import AdditionalRatesSection from '../../../components/AdditionalRatesSection';
 import { BackArrowIcon, InfoCircleIcon, CoinIcon, AngleDownIcon, ProgressTickIcon, InfoCircleIconBlue } from '../../../assets';
 import { upsertServiceSetup, getServiceSetup } from '../../../services/serviceSetupService';
 import { getServiceUnit, formatEarnRange } from '../../../utils/serviceUnits';
+import { iosKeyboardDismissMode } from '../../../utils/keyboard';
 
 const { unit: RATE_UNIT, pricedBy: PRICED_BY } = getServiceUnit('DROP_IN_VISITS');
 
@@ -252,6 +253,7 @@ export default function DropInVisitSettingsScreen({ navigation }) {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={iosKeyboardDismissMode}
                 >
                     {/* Manage Drop-In Visit Title */}
                     <View style={styles.titleContainer}>

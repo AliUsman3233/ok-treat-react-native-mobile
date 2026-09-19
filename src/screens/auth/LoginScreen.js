@@ -19,12 +19,14 @@ import { GoogleIcon, AppleIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 import { signInWithGoogle } from '../../services/googleAuthService';
 import { registerForPushNotifications } from '../../services/notificationService';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width, height } = Dimensions.get('window');
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const alert = useAppAlert();
-  const [email, setEmail] = useState('');
+  // Prefilled when signup redirects here because the account already exists.
+  const [email, setEmail] = useState(route?.params?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
@@ -128,6 +130,7 @@ export default function LoginScreen({ navigation }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
         showsVerticalScrollIndicator={false}
       >
         {/* Top Section - Form Content */}
