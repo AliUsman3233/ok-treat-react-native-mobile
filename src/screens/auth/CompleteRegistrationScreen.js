@@ -25,6 +25,7 @@ import {
 import { API_ENDPOINTS } from '../../config/api';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { defaultCountryInfo, toE164, isValidPhone } from '../../utils/phone';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,6 +53,10 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
   const keyboardHeight = useKeyboardHeight();
 
   const handleContinue = () => {
+    console.log('[DBG COMPLETE-FORM] fullName="' + fullName + '" countryCode="' + countryCode +
+      '" phoneRaw="' + phoneNumber + '" phoneDigits=' + (phoneNumber||'').replace(/[^0-9]/g,'').length +
+      ' isValidPhone=' + isValidPhone(countryCode, phoneNumber) +
+      ' e164=' + toE164(countryCode, phoneNumber));
     // Validate required fields
     if (!fullName || !phoneNumber) {
       alert('Error', 'Please fill in all required fields', 'error');
@@ -99,6 +104,7 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
       >
         {/* Title - Centered */}
         <Text style={styles.title}>Complete Registration</Text>

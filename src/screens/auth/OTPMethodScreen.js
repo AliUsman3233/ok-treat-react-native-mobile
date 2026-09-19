@@ -65,7 +65,24 @@ export default function OTPMethodScreen({ route, navigation }) {
           }),
         });
         data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Registration failed');
+        console.log('[DBG REGISTER] status=' + response.status + ' body=' + JSON.stringify(data));
+        if (!response.ok) {
+          const message = data.message || 'Registration failed';
+          // The backend rejects a signup when the email OR the phone is already
+          // taken by a verified account. That isn't a failure the user can fix by
+          // retrying — they already have an account — so send them to Login
+          // instead of showing a dead-end error.
+          if (/already exists/i.test(message)) {
+            alert(
+              'Account already exists',
+              'An account with this email or phone number already exists. Please log in instead.',
+              'error'
+            );
+            navigation.navigate('Login', { email });
+            return;
+          }
+          throw new Error(message);
+        }
         setRegisteredUserId(data.data.userId);
       }
 
@@ -81,6 +98,7 @@ export default function OTPMethodScreen({ route, navigation }) {
         _devOtp: data.data?._devOtp || data._devOtp || null,
       });
     } catch (error) {
+      console.log('[DBG REGISTER ERROR] name=' + error.name + ' msg=' + error.message + ' stack=' + (error.stack||'').split('\n').slice(0,3).join(' | '));
       alert('Error', error.message || 'Failed to send verification code.', 'error');
     } finally {
       setLoading(false);

@@ -18,6 +18,7 @@ import Input from '../../components/Input';
 import { BackArrowIcon, GoogleIcon, AppleIcon } from '../../assets';
 import { signInWithGoogle } from '../../services/googleAuthService';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
+import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -56,6 +57,9 @@ export default function RegisterScreen({ navigation }) {
     confirmPassword === password;
 
   const handleRegister = () => {
+    console.log('[DBG REG-FORM] emailLen=' + email.length + ' trimmedLen=' + email.trim().length +
+      ' emailValid=' + emailRegex.test(email.trim()) + ' pwLen=' + password.length +
+      ' confirmLen=' + confirmPassword.length + ' match=' + (password === confirmPassword));
     if (!email || !password || !confirmPassword) {
       alert('Error', 'Please fill in all fields', 'error');
       return;
@@ -77,8 +81,11 @@ export default function RegisterScreen({ navigation }) {
     }
 
     // Navigate to complete registration
+    // Forward the trimmed email — validation above uses email.trim(), and iOS's
+    // QuickType bar often appends a trailing space, so the raw value can differ
+    // from what was actually validated.
     navigation.navigate('CompleteRegistration', {
-      email: email,
+      email: email.trim(),
       password: password
     });
   };
@@ -89,6 +96,7 @@ export default function RegisterScreen({ navigation }) {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={iosKeyboardDismissMode}
         showsVerticalScrollIndicator={false}
       >
         {/* Header with Back Button */}
