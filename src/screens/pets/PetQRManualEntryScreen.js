@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator, Alert } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { BackArrowIcon } from '../../assets';
@@ -70,15 +70,20 @@ export default function PetQRManualEntryScreen({ navigation, route }) {
         if (isLinkMode) {
           // Free to claim — return the code to the wizard
           navigation.navigate({ name: returnScreen, params: { qrCode: code }, merge: true });
-        } else {
-          // Lookup mode — keep the original error so finders aren't misled
-          alert(
-            reason === 'NOT_LINKED' ? 'This tag isn\'t claimed yet' : 'Tag not found',
-            reason === 'NOT_LINKED'
-              ? 'The code is valid but no pet is currently linked to it. If this is your tag, please re-scan it or contact support to claim it.'
-              : "We couldn't find this code in our system. Please check and try again.",
-            'pending'
+        } else if (reason === 'NOT_LINKED') {
+          // Lookup mode, registered-but-free tag — offer to claim it by adding
+          // a pet (AddPet reads route.params.qrCode and links on save).
+          Alert.alert(
+            "This tag isn't linked yet",
+            'This tag is valid but no pet is linked to it. Add a pet for it now?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add a pet', onPress: () => navigation.navigate('AddPet', { qrCode: code }) },
+            ]
           );
+        } else {
+          // NOT_FOUND in lookup mode — unknown code, keep it an error.
+          alert('Tag not found', "We couldn't find this code in our system. Please check and try again.", 'pending');
         }
       } else if (reason === 'INVALID_FORMAT') {
         alert('Invalid QR Code', "This doesn't appear to be a valid OkTreat QR code.", 'pending');

@@ -82,7 +82,10 @@ export default function OTPMethodScreen({ route, navigation }) {
           }
           throw new Error(message);
         }
-        setRegisteredUserId(data.data.userId);
+        // Verify-first: no user exists yet — the account is created only after
+        // the OTP is confirmed. Track the pending registration so a second tap
+        // resends instead of re-registering.
+        setRegisteredUserId(data.data.pendingId);
       }
 
       if (data.message?.includes('pending')) {
@@ -92,7 +95,7 @@ export default function OTPMethodScreen({ route, navigation }) {
       navigation.navigate('OTPEntry', {
         email,
         phoneNumber,
-        userId: registeredUserId || data.data?.userId,
+        userId: registeredUserId || data.data?.pendingId,
         otpMethod: selectedMethod,
         _devOtp: data.data?._devOtp || data._devOtp || null,
       });

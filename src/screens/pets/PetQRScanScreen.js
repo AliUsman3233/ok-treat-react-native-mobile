@@ -124,6 +124,9 @@ export default function PetQRScanScreen({ navigation, route }) {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [errorTitle, setErrorTitle] = useState('No Pet Found');
+  // When a public scan hits a registered-but-unlinked tag (NOT_LINKED), we hold
+  // the code here so the error modal can offer "Add a pet for this tag".
+  const [claimQrCode, setClaimQrCode] = useState(null);
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const processingRef = useRef(false);
   const locationPermRef = useRef(null); // Cache location permission status
@@ -300,7 +303,9 @@ export default function PetQRScanScreen({ navigation, route }) {
           if (reason === 'DEACTIVATED') {
             showError('Tag Deactivated', 'This QR tag has been deactivated and is no longer valid.');
           } else if (reason === 'NOT_LINKED') {
-            showError('Tag Not Linked', 'This QR tag is not linked to any pet yet.');
+            // Registered OkTreat tag that's free — offer to claim it by adding a pet.
+            setClaimQrCode(qrCode);
+            showError('Tag Not Linked', "This tag isn't linked to a pet yet. You can add a pet for it now.");
           } else if (reason === 'INVALID_FORMAT') {
             showError('Invalid QR Code', 'This doesn\'t appear to be a valid OkTreat QR code.');
           } else {
@@ -358,10 +363,26 @@ export default function PetQRScanScreen({ navigation, route }) {
     setShowErrorModal(false);
     setErrorMessage('');
     setErrorTitle('No Pet Found');
+    setClaimQrCode(null);
     setLoading(false);
     setScanned(false);
     setScanning(true);
     processingRef.current = false;
+  };
+
+  // "Add a pet for this tag" — start the Add Pet wizard with the scanned code
+  // pre-filled (AddPetScreen reads route.params.qrCode into formData). On save
+  // the backend links the tag to the new pet.
+  const handleAddPetForTag = () => {
+    const code = claimQrCode;
+    setShowErrorModal(false);
+    setClaimQrCode(null);
+    setErrorMessage('');
+    setErrorTitle('No Pet Found');
+    setLoading(false);
+    setScanned(false);
+    processingRef.current = false;
+    navigation.navigate('AddPet', { qrCode: code });
   };
 
   // Forward link-flow context (returnScreen, currentQrCode) so the manual
@@ -539,9 +560,20 @@ export default function PetQRScanScreen({ navigation, route }) {
                 <Text style={styles.modalTitle}>{errorTitle}</Text>
                 <Text style={styles.modalMessage}>{errorMessage}</Text>
               </View>
-              <TouchableOpacity style={styles.okButton} onPress={handleErrorModalClose}>
-                <Text style={styles.okButtonText}>Try Again</Text>
-              </TouchableOpacity>
+              {claimQrCode ? (
+                <View style={styles.modalButtonGroup}>
+                  <TouchableOpacity style={[styles.okButton, styles.addPetButton]} onPress={handleAddPetForTag}>
+                    <Text style={styles.addPetButtonText}>Add a pet for this tag</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.okButton} onPress={handleErrorModalClose}>
+                    <Text style={styles.okButtonText}>Scan again</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.okButton} onPress={handleErrorModalClose}>
+                  <Text style={styles.okButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </Modal>
@@ -597,4 +629,7 @@ const styles = StyleSheet.create({
   modalMessage: { fontSize: 14, fontFamily: 'Urbanist', fontWeight: '400', color: '#888888', textAlign: 'center', lineHeight: 18.2 },
   okButton: { width: width * 0.7, height: 40, backgroundColor: '#FFC2EB', borderRadius: 52, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 },
   okButtonText: { color: '#32A6D8', fontSize: 16, fontFamily: 'Avenir LT Std', fontWeight: '600', lineHeight: 24.8, textAlign: 'center' },
+  modalButtonGroup: { width: '100%', alignItems: 'center', gap: 12 },
+  addPetButton: { backgroundColor: '#32A6D8' },
+  addPetButtonText: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Avenir LT Std', fontWeight: '600', lineHeight: 24.8, textAlign: 'center' },
 });

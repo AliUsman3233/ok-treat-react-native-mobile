@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as Application from 'expo-application';
+import { useDispatch } from 'react-redux';
 import { API_ENDPOINTS, API_CONFIG } from '../../config/api';
 import { evaluateAppUpdate, tryPlayInAppUpdate } from '../../services/appVersionService';
+import { useRemoteConfig } from '../../hooks/useRemoteConfig';
+import { loadRemoteConfig } from '../../store/slices/appSlice';
 
 // Open the store listing; fall back to the Play web URL if the market:// deep
 // link can't be handled.
@@ -20,11 +23,14 @@ const openStore = async (storeUrl) => {
 
 const splashVideo = require('../../assets/media/splash_video.mp4');
 
-// Module-level guard so the intro video plays AT MOST ONCE per app launch,
-// even if the splash briefly remounts during the ready/auth state transitions
-// (that remount was causing the video to play twice). Reset only on a full
-// app restart (fresh JS runtime).
-let splashVideoPlayed = false;
+// Module-level guard so the intro video behaves correctly across any remount
+// within a single app launch. We mark it COMPLETED only when the video actually
+// finishes (playToEnd / fallback) — NOT when it starts. So a remount MID-play
+// replays it in full (no early cut), while a remount AFTER it finished skips it
+// (no double-play). Reset only on a full app restart (fresh JS runtime).
+// The remount that made this necessary (StripeProvider re-keying) is now fixed
+// in App.js; this stays as belt-and-suspenders.
+let splashVideoCompleted = false;
 
 // Real installed app version + build, read from the native package at runtime
 // (Android versionName / versionCode from build.gradle). Falls back to a
@@ -40,12 +46,18 @@ const VERSION_LABEL = APP_BUILD
 const VIDEO_FALLBACK_MS = 8000;
 
 export default function SplashScreen({ onServerReady }) {
+  const dispatch = useDispatch();
+  // Admin-controlled maintenance gate (from /api/app/config, loaded on launch).
+  const { maintenance, supportEmail } = useRemoteConfig();
+  const maintenanceOn = !!maintenance?.enabled;
+  const [refreshingConfig, setRefreshingConfig] = useState(false);
+
   const [serverStatus, setServerStatus] = useState('checking');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  // If the video already played this launch, start "finished" so a remount
-  // advances immediately instead of replaying it.
-  const [videoFinished, setVideoFinished] = useState(splashVideoPlayed);
+  // If the video already completed this launch, start "finished" so a remount
+  // skips it; otherwise (including a mid-play remount) it plays from the start.
+  const [videoFinished, setVideoFinished] = useState(splashVideoCompleted);
   // Update gate: null = not yet checked; else { action, message, storeUrl }.
   const [updateInfo, setUpdateInfo] = useState(null);
   const [softDismissed, setSoftDismissed] = useState(false);
@@ -55,18 +67,22 @@ export default function SplashScreen({ onServerReady }) {
   const videoPlayer = useVideoPlayer(splashVideo, (player) => {
     player.loop = false;
     player.muted = true;
-    // Only play the first time this launch — a remount must not replay it.
-    if (!splashVideoPlayed) {
-      splashVideoPlayed = true;
+    // Play unless the video already finished once this launch (COMPLETED is set
+    // on playToEnd / fallback below), so a mid-play remount still replays fully.
+    if (!splashVideoCompleted) {
       player.play();
     }
   });
 
   useEffect(() => {
     const sub = videoPlayer.addListener('playToEnd', () => {
+      splashVideoCompleted = true;
       setVideoFinished(true);
     });
-    const fallback = setTimeout(() => setVideoFinished(true), VIDEO_FALLBACK_MS);
+    const fallback = setTimeout(() => {
+      splashVideoCompleted = true;
+      setVideoFinished(true);
+    }, VIDEO_FALLBACK_MS);
     return () => {
       sub.remove();
       clearTimeout(fallback);
@@ -93,6 +109,9 @@ export default function SplashScreen({ onServerReady }) {
 
   useEffect(() => {
     if (advancedRef.current) return;
+    // Maintenance takes precedence over everything — a hard, admin-controlled
+    // block. Never advance into the app while it's on.
+    if (maintenanceOn) return;
     if (serverStatus !== 'online' || !videoFinished) return;
     // Wait until the update gate has resolved.
     if (!updateInfo) return;
@@ -102,7 +121,21 @@ export default function SplashScreen({ onServerReady }) {
     if (updateInfo.action === 'soft' && !softDismissed) return;
     advancedRef.current = true;
     onServerReady && onServerReady();
-  }, [serverStatus, videoFinished, updateInfo, softDismissed, onServerReady]);
+  }, [maintenanceOn, serverStatus, videoFinished, updateInfo, softDismissed, onServerReady]);
+
+  // Re-fetch the remote config so turning maintenance OFF admin-side lets the
+  // user in without a full app restart (Retry button on the maintenance card).
+  const handleMaintenanceRetry = async () => {
+    if (refreshingConfig) return;
+    setRefreshingConfig(true);
+    try {
+      await dispatch(loadRemoteConfig()).unwrap();
+    } catch (_) {
+      // fail-open: keep showing the card; user can retry again
+    } finally {
+      setRefreshingConfig(false);
+    }
+  };
 
   const checkServerStatus = async () => {
     try {
@@ -164,7 +197,7 @@ export default function SplashScreen({ onServerReady }) {
       </View>
 
       <Modal
-        visible={showErrorModal}
+        visible={showErrorModal && !maintenanceOn}
         transparent
         animationType="fade"
         onRequestClose={() => setShowErrorModal(false)}
@@ -203,10 +236,56 @@ export default function SplashScreen({ onServerReady }) {
         </View>
       </Modal>
 
+      {/* Maintenance gate — hard, admin-controlled block (mobile only). Takes
+          precedence over the update/offline modals; non-dismissable. */}
+      <Modal
+        visible={!!(videoFinished && maintenanceOn)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.errorIconContainer}>
+              <Text style={styles.errorIcon}>🛠️</Text>
+            </View>
+
+            <Text style={styles.modalTitle}>
+              {maintenance?.title || "We'll be right back"}
+            </Text>
+            <Text style={styles.modalMessage}>
+              {maintenance?.message ||
+                'OkTreat is undergoing scheduled maintenance. Please check back shortly.'}
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.retryButton]}
+                onPress={handleMaintenanceRetry}
+                disabled={refreshingConfig}
+              >
+                <Text style={styles.retryButtonText}>
+                  {refreshingConfig ? 'Checking…' : 'Retry'}
+                </Text>
+              </TouchableOpacity>
+
+              {!!supportEmail && (
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.skipButton]}
+                  onPress={() => Linking.openURL(`mailto:${supportEmail}`)}
+                >
+                  <Text style={styles.skipButtonText}>Contact support</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Update gate: 'force' (required, non-dismissable) or 'soft' (optional) */}
       <Modal
         visible={
-          !!(videoFinished && updateInfo &&
+          !!(!maintenanceOn && videoFinished && updateInfo &&
             (updateInfo.action === 'force' ||
               (updateInfo.action === 'soft' && !softDismissed)))
         }

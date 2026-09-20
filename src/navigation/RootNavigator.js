@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useDispatch, useSelector } from 'react-redux';
 import { loadUser } from '../store/slices/authSlice';
-import { loadAppSettings } from '../store/slices/appSlice';
+import { loadAppSettings, loadRemoteConfig } from '../store/slices/appSlice';
 import { connectSocket, disconnectSocket } from '../config/socket';
 import { addNotification } from '../store/slices/notificationSlice';
 import { getSocket } from '../config/socket';
@@ -32,6 +32,10 @@ export default function RootNavigator() {
       dispatch(loadAppSettings()).unwrap().catch((err) => {
         console.warn('Failed to load app settings:', err);
       }),
+      // Remote config (store links, Amazon link, support contact). Fail-open —
+      // fetchAppConfig resolves to cache/defaults on error, so this never
+      // blocks the splash from advancing.
+      dispatch(loadRemoteConfig()).unwrap().catch(() => {}),
     ]).finally(() => {
       setIsReady(true);
     });

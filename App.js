@@ -189,14 +189,21 @@ export default function App() {
 }
 
 // StripeProvider with publishable key fetched at runtime from /api/coins/config.
-// Re-mounts (key={publishableKey}) when the key changes so a server-side mode
-// flip propagates without a full app restart.
+//
+// IMPORTANT: no `key` prop here. StripeProvider re-initialises whenever its
+// `publishableKey` prop changes (it has a useEffect keyed on publishableKey),
+// so the initial "pending → real key" load AND any later server-side mode flip
+// both propagate WITHOUT remounting the tree. The old `key={publishableKey}`
+// remounted this whole subtree — including the splash — mid-video when the key
+// loaded a second or two into launch, which made the intro video play twice
+// (and, once the play-once guard was added, cut it off early). Prop-only update
+// = no remount = the splash mounts once and plays through.
 function StripeWrapper({ children }) {
   const { publishableKey } = usePaymentConfig();
-  // Pass an empty string while the key is loading — SDK no-ops payment APIs
-  // until a real key is supplied, and screens already guard on missing config.
+  // Empty string while the key loads — SDK no-ops payment APIs until a real key
+  // is supplied, and screens already guard on missing config.
   return (
-    <StripeProvider key={publishableKey || 'pending'} publishableKey={publishableKey || ''}>
+    <StripeProvider publishableKey={publishableKey || ''}>
       {children}
     </StripeProvider>
   );
