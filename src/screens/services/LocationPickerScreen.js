@@ -547,7 +547,7 @@ export default function LocationPickerScreen({ navigation, route }) {
                 </View>
                 <Text style={styles.sitterDistance}>{selectedSitter.distance}</Text>
                 <View style={styles.ratingRow}>
-                  <StarIcon width={16} height={16} />
+                  <StarIcon width={16} height={16} fill="#FBBC04" />
                   <Text style={styles.ratingText}>{selectedSitter.rating} ({selectedSitter.reviews} reviews)</Text>
                 </View>
                 <Text style={styles.updateText}>Last update: {selectedSitter.lastUpdate}</Text>
