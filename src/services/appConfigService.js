@@ -13,7 +13,7 @@ export const DEFAULT_MAINTENANCE = {
 };
 
 export const DEFAULT_REMOTE_CONFIG = {
-  amazonTagsUrl: '',
+  amazonTagsUrl: 'https://www.amazon.com/stores/OKTreat/page/39C7FC72-20EB-4F6A-AE27-53D4958D9361?ref_=cm_sw_r_mwn_ast_store_H4ANNKFBEKG9BCYV8SS2',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.oktreat.app',
   appStoreUrl: 'https://apps.apple.com/us/app/oktreat-pet-sitting-boarding/id6479255523',
   supportEmail: 'careteam@oktreat.com',
