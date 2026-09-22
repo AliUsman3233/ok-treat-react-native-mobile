@@ -42,15 +42,17 @@ export const registerForPushNotifications = async () => {
     // requiring users to uninstall + reinstall. Bump the version suffix
     // whenever the channel's audio changes.
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('oktreat-default-v2', {
+      await Notifications.setNotificationChannelAsync('oktreat-default-v3', {
         name: 'OkTreat Notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#32A6D8',
         sound: 'notification',
       }).catch(() => {});
-      // Delete the legacy 'default' channel so users don't see two
-      // notification categories in system settings.
+      // Remove older channels so upgraders don't keep a silent/locked channel
+      // (a channel's sound can't be changed once created) or see duplicates in
+      // system settings. Bump the id above whenever the audio changes.
+      await Notifications.deleteNotificationChannelAsync('oktreat-default-v2').catch(() => {});
       await Notifications.deleteNotificationChannelAsync('default').catch(() => {});
     }
 
