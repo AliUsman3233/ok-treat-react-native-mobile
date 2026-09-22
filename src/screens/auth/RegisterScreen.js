@@ -133,6 +133,10 @@ export default function RegisterScreen({ navigation }) {
             value={password}
             onChangeText={setPassword}
           />
+          {/* Always shows the requirement; turns red once they've typed too few. */}
+          <Text style={[styles.fieldHint, password.length > 0 && password.length < 6 && styles.fieldHintError]}>
+            Must be at least 6 characters
+          </Text>
 
           {/* Confirm Password Input */}
           <Text style={styles.fieldLabel}>Confirm Password <Text style={{ color: '#FF3B30' }}>*</Text></Text>
@@ -142,6 +146,9 @@ export default function RegisterScreen({ navigation }) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
+          {confirmPassword.length > 0 && confirmPassword !== password && (
+            <Text style={[styles.fieldHint, styles.fieldHintError]}>Passwords do not match</Text>
+          )}
 
           {/* Register Button */}
           <Button
@@ -363,5 +370,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Avenir LT Std',
     fontWeight: '600',
     marginBottom: 6,
+  },
+  fieldHint: {
+    color: '#818898',
+    fontSize: 12,
+    fontFamily: 'Avenir LT Std',
+    marginTop: -6,
+    marginBottom: 10,
+  },
+  fieldHintError: {
+    color: '#FF3B30',
   },
 });
