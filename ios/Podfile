@@ -64,5 +64,21 @@ target 'OkTreat' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # IPHONEOS_DEPLOYMENT_TARGET raised for Xcode 27
+    min_target = podfile_properties['ios.deploymentTarget'] || '15.1'
+    projects = [installer.pods_project]
+    projects += installer.generated_projects if installer.respond_to?(:generated_projects)
+    projects.compact.uniq.each do |project|
+      project.targets.each do |target|
+        target.build_configurations.each do |bc|
+          current = bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+          if current.nil? || Gem::Version.new(current.to_s) < Gem::Version.new(min_target)
+            bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_target
+          end
+        end
+      end
+      project.save
+    end
   end
 end

@@ -68,7 +68,8 @@
       "@react-native-google-signin/google-signin",
       "expo-localization",
       "./plugins/withModularHeaders",
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "./plugins/withPodDeploymentTarget"
     ],
     "icon": "./assets/icon.png"
   }
