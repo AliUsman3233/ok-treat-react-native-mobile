@@ -15,6 +15,7 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.mubbits.oktreat",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan QR codes and take pet photos.",

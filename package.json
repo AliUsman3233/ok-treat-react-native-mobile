@@ -26,6 +26,7 @@
     "date-fns": "^3.0.6",
     "dayjs": "^1.11.19",
     "expo": "^54.0.33",
+    "expo-apple-authentication": "~8.0.8",
     "expo-auth-session": "~7.0.10",
     "expo-av": "~16.0.8",
     "expo-camera": "~17.0.10",

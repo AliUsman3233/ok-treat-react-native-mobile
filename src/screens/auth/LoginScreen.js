@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,7 @@ import Input from '../../components/Input';
 import { GoogleIcon, AppleIcon } from '../../assets';
 import { API_ENDPOINTS } from '../../config/api';
 import { signInWithGoogle } from '../../services/googleAuthService';
+import { signInWithApple, isAppleSignInAvailable } from '../../services/appleAuthService';
 import { registerForPushNotifications } from '../../services/notificationService';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
@@ -29,7 +31,38 @@ export default function LoginScreen({ navigation, route }) {
   const [email, setEmail] = useState(route?.params?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Apple Sign-In is iOS-only; hide the button where it isn't available.
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    let mounted = true;
+    isAppleSignInAvailable().then((ok) => { if (mounted) setAppleAvailable(ok); });
+    return () => { mounted = false; };
+  }, []);
+
+  const finishSocialLogin = async (result) => {
+    if (result?.success) {
+      await AsyncStorage.setItem('authToken', result.data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
+      dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
+      registerForPushNotifications().catch(() => {});
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setLoading(true);
+      const result = await signInWithApple();
+      await finishSocialLogin(result);
+    } catch (error) {
+      if (error.message !== 'Sign-in cancelled') {
+        alert('Error', error.message || 'Apple sign-in failed', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -211,14 +244,17 @@ export default function LoginScreen({ navigation, route }) {
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.appleButton}
-          onPress={() => alert('Coming Soon', 'Apple Sign-In is under development.', 'pending')}
-          activeOpacity={0.7}
-        >
-          <AppleIcon width={20} height={20} fill="#FFFFFF" />
-          <Text style={styles.appleButtonText}>Continue with Apple</Text>
-        </TouchableOpacity>
+        {appleAvailable && (
+          <TouchableOpacity
+            style={[styles.appleButton, loading && { opacity: 0.6 }]}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <AppleIcon width={20} height={20} fill="#FFFFFF" />
+            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScreenWrapper>
   );

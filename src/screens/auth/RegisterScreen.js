@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +18,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { BackArrowIcon, GoogleIcon, AppleIcon } from '../../assets';
 import { signInWithGoogle } from '../../services/googleAuthService';
+import { signInWithApple, isAppleSignInAvailable } from '../../services/appleAuthService';
 import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
@@ -33,8 +35,34 @@ export default function RegisterScreen({ navigation }) {
   // the Proceed button / login link are never hidden behind it (the "Proceed
   // button not showing on some phones" bug).
   const [bottomSectionHeight, setBottomSectionHeight] = useState(200);
+  // Apple Sign-In is iOS-only; hide the button where it isn't available.
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const dispatch = useDispatch();
   const keyboardHeight = useKeyboardHeight();
+
+  useEffect(() => {
+    let mounted = true;
+    isAppleSignInAvailable().then((ok) => { if (mounted) setAppleAvailable(ok); });
+    return () => { mounted = false; };
+  }, []);
+
+  const handleAppleSignIn = async () => {
+    try {
+      setLoading(true);
+      const result = await signInWithApple();
+      if (result?.success) {
+        await AsyncStorage.setItem('authToken', result.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
+        dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
+      }
+    } catch (error) {
+      if (error.message !== 'Sign-in cancelled') {
+        alert('Error', error.message || 'Apple sign-in failed', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -211,14 +239,17 @@ export default function RegisterScreen({ navigation }) {
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.appleButton}
-          onPress={() => alert('Coming Soon', 'Apple Sign-In is under development.', 'pending')}
-          activeOpacity={0.7}
-        >
-          <AppleIcon width={20} height={20} fill="#FFFFFF" />
-          <Text style={styles.appleButtonText}>Continue with Apple</Text>
-        </TouchableOpacity>
+        {appleAvailable && (
+          <TouchableOpacity
+            style={[styles.appleButton, loading && { opacity: 0.6 }]}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <AppleIcon width={20} height={20} fill="#FFFFFF" />
+            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScreenWrapper>
   );
