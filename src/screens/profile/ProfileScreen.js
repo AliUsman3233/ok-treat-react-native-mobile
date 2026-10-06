@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Linking } from 'react-native';
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout, setCredentials } from '../../store/slices/authSlice';
@@ -7,6 +7,7 @@ import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import api from '../../config/api';
 import { useAppAlert } from '../../context/AlertContext';
+import { useRemoteConfig } from '../../hooks/useRemoteConfig';
 import {
   BackArrowIcon,
   UserProfileIcon,
@@ -25,6 +26,7 @@ export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const alert = useAppAlert();
   const { user, token } = useSelector(state => state.auth);
+  const { playStoreUrl, appStoreUrl } = useRemoteConfig();
 
   // Refresh profile data when screen gets focus
   useFocusEffect(
@@ -81,8 +83,7 @@ export default function ProfileScreen({ navigation }) {
       component: RateUsIcon,
       screen: null,
       color: '#32A6D8',
-      action: 'coming_soon',
-      comingSoonLabel: 'Rate Us',
+      action: 'rate',
     },
     {
       title: 'Log out',
@@ -93,9 +94,36 @@ export default function ProfileScreen({ navigation }) {
     },
   ];
 
+  // Open the platform store straight to the review UI, falling back to the
+  // listing's web URL when the native store app can't handle the deep link.
+  const handleRateUs = async () => {
+    const webUrl = ((Platform.OS === 'ios' ? appStoreUrl : playStoreUrl) || '').trim();
+    if (!webUrl) {
+      alert('Rate Us', 'This feature is under development.', 'pending');
+      return;
+    }
+    const idMatch = webUrl.match(/id(\d+)/);
+    const pkgMatch = webUrl.match(/[?&]id=([^&]+)/);
+    const deepLink = Platform.OS === 'ios'
+      ? (idMatch ? `itms-apps://apps.apple.com/app/id${idMatch[1]}?action=write-review` : webUrl)
+      : (pkgMatch ? `market://details?id=${pkgMatch[1]}` : webUrl);
+    try {
+      const supported = await Linking.canOpenURL(deepLink);
+      await Linking.openURL(supported ? deepLink : webUrl);
+    } catch (e) {
+      try {
+        await Linking.openURL(webUrl);
+      } catch (_) {
+        alert('Rate Us', 'Could not open the app store.', 'error');
+      }
+    }
+  };
+
   const handleMenuPress = (item) => {
     if (item.action === 'logout') {
       handleLogout();
+    } else if (item.action === 'rate') {
+      handleRateUs();
     } else if (item.action === 'coming_soon') {
       alert(item.comingSoonLabel || item.title, 'Coming after release', 'pending');
     } else if (item.screen) {
