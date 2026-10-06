@@ -11,12 +11,12 @@ import api from '../config/api';
 // audience accepts this ID (auth.controller.js).
 const GOOGLE_WEB_CLIENT_ID = '421263250507-ilfka1ik8v6agv226ot6a8u6mf7sj4hs.apps.googleusercontent.com';
 
-// iOS needs its own OAuth client ID (or a GoogleService-Info.plist), and the
-// ok-trear project has neither yet. configure() dispatches a native promise
-// without catching it, so calling it on iOS with no client ID rejects and
-// redboxes the app at startup. Skip it there until this is filled in;
-// signInWithGoogle() reports the gap when the user actually taps sign-in.
-const GOOGLE_IOS_CLIENT_ID = null;
+// iOS OAuth client from the ok-trear project (#421263250507), bundle id
+// com.mubbits.oktreat. The reversed form of this id
+// (com.googleusercontent.apps.421263250507-7unfsrc4...) is registered in
+// ios/OkTreat/Info.plist under CFBundleURLSchemes so the native sign-in can
+// redirect back into the app.
+const GOOGLE_IOS_CLIENT_ID = '421263250507-7unfsrc4c68rlcm15mj9v4ib1cc4hvsp.apps.googleusercontent.com';
 
 const isGoogleSignInConfigured =
   Platform.OS !== 'ios' || !!GOOGLE_IOS_CLIENT_ID;
