@@ -28,6 +28,11 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // The social-login section is position:absolute at the bottom and overlaps the
+  // ScrollView. Measure its height so we can pad the scroll content enough that
+  // the Proceed button / login link are never hidden behind it (the "Proceed
+  // button not showing on some phones" bug).
+  const [bottomSectionHeight, setBottomSectionHeight] = useState(200);
   const dispatch = useDispatch();
   const keyboardHeight = useKeyboardHeight();
 
@@ -91,7 +96,7 @@ export default function RegisterScreen({ navigation }) {
     <ScreenWrapper style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomSectionHeight + 24 + keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={iosKeyboardDismissMode}
         showsVerticalScrollIndicator={false}
@@ -184,7 +189,10 @@ export default function RegisterScreen({ navigation }) {
       </ScrollView>
 
       {/* Bottom Section - Social Login - Fixed at bottom */}
-      <View style={styles.bottomSection}>
+      <View
+        style={styles.bottomSection}
+        onLayout={(e) => setBottomSectionHeight(e.nativeEvent.layout.height)}
+      >
         {/* Divider */}
         <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />

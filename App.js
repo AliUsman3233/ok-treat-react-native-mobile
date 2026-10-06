@@ -19,6 +19,16 @@ import { AlertProvider } from './src/context/AlertContext';
 import { PaymentConfigProvider, usePaymentConfig } from './src/context/PaymentConfigContext';
 import { WalletProvider } from './src/context/WalletContext';
 
+// Lock the app's typography to our design — ignore the device's "Font size" /
+// "Display size" accessibility scaling so large system settings can't inflate
+// text and break layouts (e.g. the signup "Proceed" button pushed off-screen on
+// some phones). Set once at module load, before any component renders, so every
+// <Text> / <TextInput> inherits it.
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.allowFontScaling = false;
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.allowFontScaling = false;
+
 // Set up notification handler at top level (outside component)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
