@@ -17,6 +17,7 @@ web-build/
 # iOS
 /ios/Pods/
 /ios/build/
+/ios/build-sim/
 *.xcworkspace
 *.xcuserdata
 
