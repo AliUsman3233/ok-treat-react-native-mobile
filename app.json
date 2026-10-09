@@ -66,7 +66,12 @@
           "color": "#32A6D8"
         }
       ],
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.421263250507-7unfsrc4c68rlcm15mj9v4ib1cc4hvsp"
+        }
+      ],
       "expo-localization",
       "./plugins/withModularHeaders",
       "./plugins/withReleaseSigning",

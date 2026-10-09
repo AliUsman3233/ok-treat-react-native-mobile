@@ -12,10 +12,11 @@ import api from '../config/api';
 const GOOGLE_WEB_CLIENT_ID = '421263250507-ilfka1ik8v6agv226ot6a8u6mf7sj4hs.apps.googleusercontent.com';
 
 // iOS OAuth client from the ok-trear project (#421263250507), bundle id
-// com.mubbits.oktreat. The reversed form of this id
-// (com.googleusercontent.apps.421263250507-7unfsrc4...) is registered in
-// ios/OkTreat/Info.plist under CFBundleURLSchemes so the native sign-in can
-// redirect back into the app.
+// com.mubbits.oktreat. The reversed form of this id must be registered as a
+// CFBundleURLScheme or the native sign-in cannot redirect back into the app.
+// That scheme comes from the `iosUrlScheme` option on the
+// @react-native-google-signin/google-signin plugin in app.json — keep the two
+// in sync if this client id ever changes.
 const GOOGLE_IOS_CLIENT_ID = '421263250507-7unfsrc4c68rlcm15mj9v4ib1cc4hvsp.apps.googleusercontent.com';
 
 const isGoogleSignInConfigured =
