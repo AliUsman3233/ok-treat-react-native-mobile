@@ -52,12 +52,14 @@ const ScreenWrapper = ({ children, style, scrollable = true, noBottomTabs = fals
   // TouchableWithoutFeedback only becomes the responder for taps no child
   // handled, so buttons, inputs and scrolling are unaffected.
   //
-  // Scoped to iOS: Android already dismisses the keyboard via the system back
-  // button, and wrapping its touch tree adds risk for no gain.
+  // Applied on BOTH platforms. Android's system back button also dismisses the
+  // keyboard, but users expect tapping the screen to work too — on content-dense
+  // forms there's little empty ScrollView space to tap, so back was the only way
+  // out and the keyboard felt stuck.
   //
   // Pass dismissKeyboard={false} to opt a screen out if it ever needs an
   // input to keep focus while the user taps elsewhere.
-  const content = dismissKeyboard && Platform.OS === 'ios' ? (
+  const content = dismissKeyboard ? (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.flex}>{children}</View>
     </TouchableWithoutFeedback>

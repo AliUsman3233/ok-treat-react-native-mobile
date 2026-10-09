@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, Switch, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import { useState, useEffect } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -246,10 +247,7 @@ export default function ContactSitterScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -259,7 +257,13 @@ export default function ContactSitterScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
+        <KeyboardAwareScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={iosKeyboardDismissMode}
+          bottomOffset={90}
+        >
           {/* Service Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Service</Text>
@@ -419,9 +423,11 @@ export default function ContactSitterScreen({ navigation, route }) {
             </View>
             <Text style={styles.charCounter}>{message.length}/500</Text>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
-        {/* Send Request Button */}
+        {/* Send Request Button — sticks above the keyboard while the message
+            field is focused so it's never hidden behind it. */}
+        <KeyboardStickyView>
         <View style={styles.buttonContainer}>
           {submitting ? (
             <View style={styles.loadingButton}>
@@ -440,6 +446,7 @@ export default function ContactSitterScreen({ navigation, route }) {
             />
           )}
         </View>
+        </KeyboardStickyView>
 
         {/* Success Modal */}
         <Modal
@@ -465,7 +472,7 @@ export default function ContactSitterScreen({ navigation, route }) {
             </View>
           </View>
         </Modal>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenWrapper>
   );
 }

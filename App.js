@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Platform, Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import * as Notifications from 'expo-notifications';
@@ -136,6 +137,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <KeyboardProvider>
       <PaymentConfigProvider>
         <StripeWrapper>
           <WalletProvider>
@@ -194,6 +196,7 @@ export default function App() {
           </WalletProvider>
         </StripeWrapper>
       </PaymentConfigProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }
