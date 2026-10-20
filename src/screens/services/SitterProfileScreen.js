@@ -809,7 +809,7 @@ export default function SitterProfileScreen({ navigation, route }) {
   }
 
   return (
-    <ScreenWrapper noBottomTabs>
+    <ScreenWrapper noBottomTabs dismissKeyboard={false}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -820,7 +820,7 @@ export default function SitterProfileScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
           {/* Profile Section */}
           <View style={styles.profileSection}>
             {/* Cover and Profile Image */}
@@ -939,6 +939,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  // The ScrollView is a flex child between a fixed header and a fixed footer.
+  // Without flex:1 it sizes to its content rather than the leftover space.
+  scrollView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
