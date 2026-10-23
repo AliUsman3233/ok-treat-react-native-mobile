@@ -14,6 +14,7 @@ import store from './src/store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { setNavigationRef, setTokenExpiredModalHandler, handleTokenExpiredAction } from './src/config/axiosInterceptor';
 import { registerForPushNotifications } from './src/services/notificationService';
+import { syncUserLocation } from './src/services/locationService';
 import { initI18n } from './src/i18n';
 import { getLanguage } from './src/utils/storage';
 import { AlertProvider } from './src/context/AlertContext';
@@ -89,6 +90,12 @@ export default function App() {
     // No-ops if the user isn't logged in yet (auth-token call is gated).
     // Login screens call this again post-auth so a new login picks up the token.
     registerForPushNotifications();
+
+    // Capture + sync the user's location so they can receive "missing pet near
+    // you" alerts. No-ops if not logged in. On each launch it refreshes the
+    // location when permission is already granted; the first time it shows a
+    // one-time explanation, then the OS permission prompt.
+    syncUserLocation({ promptIfNeeded: true }).catch(() => {});
 
     // Hide browser's default password reveal button on web
     let webStyle = null;

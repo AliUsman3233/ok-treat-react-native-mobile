@@ -21,6 +21,7 @@ import { API_ENDPOINTS } from '../../config/api';
 import { signInWithGoogle } from '../../services/googleAuthService';
 import { signInWithApple, isAppleSignInAvailable } from '../../services/appleAuthService';
 import { registerForPushNotifications } from '../../services/notificationService';
+import { syncUserLocation } from '../../services/locationService';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width, height } = Dimensions.get('window');
@@ -47,6 +48,7 @@ export default function LoginScreen({ navigation, route }) {
       await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
       dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
       registerForPushNotifications().catch(() => {});
+      syncUserLocation({ promptIfNeeded: true }).catch(() => {});
     }
   };
 
@@ -73,6 +75,7 @@ export default function LoginScreen({ navigation, route }) {
         await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
         dispatch(setCredentials({ token: result.data.token, user: result.data.user }));
         registerForPushNotifications().catch(() => {});
+      syncUserLocation({ promptIfNeeded: true }).catch(() => {});
       }
     } catch (error) {
       if (error.message !== 'Sign-in cancelled') {
@@ -146,6 +149,7 @@ export default function LoginScreen({ navigation, route }) {
       // Fire-and-forget: re-sync the push token now that auth is ready
       // (the App.js call earlier no-ops because there's no auth token yet).
       registerForPushNotifications().catch(() => {});
+      syncUserLocation({ promptIfNeeded: true }).catch(() => {});
 
       // No need to manually navigate - RootNavigator handles it when isAuthenticated changes
 
