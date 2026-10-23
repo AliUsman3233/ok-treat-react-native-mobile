@@ -809,7 +809,7 @@ export default function SitterProfileScreen({ navigation, route }) {
   }
 
   return (
-    <ScreenWrapper noBottomTabs dismissKeyboard={false}>
+    <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
