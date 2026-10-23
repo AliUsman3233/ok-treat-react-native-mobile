@@ -21,7 +21,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.10</string>
+	<string>1.1.11</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -62,7 +62,7 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your location</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app uses your location to find nearby pet sitters.</string>
+	<string>This app uses your location to alert you about missing pets near you and to find nearby pet sitters.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
 	<key>NSPhotoLibraryUsageDescription</key>
