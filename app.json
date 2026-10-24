@@ -3,7 +3,7 @@
     "name": "OkTreat",
     "slug": "oktreat",
     "scheme": "oktreat",
-    "version": "1.1.11",
+    "version": "1.1.12",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -73,6 +73,7 @@
         }
       ],
       "expo-localization",
+      "./plugins/withSceneLifecycle",
       "./plugins/withModularHeaders",
       "./plugins/withReleaseSigning",
       "./plugins/withPodDeploymentTarget"
