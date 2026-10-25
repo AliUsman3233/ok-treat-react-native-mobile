@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Platform, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Platform, StyleSheet, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -27,34 +27,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const DRAG_SLOP = 12;
 
 const ScreenWrapper = ({ children, style, scrollable = true, noBottomTabs = false, dismissKeyboard = true }) => {
-  // Only mount the tap-to-dismiss catcher while the keyboard is actually up.
+  // Is the tap-to-dismiss catcher armed? Only while the keyboard is up.
   //
-  // The catcher is a TouchableWithoutFeedback spanning the whole screen. It
-  // becomes the touch responder at touch-START, before anyone knows whether the
-  // gesture is a tap or a drag. On a screen built mostly from plain View/Image/
-  // Text the native UIScrollView then never receives the pan, and iOS renders
-  // the drag as a rubber-band overscroll: content follows the finger and springs
-  // back to the top. Screens whose rows are TouchableOpacity escaped it because
-  // those children took the touch first — which is why only some screens broke.
+  // This is a ref, deliberately, and the tree below never changes shape.
+  // An earlier version held this in state and swapped the children between a
+  // bare mount and a <TouchableWithoutFeedback><View> wrapper. React sees a
+  // different element type at that position and remounts the entire subtree —
+  // which destroyed the TextInput the user had just tapped. Focus was lost, the
+  // keyboard slid away, that fired keyboardWillHide, and the whole thing
+  // unwound: the keyboard appeared and vanished within a second.
   //
-  // With no input focused there is no keyboard to dismiss, so the catcher has
-  // nothing to do; keeping it mounted only cost us scrolling. Gating on keyboard
-  // visibility means the normal case — browsing a screen — has no extra
-  // responder in the tree at all.
-  const [keyboardUp, setKeyboardUp] = useState(false);
+  // So: one stable tree, and a flag the responder callbacks read at touch time.
+  // No re-render on a keyboard transition either, which matters when 76 screens
+  // sit inside this component.
+  const armed = useRef(false);
   const touchStart = useRef(null);
 
   useEffect(() => {
     if (!dismissKeyboard || Platform.OS === 'web') return undefined;
 
     // iOS fires the "will" events ahead of the animation, so the catcher is
-    // mounted by the time the keyboard is actually on screen. Android only has
+    // armed by the time the keyboard is actually on screen. Android only has
     // the "did" variants.
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const show = Keyboard.addListener(showEvent, () => setKeyboardUp(true));
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardUp(false));
+    const show = Keyboard.addListener(showEvent, () => {
+      armed.current = true;
+    });
+    const hide = Keyboard.addListener(hideEvent, () => {
+      armed.current = false;
+    });
     return () => {
       show.remove();
       hide.remove();
@@ -91,21 +94,28 @@ const ScreenWrapper = ({ children, style, scrollable = true, noBottomTabs = fals
   //
   // Pass dismissKeyboard={false} to opt a screen out if it ever needs an
   // input to keep focus while the user taps elsewhere.
-  const showCatcher = dismissKeyboard && keyboardUp;
-
-  // While the catcher IS mounted it still owns the gesture, so a drag would be
-  // swallowed rather than scrolling. Dismiss on a real drag too: that matches
-  // the iOS convention that scrolling puts the keyboard away, and it unmounts
-  // the catcher so the gesture that follows scrolls normally.
   //
-  // onTouchStart/onTouchMove are plain touch callbacks — unlike the responder
-  // system they fire without claiming the gesture, so adding them changes
-  // nothing about who handles the touch.
+  // Claiming the responder is what makes this safe to tell apart from a tap on
+  // a control: responder negotiation bubbles outward from the touched view, so
+  // a TextInput or Touchable under the finger claims the gesture first and this
+  // handler is never asked. We only ever win taps nothing else wanted. The
+  // touch callbacks below, by contrast, fire for every touch regardless of who
+  // the responder is — which is why the drag check lives there and the dismiss
+  // lives in onResponderRelease.
+  //
+  // With the keyboard down we decline every gesture, so the native UIScrollView
+  // gets the pan and plain View/Image/Text screens scroll normally.
+  const onStartShouldSetResponder = () => dismissKeyboard && armed.current;
+
   const onTouchStart = (e) => {
     const { pageX, pageY } = e.nativeEvent;
     touchStart.current = { x: pageX, y: pageY };
   };
 
+  // While the catcher is armed it owns the gesture, so a drag would be
+  // swallowed rather than scrolling. Dismiss on a real drag too: that matches
+  // the iOS convention that scrolling puts the keyboard away, and it disarms
+  // the catcher so the gesture that follows scrolls normally.
   const onTouchMove = (e) => {
     const start = touchStart.current;
     if (!start) return;
@@ -116,19 +126,25 @@ const ScreenWrapper = ({ children, style, scrollable = true, noBottomTabs = fals
     }
   };
 
-  const content = showCatcher ? (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.flex} onTouchStart={onTouchStart} onTouchMove={onTouchMove}>
-        {children}
-      </View>
-    </TouchableWithoutFeedback>
-  ) : (
-    children
-  );
+  // Reached only when nothing else claimed the touch, i.e. a tap on blank
+  // space. touchStart is null if the gesture already turned into a drag.
+  const onResponderRelease = () => {
+    const wasTap = touchStart.current !== null;
+    touchStart.current = null;
+    if (wasTap) Keyboard.dismiss();
+  };
 
   return (
     <SafeAreaView style={[styles.container, style]} edges={edges}>
-      {content}
+      <View
+        style={styles.flex}
+        onStartShouldSetResponder={onStartShouldSetResponder}
+        onResponderRelease={onResponderRelease}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+      >
+        {children}
+      </View>
     </SafeAreaView>
   );
 };
