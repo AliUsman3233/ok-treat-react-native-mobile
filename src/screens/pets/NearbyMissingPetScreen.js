@@ -21,6 +21,16 @@ import { getPublicMissingReport, reportPetSighting } from '../../services/petSer
 
 const DEFAULT_PET_IMAGE = require('../../assets/images/Pet_default_image.png');
 
+// Postgres NUMERIC/DECIMAL columns serialize to JSON as strings, so a
+// coordinate can arrive as "37.7749". Number.isFinite rejects those, and the
+// map, marker, Directions button and distance row all disappear with no error
+// — on the one screen whose job is to say where the pet was last seen. Coerce
+// first and treat anything unparseable as absent.
+const toNum = (value) => {
+  const n = typeof value === 'string' ? parseFloat(value) : value;
+  return Number.isFinite(n) ? n : null;
+};
+
 const formatDateTime = (value) => {
   if (!value) return '';
   const d = new Date(value);
@@ -28,6 +38,18 @@ const formatDateTime = (value) => {
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return `${date} · ${time}`;
 };
+
+// Defined at module scope on purpose: a component declared inside the screen
+// body is a brand-new type on every render, so React remounts it each time.
+const Header = ({ title, onBack }) => (
+  <View style={styles.header}>
+    <TouchableOpacity onPress={onBack} style={styles.backButton}>
+      <BackArrowIcon width={20} height={20} />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>{title}</Text>
+    <View style={styles.placeholder} />
+  </View>
+);
 
 export default function NearbyMissingPetScreen({ navigation, route }) {
   const alert = useAppAlert();
@@ -69,9 +91,9 @@ export default function NearbyMissingPetScreen({ navigation, route }) {
   const pet = data?.pet;
   const report = data?.report;
   const owner = data?.owner;
-  const lat = report?.lastSeenLat;
-  const lng = report?.lastSeenLng;
-  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const lat = toNum(report?.lastSeenLat);
+  const lng = toNum(report?.lastSeenLng);
+  const hasCoords = lat !== null && lng !== null;
 
   const handleCall = () => {
     const phone = report?.contactPhone;
@@ -142,21 +164,11 @@ export default function NearbyMissingPetScreen({ navigation, route }) {
     );
   };
 
-  const Header = ({ title }) => (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <BackArrowIcon width={20} height={20} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <View style={styles.placeholder} />
-    </View>
-  );
-
   if (loading) {
     return (
       <ScreenWrapper noBottomTabs>
         <View style={styles.container}>
-          <Header title="Missing Pet" />
+          <Header title="Missing Pet" onBack={() => navigation.goBack()} />
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#32A6D8" />
           </View>
@@ -169,7 +181,7 @@ export default function NearbyMissingPetScreen({ navigation, route }) {
     return (
       <ScreenWrapper noBottomTabs>
         <View style={styles.container}>
-          <Header title="Missing Pet" />
+          <Header title="Missing Pet" onBack={() => navigation.goBack()} />
           <View style={styles.centerContainer}>
             <Icon name="checkmark-circle" size={48} color="#1E9E5A" />
             <Text style={styles.stateTitle}>Good news!</Text>
@@ -186,7 +198,7 @@ export default function NearbyMissingPetScreen({ navigation, route }) {
     return (
       <ScreenWrapper noBottomTabs>
         <View style={styles.container}>
-          <Header title="Missing Pet" />
+          <Header title="Missing Pet" onBack={() => navigation.goBack()} />
           <View style={styles.centerContainer}>
             <Text style={styles.stateText}>{error || 'Report not available.'}</Text>
             <TouchableOpacity onPress={() => { setLoading(true); load(); }}>
@@ -199,12 +211,15 @@ export default function NearbyMissingPetScreen({ navigation, route }) {
   }
 
   const breed = pet.breed || pet.type || '';
-  const distanceLabel = Number.isFinite(distanceKm) ? `~${distanceKm} km from you` : null;
+  // distanceKm arrives as a string from an FCM data payload (all FCM data
+  // values are strings) and from the notification row's JSON.
+  const distance = toNum(distanceKm);
+  const distanceLabel = distance !== null ? `~${distance.toFixed(1)} km from you` : null;
 
   return (
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
-        <Header title="Missing Pet" />
+        <Header title="Missing Pet" onBack={() => navigation.goBack()} />
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}

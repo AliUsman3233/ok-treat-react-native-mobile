@@ -204,9 +204,15 @@ export default function NotificationsScreen({ navigation }) {
             petId: data.petId,
             distanceKm: data.distanceKm,
           });
-        } else if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+        } else {
           // Legacy rows without a petId — fall back to external maps.
-          Linking.openURL(`https://www.google.com/maps?q=${data.latitude},${data.longitude}`).catch(() => {});
+          // parseFloat, not Number.isFinite: the coordinates come back as
+          // strings from a NUMERIC column and would otherwise be dropped.
+          const lat = parseFloat(data.latitude);
+          const lng = parseFloat(data.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`).catch(() => {});
+          }
         }
         return;
       }
