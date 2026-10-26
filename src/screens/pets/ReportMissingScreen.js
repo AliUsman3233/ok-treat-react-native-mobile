@@ -93,6 +93,17 @@ export default function ReportMissingScreen({ navigation, route }) {
       alert('Invalid date', 'Last-seen time cannot be in the future.', 'error');
       return;
     }
+    // The last-seen point is the origin for the nearby-alert radius and the
+    // only thing the "help return this pet" screen can put on a map. Reports
+    // filed without it reach nobody and show no map, so it is required.
+    if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+      alert(
+        'Missing location',
+        'Pick where your pet was last seen — we use it to alert people nearby and to show them where to look.',
+        'error'
+      );
+      return;
+    }
     try {
       setSubmitting(true);
       await reportPetMissing(pet.id, {
