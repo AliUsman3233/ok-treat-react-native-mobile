@@ -109,6 +109,30 @@ export const getMissingReport = async (petId) => {
   }
 };
 
+// Fetch an ACTIVE missing-pet report for ANY authenticated user (e.g. a
+// nearby-alert recipient) — pet summary + last-seen details + owner contact.
+// Throws (404) when the pet isn't currently reported missing.
+export const getPublicMissingReport = async (petId) => {
+  try {
+    const response = await authApi.get(`/pets/${petId}/missing-report/public`);
+    return response.data;
+  } catch (error) {
+    console.error('Get public missing report error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to fetch missing report' };
+  }
+};
+
+// Report a sighting of a missing pet — notifies the owner. Body: { latitude?, longitude?, note? }
+export const reportPetSighting = async (petId, payload = {}) => {
+  try {
+    const response = await authApi.post(`/pets/${petId}/found`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Report sighting error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to report sighting' };
+  }
+};
+
 // Get pet by QR code (public endpoint - no auth needed)
 export const getPetByQRCode = async (qrCode) => {
   try {

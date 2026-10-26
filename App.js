@@ -97,6 +97,56 @@ export default function App() {
     // one-time explanation, then the OS permission prompt.
     syncUserLocation({ promptIfNeeded: true }).catch(() => {});
 
+    // Deep-link when the user taps a push notification from the tray. Mirrors
+    // the in-app NotificationsScreen routing for the key types. Best-effort:
+    // if the target isn't reachable (e.g. tapped while logged out),
+    // NavigationContainer's onUnhandledAction surfaces a graceful message.
+    let responseSub = null;
+    if (Platform.OS !== 'web') {
+      const routeFromPush = (data) => {
+        const nav = navigationRef.current;
+        if (!nav || !data) return;
+        const num = (v) => (v == null || v === '' ? undefined : Number(v));
+        switch (data.type) {
+          case 'NEARBY_MISSING_PET':
+            if (data.petId) nav.navigate('NearbyMissingPet', { petId: data.petId, distanceKm: num(data.distanceKm) });
+            else nav.navigate('Notifications');
+            break;
+          case 'PET_SIGHTING_REPORTED':
+          case 'PET_SCANNED_WHILE_MISSING':
+          case 'PET_QR_LINKED':
+          case 'PET_QR_DISCONNECTED':
+            if (data.petId) nav.navigate('MyPetProfile', { petId: data.petId });
+            else nav.navigate('Notifications');
+            break;
+          case 'MESSAGE':
+          case 'NEW_MESSAGE':
+            if (data.senderId) nav.navigate('ChatConversation', { otherUserId: data.senderId, chatName: data.senderName || 'Chat' });
+            else nav.navigate('Notifications');
+            break;
+          default:
+            nav.navigate('Notifications');
+        }
+      };
+
+      responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+        try { routeFromPush(response?.notification?.request?.content?.data); }
+        catch (e) { console.log('push tap routing failed:', e?.message); }
+      });
+
+      // Cold start: app was launched by tapping a push. Delay so navigation +
+      // auth gate settle before we navigate.
+      Notifications.getLastNotificationResponseAsync()
+        .then((response) => {
+          if (!response) return;
+          setTimeout(() => {
+            try { routeFromPush(response?.notification?.request?.content?.data); }
+            catch (e) { console.log('push cold-start routing failed:', e?.message); }
+          }, 1500);
+        })
+        .catch(() => {});
+    }
+
     // Hide browser's default password reveal button on web
     let webStyle = null;
     if (Platform.OS === 'web') {
@@ -120,6 +170,7 @@ export default function App() {
     // Cleanup
     return () => {
       setTokenExpiredModalHandler(null);
+      if (responseSub) responseSub.remove();
       if (webStyle && Platform.OS === 'web') {
         document.head.removeChild(webStyle);
       }

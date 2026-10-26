@@ -196,17 +196,29 @@ export default function NotificationsScreen({ navigation }) {
         }
         return;
 
-      // Sitter-facing radius alert. Owner pets aren't ours, so we open
-      // Google Maps centered on the last-seen location instead of
-      // bouncing into a pet detail we wouldn't have permission to see.
+      // Community radius alert — open the in-app "help return this pet" screen
+      // (pet photo, last-seen map, owner contact, "I found this pet").
       case 'NEARBY_MISSING_PET': {
-        const { latitude, longitude } = data;
-        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-          const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
-          Linking.openURL(url).catch(() => {});
+        if (data.petId) {
+          navigation.navigate('NearbyMissingPet', {
+            petId: data.petId,
+            distanceKm: data.distanceKm,
+          });
+        } else if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+          // Legacy rows without a petId — fall back to external maps.
+          Linking.openURL(`https://www.google.com/maps?q=${data.latitude},${data.longitude}`).catch(() => {});
         }
         return;
       }
+
+      // Owner-facing: someone reported spotting their missing pet.
+      case 'PET_SIGHTING_REPORTED':
+        if (data.petId) {
+          navigation.navigate('MyPetProfile', { petId: data.petId });
+        } else {
+          navigation.navigate('MainTabs', { screen: 'Pets', params: { screen: 'PetList' } });
+        }
+        return;
 
       // ── Account / system ──
       case 'SITTER_APPROVED':

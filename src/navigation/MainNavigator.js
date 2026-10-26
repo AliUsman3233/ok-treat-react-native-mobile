@@ -29,6 +29,7 @@ import EditPetScreen from '../screens/pets/EditPetScreen';
 import PetDetailScreen from '../screens/pets/PetDetailScreen';
 import MyPetProfileScreen from '../screens/pets/MyPetProfileScreen';
 import ReportMissingScreen from '../screens/pets/ReportMissingScreen';
+import NearbyMissingPetScreen from '../screens/pets/NearbyMissingPetScreen';
 import PetWizardStep1Screen from '../screens/pets/PetWizardStep1Screen';
 import PetWizardStep2Screen from '../screens/pets/PetWizardStep2Screen';
 import PetWizardStep3Screen from '../screens/pets/PetWizardStep3Screen';
@@ -391,6 +392,7 @@ export default function MainNavigator() {
       <RootStack.Screen name="PetDetail" component={PetDetailScreen} />
       <RootStack.Screen name="MyPetProfile" component={MyPetProfileScreen} />
       <RootStack.Screen name="ReportMissing" component={ReportMissingScreen} />
+      <RootStack.Screen name="NearbyMissingPet" component={NearbyMissingPetScreen} />
       <RootStack.Screen name="PetWizardStep1" component={PetWizardStep1Screen} />
       <RootStack.Screen name="PetWizardStep2" component={PetWizardStep2Screen} />
       <RootStack.Screen name="PetWizardStep3" component={PetWizardStep3Screen} />
