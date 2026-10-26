@@ -236,6 +236,9 @@ export default function NotificationsScreen({ navigation }) {
         return;
 
       // ── Promotional ──
+      // The backend emits REFERRAL_REWARD; REFERRAL_REWARD_EARNED was never
+      // sent, so these rows fell through to `default` and opened Bookings.
+      case 'REFERRAL_REWARD':
       case 'REFERRAL_REWARD_EARNED':
         navigation.navigate('PaymentMethods');
         return;
