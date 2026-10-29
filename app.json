@@ -3,7 +3,7 @@
     "name": "OkTreat",
     "slug": "oktreat",
     "scheme": "oktreat",
-    "version": "1.1.13",
+    "version": "1.1.14",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -23,7 +23,7 @@
         "NSLocationWhenInUseUsageDescription": "This app uses your location to alert you about missing pets near you and to find nearby pet sitters.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "2"
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
