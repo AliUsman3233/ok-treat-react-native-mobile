@@ -117,6 +117,10 @@ const ScreenWrapper = ({ children, style, scrollable = true, noBottomTabs = fals
   // the iOS convention that scrolling puts the keyboard away, and it disarms
   // the catcher so the gesture that follows scrolls normally.
   const onTouchMove = (e) => {
+    // Only while the keyboard is up. Otherwise every scroll in the app ran
+    // this arithmetic and called Keyboard.dismiss() on a keyboard that was
+    // already down.
+    if (!armed.current) return;
     const start = touchStart.current;
     if (!start) return;
     const { pageX, pageY } = e.nativeEvent;

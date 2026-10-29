@@ -3,13 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -141,10 +140,7 @@ export default function ReportMissingScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <BackArrowIcon width={20} height={20} />
@@ -153,12 +149,22 @@ export default function ReportMissingScreen({ navigation, route }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView
+        {/* KeyboardAwareScrollView, not KeyboardAvoidingView.
+            RN's KeyboardAvoidingView compares its onLayout y — which is
+            relative to its PARENT — against the keyboard's window-absolute
+            screenY. ScreenWrapper's SafeAreaView pushes this subtree down by
+            the top inset, so the KAV reported y=0 while really sitting ~59pt
+            lower, and padded that much less than the keyboard needs. The
+            bottom field stayed covered. keyboardVerticalOffset papers over it
+            with a device-specific magic number; this measures in window
+            coordinates instead, and scrolls the focused field into view. */}
+        <KeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={iosKeyboardDismissMode}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          bottomOffset={24}
         >
           <View style={styles.urgencyCard}>
             <Icon name="warning" size={20} color="#D93025" />
@@ -257,8 +263,8 @@ export default function ReportMissingScreen({ navigation, route }) {
               </>
             )}
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </ScreenWrapper>
   );
 }

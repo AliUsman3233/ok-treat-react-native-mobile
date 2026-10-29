@@ -13,6 +13,7 @@ import { getServiceUnit } from '../../utils/serviceUnits';
 import { finishFlow } from '../../navigation/navHelpers';
 import moment from 'moment';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +53,7 @@ const toServiceEnum = (v) => (SERVICE_ENUMS.includes(v) ? v : SERVICE_TYPE_MAP[v
 
 export default function ContactSitterScreen({ navigation, route }) {
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const wallet = useWallet();
   const { sitter, service, serviceType, startDate, endDate } = route?.params || {};
   const [message, setMessage] = useState('');
@@ -426,8 +428,12 @@ export default function ContactSitterScreen({ navigation, route }) {
         </KeyboardAwareScrollView>
 
         {/* Send Request Button — sticks above the keyboard while the message
-            field is focused so it's never hidden behind it. */}
-        <KeyboardStickyView>
+            field is focused so it's never hidden behind it.
+            ScreenWrapper's SafeAreaView has already lifted this footer by the
+            bottom inset, and KeyboardStickyView then lifts it by the full
+            keyboard height, so without `opened` it floats an inset's worth of
+            blank white above the keyboard. Push it back down by that much. */}
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <View style={styles.buttonContainer}>
           {submitting ? (
             <View style={styles.loadingButton}>
