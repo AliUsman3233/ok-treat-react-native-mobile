@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Icon from '@expo/vector-icons/Ionicons';
 import { Dropdown } from '../../components';
-import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
@@ -16,7 +16,6 @@ const MEDICATION_ALLERGY_PRESETS = ['Penicillin', 'NSAIDs', 'Steroids', 'Sulfa']
 const NONE_KNOWN = 'None known';
 
 export default function PetWizardStep3Screen({ formData, setFormData }) {
-  const keyboardHeight = useKeyboardHeight();
   const [medDraft, setMedDraft] = useState('');
   const [foodDraft, setFoodDraft] = useState('');
   const [medAllergyDraft, setMedAllergyDraft] = useState('');
@@ -65,13 +64,14 @@ export default function PetWizardStep3Screen({ formData, setFormData }) {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={iosKeyboardDismissMode}
+      bottomOffset={24}
     >
       {/* Form Card */}
       <View style={styles.formCard}>
@@ -259,7 +259,7 @@ export default function PetWizardStep3Screen({ formData, setFormData }) {
           />
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

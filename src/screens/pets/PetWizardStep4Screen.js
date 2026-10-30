@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import React from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -8,7 +9,6 @@ import PhoneInput from '../../components/PhoneInput';
 import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
-import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
@@ -16,7 +16,6 @@ const { width } = Dimensions.get('window');
 export default function PetWizardStep4Screen({ formData, setFormData, navigation, route }) {
   const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
-  const keyboardHeight = useKeyboardHeight();
 
   // Determine which screen to return to based on whether we're in add or edit mode
   const isEditMode = route?.params?.petId || formData?.id;
@@ -86,13 +85,14 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={iosKeyboardDismissMode}
+      bottomOffset={24}
     >
       {/* Header Text */}
       <Text style={styles.headerText}>
@@ -254,7 +254,7 @@ export default function PetWizardStep4Screen({ formData, setFormData, navigation
           </ImagePickerButton>
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

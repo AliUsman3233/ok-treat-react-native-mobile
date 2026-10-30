@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import Icon from '@expo/vector-icons/Ionicons';
 import moment from 'moment';
 import { Dropdown } from '../../components';
 import DateRangePicker from '../../components/DateRangePicker';
 import { CalendarIcon, AngleDownIcon } from '../../assets';
-import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import api from '../../config/api';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 export default function PetWizardStep2Screen({ formData, setFormData }) {
   const alert = useAppAlert();
-  const keyboardHeight = useKeyboardHeight();
   // Seed picker state from formData on first render so EditPet (and re-renders
   // of AddPet after going back/forward through steps) pre-select the saved date.
   // moment() is lenient enough to parse ISO, "5 Jun 2024", and other variants.
@@ -66,13 +65,14 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
 
   return (
     <>
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
         showsVerticalScrollIndicator={true}
         bounces={true}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={iosKeyboardDismissMode}
+        bottomOffset={24}
       >
         {/* Form Card */}
         <View style={styles.formCard}>
@@ -197,7 +197,7 @@ export default function PetWizardStep2Screen({ formData, setFormData }) {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </>
   );
 }

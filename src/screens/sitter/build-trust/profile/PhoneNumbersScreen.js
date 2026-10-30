@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -110,10 +111,7 @@ export default function PhoneNumbersScreen({ navigation }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
@@ -123,12 +121,13 @@ export default function PhoneNumbersScreen({ navigation }) {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={iosKeyboardDismissMode}
+          bottomOffset={24}
         >
           {/* Phone Number Section */}
           <View style={styles.sectionHeader}>
@@ -201,7 +200,7 @@ export default function PhoneNumbersScreen({ navigation }) {
           <Text style={styles.disclaimer}>
             By providing your phone number, you agree to receive service-related texts. Reply HELP for help or STOP to unsubscribe. Message and data rates may apply.
           </Text>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <UnsavedChangesModal
           visible={showUnsavedModal}
@@ -212,7 +211,7 @@ export default function PhoneNumbersScreen({ navigation }) {
         <View style={styles.buttonContainer}>
           <Button title={isSaving ? 'Saving...' : 'Continue'} onPress={handleSave} disabled={isSaving} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenWrapper>
   );
 }

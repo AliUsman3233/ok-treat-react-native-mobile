@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Modal, Alert } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -56,6 +58,7 @@ const MessageBubble = ({ message, otherAvatar, myAvatar }) => {
 export default function ChatConversationScreen({ route, navigation }) {
   const { chatName = 'Chat', otherUserId, chatId, avatar } = route?.params || {};
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -290,12 +293,8 @@ export default function ChatConversationScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          {/* Messages */}
+        {/* Messages — the list stays a plain ScrollView; only the input bar
+            below is lifted above the keyboard via KeyboardStickyView. */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#B46299" />
@@ -320,7 +319,8 @@ export default function ChatConversationScreen({ route, navigation }) {
             </ScrollView>
           )}
 
-          {/* Input */}
+          {/* Input — sticks above the keyboard so it's never covered. */}
+          <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
               <View style={styles.inputIcons}>
@@ -357,7 +357,7 @@ export default function ChatConversationScreen({ route, navigation }) {
               </View>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+          </KeyboardStickyView>
       </View>
 
       {/* Header overflow menu — Report / Block */}

@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,6 +16,7 @@ import { iosKeyboardDismissMode } from '../../../../utils/keyboard';
 
 export default function BasicInfoScreen({ navigation, route }) {
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const [profilePhoto, setProfilePhoto] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -300,12 +303,13 @@ export default function BasicInfoScreen({ navigation, route }) {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={iosKeyboardDismissMode}
+          bottomOffset={24}
         >
           {/* Page Title */}
           <View style={styles.titleContainer}>
@@ -482,7 +486,7 @@ export default function BasicInfoScreen({ navigation, route }) {
               </TouchableOpacity>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Birthday Modal */}
         <Modal
@@ -573,16 +577,18 @@ export default function BasicInfoScreen({ navigation, route }) {
         />
 
         {/* Save Button */}
-        <View style={styles.bottomButtonContainer}>
-          <Button
-            title={isSaving ? "Saving..." : "Save & Continue"}
-            onPress={handleSave}
-            type="secondary"
-            size="large"
-            fullWidth
-            disabled={isSaving || uploading}
-          />
-        </View>
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+          <View style={styles.bottomButtonContainer}>
+            <Button
+              title={isSaving ? "Saving..." : "Save & Continue"}
+              onPress={handleSave}
+              type="secondary"
+              size="large"
+              fullWidth
+              disabled={isSaving || uploading}
+            />
+          </View>
+        </KeyboardStickyView>
       </View>
     </ScreenWrapper>
   );

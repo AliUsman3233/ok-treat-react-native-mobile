@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import { useState } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -69,9 +70,11 @@ export default function SubmitReviewScreen({ navigation, route }) {
 
   return (
     <ScreenWrapper noBottomTabs>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScrollView
         style={styles.container}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={24}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -140,7 +143,7 @@ export default function SubmitReviewScreen({ navigation, route }) {
         {submitting && (
           <ActivityIndicator size="small" color="#32A6D8" style={styles.loader} />
         )}
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </ScreenWrapper>
   );
 }

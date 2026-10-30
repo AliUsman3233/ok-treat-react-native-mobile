@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { useAppAlert } from '../../context/AlertContext';
 import Button from '../../components/Button';
@@ -95,12 +95,13 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
       </View>
 
       {/* Scrollable Form Content */}
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + keyboardHeight }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={iosKeyboardDismissMode}
+        bottomOffset={24}
       >
         {/* Title - Centered */}
         <Text style={styles.title}>Complete Registration</Text>
@@ -171,7 +172,7 @@ export default function CompleteRegistrationScreen({ route, navigation }) {
             />
           }
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Bottom Section - Fixed at bottom */}
       <View style={styles.bottomSection}>

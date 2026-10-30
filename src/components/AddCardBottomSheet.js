@@ -1,4 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView } from 'react-native';
+// keyboard-controller's KeyboardAvoidingView (not RN's) — it reliably lifts the
+// whole sheet above the keyboard inside a Modal on both platforms, which RN's
+// KeyboardAvoidingView does not do on Android.
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
 import Icon from '@expo/vector-icons/Ionicons';
 import Button from './Button';
@@ -219,7 +223,7 @@ export default function AddCardBottomSheet({ visible, onClose, amount, onSuccess
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.overlay}
       >
         <View style={styles.bottomSheet}>

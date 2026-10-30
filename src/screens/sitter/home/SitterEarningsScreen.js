@@ -10,11 +10,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@expo/vector-icons/Ionicons';
@@ -118,7 +118,7 @@ export default function SitterEarningsScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
+        <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode} bottomOffset={24}>
           {/* Earned-coin summary */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
@@ -215,7 +215,7 @@ export default function SitterEarningsScreen({ navigation }) {
               ))}
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <CashOutComingSoonDialog
           visible={cashOutDialogOpen}

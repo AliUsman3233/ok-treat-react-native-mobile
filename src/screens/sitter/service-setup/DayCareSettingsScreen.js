@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../../components/ScreenWrapper';
@@ -37,6 +39,7 @@ const BOTTOM_BUTTON_WIDTH_RATIO = 0.9;
 const BOTTOM_BUTTON_MARGIN_RATIO = 0.05;
 
 export default function DayCareSettingsScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const [baseRate, setBaseRate] = useState(DEFAULT_BASE_RATE);
     const [additionalRates, setAdditionalRates] = useState(false);
     const [showAdditionalRates, setShowAdditionalRates] = useState(false);
@@ -246,12 +249,13 @@ export default function DayCareSettingsScreen({ navigation }) {
                     <View style={styles.headerPlaceholder} />
                 </View>
 
-                <ScrollView
+                <KeyboardAwareScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode={iosKeyboardDismissMode}
+                    bottomOffset={24}
                 >
                     {/* Manage Day Care Title */}
                     <View style={styles.titleContainer}>
@@ -526,7 +530,7 @@ export default function DayCareSettingsScreen({ navigation }) {
                             Note: Service providers (e.g., sitters) are required to follow all relevant laws & regulations. See Terms of Service
                         </Text>
                     </View>
-                </ScrollView>
+                </KeyboardAwareScrollView>
 
                 {/* Unsaved Changes Modal */}
                 <UnsavedChangesModal
@@ -536,6 +540,7 @@ export default function DayCareSettingsScreen({ navigation }) {
                 />
 
                 {/* Save Button */}
+                <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
                 <Button
                     style={styles.bottomButtonContainer}
                     title={isSaving ? (isExistingData ? "Updating..." : "Saving...") : (isExistingData ? "Update" : "Save")}
@@ -545,6 +550,7 @@ export default function DayCareSettingsScreen({ navigation }) {
                     fullWidth
                     disabled={isSaving}
                 />
+                </KeyboardStickyView>
             </View>
         </ScreenWrapper>
     );

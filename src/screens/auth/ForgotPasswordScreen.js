@@ -5,11 +5,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  ScrollView,
   Keyboard,
   Platform,
   Alert,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -140,7 +140,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
@@ -149,6 +149,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={iosKeyboardDismissMode}
+          bottomOffset={24}
         >
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
@@ -187,7 +188,7 @@ export default function ForgotPasswordScreen({ navigation }) {
             style={{ marginTop: 24 }}
             disabled={!isEmailValid || loading}
           />
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View style={styles.bottomSection}>
           <View style={styles.supportContainer}>
@@ -219,7 +220,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       </View>
 
       {/* Scrollable Form Content */}
-      <ScrollView
+      <KeyboardAwareScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={[
@@ -229,6 +230,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={iosKeyboardDismissMode}
+        bottomOffset={24}
       >
         {/* Icon Container */}
         <View style={styles.iconContainer}>
@@ -355,7 +357,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         </View>
 
         {/* Password Match Indicator - Removed since it's now in requirements */}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Bottom Section - Fixed at bottom */}
       <View style={styles.bottomSection}>

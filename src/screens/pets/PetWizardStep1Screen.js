@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ScrollView, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import React from 'react';
 import { CameraIcon, PawFilledIcon, DogFaceIcon, CatFaceIcon } from '../../assets';
@@ -7,7 +8,6 @@ import ImagePickerButton from '../../components/ImagePickerButton';
 import { uploadToCloudinary } from '../../services/cloudinaryService';
 import { CLOUDINARY_FOLDERS } from '../../config/cloudinary';
 import Icon from '@expo/vector-icons/Ionicons';
-import { useKeyboardHeight } from '../../utils/useKeyboardHeight';
 import { iosKeyboardDismissMode } from '../../utils/keyboard';
 
 const { width } = Dimensions.get('window');
@@ -15,7 +15,6 @@ const { width } = Dimensions.get('window');
 export default function PetWizardStep1Screen({ formData, setFormData }) {
   const alert = useAppAlert();
   const [uploading, setUploading] = React.useState(false);
-  const keyboardHeight = useKeyboardHeight();
 
   const handleImageSelected = async (imageUri) => {
     try {
@@ -32,13 +31,14 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.scrollContainer}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 + keyboardHeight }]}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
       showsVerticalScrollIndicator={true}
       bounces={true}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={iosKeyboardDismissMode}
+      bottomOffset={24}
     >
       {/* Photo Upload */}
       <ImagePickerButton onImageSelected={handleImageSelected}>
@@ -214,7 +214,7 @@ export default function PetWizardStep1Screen({ formData, setFormData }) {
           </View>
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

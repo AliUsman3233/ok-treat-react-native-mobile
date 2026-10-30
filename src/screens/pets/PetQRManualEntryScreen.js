@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ActivityIndicator, Alert } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { BackArrowIcon } from '../../assets';
@@ -113,7 +114,13 @@ export default function PetQRManualEntryScreen({ navigation, route }) {
         </View>
 
       {/* Content */}
-      <View style={styles.content}>
+      <KeyboardAwareScrollView
+        style={styles.contentScroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bottomOffset={24}
+      >
         {/* Tag Image */}
         <Image
           source={require('../../assets/images/qr_placeholder_image.png')}
@@ -140,7 +147,7 @@ export default function PetQRManualEntryScreen({ navigation, route }) {
           size="medium"
           disabled={!tagId.trim() || loading}
         />
-      </View>
+      </KeyboardAwareScrollView>
       </View>
     </ScreenWrapper>
   );
@@ -185,8 +192,11 @@ const styles = StyleSheet.create({
     width: 40,
     opacity: 0,
   },
-  content: {
+  contentScroll: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 15,
     alignItems: 'center',

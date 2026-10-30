@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Image,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useFocusEffect } from '@react-navigation/native';
 import * as WebBrowser from 'expo-web-browser';
 import * as ImagePicker from 'expo-image-picker';
@@ -154,7 +155,7 @@ export default function CashOutScreen({ navigation }) {
     <ScreenWrapper noBottomTabs>
       <View style={styles.container}>
         <Header />
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
+        <KeyboardAwareScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode} bottomOffset={24}>
           {/* Balance */}
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>Available to withdraw</Text>
@@ -262,7 +263,7 @@ export default function CashOutScreen({ navigation }) {
               ))}
             </View>
           )}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
     </ScreenWrapper>
   );

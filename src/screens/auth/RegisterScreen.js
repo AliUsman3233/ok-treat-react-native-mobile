@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  ScrollView,
   Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
@@ -122,12 +122,13 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <ScreenWrapper style={styles.container}>
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomSectionHeight + 24 + keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={iosKeyboardDismissMode}
         showsVerticalScrollIndicator={false}
+        bottomOffset={24}
       >
         {/* Header with Back Button */}
         <View style={styles.header}>
@@ -214,7 +215,7 @@ export default function RegisterScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Bottom Section - Social Login - Fixed at bottom */}
       <View

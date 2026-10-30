@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from '../../../../context/AlertContext';
 import React, { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -48,6 +50,7 @@ const YEARS_EXPERIENCE_OPTIONS = ['< 1', '1-2', '3-5', '5-10', '10+'];
 
 export default function DetailsScreen({ navigation }) {
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const [aboutPet, setAboutPet] = useState('');
   const [skills, setSkills] = useState([]);
   const [homeType, setHomeType] = useState('');
@@ -282,12 +285,13 @@ export default function DetailsScreen({ navigation }) {
           <View style={styles.headerPlaceholder} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={iosKeyboardDismissMode}
+          bottomOffset={24}
         >
           {/* Tips Card */}
           <View style={styles.card}>
@@ -488,7 +492,7 @@ export default function DetailsScreen({ navigation }) {
             </Text>
             {renderSingleSelect(YEARS_EXPERIENCE_OPTIONS, yearsExperience, setYearsExperience)}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Unsaved Changes Modal */}
         <UnsavedChangesModal
@@ -498,16 +502,18 @@ export default function DetailsScreen({ navigation }) {
         />
 
         {/* Save Button */}
-        <View style={styles.bottomButtonContainer}>
-          <Button
-            title={isSaving ? 'Saving...' : 'Save & Continue'}
-            onPress={handleSave}
-            type="secondary"
-            size="large"
-            fullWidth
-            disabled={isSaving}
-          />
-        </View>
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+          <View style={styles.bottomButtonContainer}>
+            <Button
+              title={isSaving ? 'Saving...' : 'Save & Continue'}
+              onPress={handleSave}
+              type="secondary"
+              size="large"
+              fullWidth
+              disabled={isSaving}
+            />
+          </View>
+        </KeyboardStickyView>
       </View>
     </ScreenWrapper>
   );

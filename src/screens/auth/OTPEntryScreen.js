@@ -7,9 +7,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from '../../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
@@ -24,6 +24,7 @@ const CODE_LENGTH = 4;
 
 export default function OTPEntryScreen({ route, navigation }) {
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const { email, phoneNumber, userId, otpMethod = 'email', _devOtp } = route.params || {};
   const dispatch = useDispatch();
 
@@ -144,16 +145,18 @@ export default function OTPEntryScreen({ route, navigation }) {
 
   return (
     <ScreenWrapper style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <BackArrowIcon width={20} height={20} fill="#090E12" />
         </TouchableOpacity>
       </View>
 
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bottomOffset={24}
+      >
       <View style={styles.body}>
         {/* Icon */}
         <View style={styles.iconWrap}>
@@ -217,8 +220,10 @@ export default function OTPEntryScreen({ route, navigation }) {
           )}
         </View>
       </View>
+      </KeyboardAwareScrollView>
 
       {/* Submit */}
+      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.verifyBtn, (!isComplete || loading) && styles.verifyBtnDisabled]}
@@ -237,7 +242,7 @@ export default function OTPEntryScreen({ route, navigation }) {
           <Text style={styles.changeMethodText}>Change verification method</Text>
         </TouchableOpacity>
       </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
     </ScreenWrapper>
   );
 }

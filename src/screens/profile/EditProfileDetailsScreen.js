@@ -1,4 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Image } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppAlert } from '../../context/AlertContext';
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -19,6 +21,7 @@ const { width } = Dimensions.get('window');
 
 export default function EditProfileDetailsScreen({ navigation }) {
   const alert = useAppAlert();
+  const insets = useSafeAreaInsets();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   
@@ -253,7 +256,7 @@ export default function EditProfileDetailsScreen({ navigation }) {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode}>
+        <KeyboardAwareScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={iosKeyboardDismissMode} bottomOffset={24}>
           {/* Profile Section */}
           <ImagePickerButton onImageSelected={handleImageSelected}>
             <View style={styles.profileSection}>
@@ -360,18 +363,20 @@ export default function EditProfileDetailsScreen({ navigation }) {
               />
             </View>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Save Button */}
-        <View style={styles.buttonContainer}>
-          <Button
-            title={saving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            fullWidth
-            size="medium"
-            disabled={saving || uploading || !name.trim()}
-          />
-        </View>
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+          <View style={styles.buttonContainer}>
+            <Button
+              title={saving ? 'Saving...' : 'Save'}
+              onPress={handleSave}
+              fullWidth
+              size="medium"
+              disabled={saving || uploading || !name.trim()}
+            />
+          </View>
+        </KeyboardStickyView>
       </View>
     </ScreenWrapper>
   );
